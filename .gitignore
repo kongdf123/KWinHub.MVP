@@ -1,0 +1,79 @@
+.vs/
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Build results
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+dist/
+dist-ssr/
+build/
+
+# .NET
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.userprefs
+*.dbmdl
+*.dbproj.schemaview
+*.jfm
+*.sqlproj
+*.publishsettings
+orleans.codegen.cs
+*.dotCover
+*.axscover
+*.nupkg
+*.snupkg
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+project.lock.json
+project.fragment.lock.json
+artifacts/
+**/Properties/launchSettings.json
+
+# Node / Frontend
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+*.local
+.env
+.env.*
+!.env.example
+coverage/
+*.tsbuildinfo
+vite.config.ts.timestamp-*
+
+# Test results
+[Tt]est[Rr]esults/
+*.trx
+*.coverage
+*.coveragexml
+
+# OS
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Secrets
+*.pem
+*.key
+*.crt
+secrets.json
+appsettings.*.json
+!appsettings.Development.json
+!appsettings.example.json
+
+# Docker
+docker-compose.override.yml

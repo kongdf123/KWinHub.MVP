@@ -1,0 +1,40 @@
+:root {
+  --kwin-primary: #6366f1;
+  --kwin-primary-hover: #4f46e5;
+
+  --kwin-page-bg: #f8fafc;
+  --kwin-card-bg: #ffffff;
+  --kwin-border: #e2e8f0;
+
+  --kwin-text: #1e293b;
+  --kwin-text-muted: #64748b;
+
+  --kwin-radius-sm: 6px;
+  --kwin-radius-md: 10px;
+  --kwin-radius-lg: 14px;
+
+  --el-color-primary: var(--kwin-primary);
+  --el-color-primary-light-3: #a5b4fc;
+  --el-color-primary-light-5: #c7d2fe;
+  --el-color-primary-light-7: #e0e7ff;
+  --el-color-primary-light-8: #eef2ff;
+  --el-color-primary-light-9: #eef2ff;
+  --el-color-primary-dark-2: var(--kwin-primary-hover);
+
+  --el-bg-color: var(--kwin-card-bg);
+  --el-bg-color-page: var(--kwin-page-bg);
+  --el-border-color: var(--kwin-border);
+  --el-border-radius-base: var(--kwin-radius-sm);
+  --el-border-radius-round: 999px;
+  --el-text-color-primary: var(--kwin-text);
+  --el-text-color-regular: #475569;
+  --el-text-color-secondary: var(--kwin-text-muted);
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue',
+    Arial, sans-serif;
+  background-color: var(--kwin-page-bg);
+  color: var(--kwin-text);
+}
