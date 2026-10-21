@@ -13,9 +13,16 @@ public class SubjectRepository : ISubjectRepository
         _dbContext = dbContext;
     }
 
-    public async Task<Subject?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<Subject?> GetByIdAsync(
+        Guid organizationId,
+        Guid id,
+        CancellationToken cancellationToken = default)
     {
-        return await _dbContext.Subjects.FindAsync(new object[] { id }, cancellationToken);
+        return await _dbContext.Subjects
+            .AsNoTracking()
+            .SingleOrDefaultAsync(
+                s => s.Id == id && s.OrganizationId == organizationId,
+                cancellationToken);
     }
 
     public async Task<IReadOnlyList<Subject>> ListByOrganizationAsync(
@@ -23,6 +30,7 @@ public class SubjectRepository : ISubjectRepository
         CancellationToken cancellationToken = default)
     {
         return await _dbContext.Subjects
+            .AsNoTracking()
             .Where(s => s.OrganizationId == organizationId)
             .OrderBy(s => s.LastName)
             .ThenBy(s => s.FirstName)

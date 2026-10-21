@@ -4,7 +4,10 @@ namespace KWinHub.Application.Subjects;
 
 public interface ISubjectRepository
 {
-    Task<Subject?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<Subject?> GetByIdAsync(
+        Guid organizationId,
+        Guid id,
+        CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<Subject>> ListByOrganizationAsync(
         Guid organizationId,

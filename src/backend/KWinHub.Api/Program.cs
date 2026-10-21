@@ -1,5 +1,12 @@
+using System.Text;
+using FluentValidation;
+using KWinHub.Api.Services;
 using KWinHub.Application;
+using KWinHub.Application.Abstractions;
+using KWinHub.Application.Subjects;
 using KWinHub.Infrastructure;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +17,18 @@ builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new() { Title = "KWinHub API", Version = "v1" });
 });
+
+builder.Services.AddHttpContextAccessor();
+
+builder.Services.AddScoped<ICurrentUserContext, CurrentUserContext>();
+builder.Services.AddSingleton<DevTokenIssuer>();
+
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddValidatorsFromAssemblyContaining<CreateSubjectRequestValidator>();
+
+builder.Services.AddProblemDetails();
+
+ConfigureAuthentication(builder.Services, builder.Configuration);
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
@@ -22,10 +41,38 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "KWinHub API v1"));
 }
 
+app.UseProblemDetails();
+
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
 
 app.Run();
+
+static void ConfigureAuthentication(IServiceCollection services, IConfiguration configuration)
+{
+    var key = configuration["Jwt:SigningKey"]
+        ?? throw new InvalidOperationException("Jwt:SigningKey is not configured.");
+
+    var issuer = configuration["Jwt:Issuer"] ?? "kwinhub";
+    var audience = configuration["Jwt:Audience"] ?? "kwinhub-api";
+
+    services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddJwtBearer(options =>
+        {
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = issuer,
+                ValidAudience = audience,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key)),
+                ClockSkew = TimeSpan.Zero,
+            };
+        });
+}

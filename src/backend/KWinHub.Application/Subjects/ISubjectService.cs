@@ -13,5 +13,8 @@ public interface ISubjectService
         Guid organizationId,
         CancellationToken cancellationToken = default);
 
-    Task<SubjectResponse?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<SubjectResponse?> GetByIdAsync(
+        Guid organizationId,
+        Guid id,
+        CancellationToken cancellationToken = default);
 }

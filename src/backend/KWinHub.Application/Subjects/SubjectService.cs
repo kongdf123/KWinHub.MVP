@@ -45,9 +45,12 @@ public class SubjectService : ISubjectService
         return subjects.Select(ToResponse).ToList();
     }
 
-    public async Task<SubjectResponse?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<SubjectResponse?> GetByIdAsync(
+        Guid organizationId,
+        Guid id,
+        CancellationToken cancellationToken = default)
     {
-        var subject = await _repository.GetByIdAsync(id, cancellationToken);
+        var subject = await _repository.GetByIdAsync(organizationId, id, cancellationToken);
         return subject is null ? null : ToResponse(subject);
     }
 
