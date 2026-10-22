@@ -72,7 +72,7 @@ The React service layer explicitly describes itself as a mock repository and use
 
 This is a mismatch between the product prototype and the actual platform implementation.
 
-My recommendation: use React as the primary frontend, consistent with the repository's own [frontend technology recommendation](https://github.com/kongdf123/KWinHub.MVP/blob/main/docs/KWin%20Hub%202.0%20%E2%80%94%20Frontend%20Technology%20Stack%20Recommendation.txt?utm_source=chatgpt.com), provided your team is comfortable with React. It is already the richer of the two prototypes and suits the data-intensive dashboard and visualization direction.
+My recommendation: use React as the primary frontend, consistent with the repository's own [frontend technology recommendation](https://github.com/kongdf123/KWinHub.MVP/blob/main/docs/architecture/frontend-technology-stack-recommendation.md), provided your team is comfortable with React. It is already the richer of the two prototypes and suits the data-intensive dashboard and visualization direction.
 
 Then:
 

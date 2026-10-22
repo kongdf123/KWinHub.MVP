@@ -1,0 +1,105 @@
+﻿# KWinHub MVP Product Requirements & Workflow Design Specification
+## 1. How to read this specification
+## 2. Executive summary
+### 2.1 Product concept
+### 2.2 MVP prototype outcome
+## 3. Goals, non-goals, and success criteria
+### 3.1 Goals
+### 3.2 Non-goals for the current prototype
+### 3.3 Proposed prototype success criteria
+## 4. Users, roles, and jobs to be done
+### 4.1 Primary persona
+### 4.2 Secondary roles to consider
+### 4.3 Permission principles
+## 5. Product principles
+## 6. Information architecture and navigation
+### 6.1 Proposed primary navigation
+### 6.2 Proposed screen inventory
+### 6.3 Navigation and context rules
+## 7. End-to-end workflow
+### 7.1 Workflow overview
+### 7.2 Workflow boundaries
+## 8. Functional requirements
+### 8.1 Organization and access
+### 8.2 Athletes and identity
+### 8.3 Devices and data sources
+### 8.4 Protocols and sessions
+### 8.5 Data ingestion, validation, and operations
+### 8.6 Results and performance analysis
+### 8.7 Reports
+### 8.8 Integrations and audit
+## 9. Detailed workflow specifications
+### WF-01 --- Organization onboarding and readiness
+### WF-02 --- Athlete identity and roster preparation
+### WF-03 --- Device and client-application readiness
+### WF-04 --- Session configuration
+### WF-05 --- Conduct a session and receive data
+### WF-06 --- Ingestion, validation, and exception resolution
+### WF-07 --- Result review and cross-domain analysis
+### WF-08 --- Report creation and sharing
+## 10. Domain model and relationships
+### 10.1 Proposed provenance chain
+### 10.2 Provenance fields to consider
+## 11. State model and terminology
+### 11.1 Organization readiness
+### 11.2 Device/source operational state
+### 11.3 Session lifecycle
+### 11.4 Data-record lifecycle
+### 11.5 Result review state
+### 11.6 Report state
+### 11.7 Status design requirements
+## 12. Mixed-domain data and comparability
+### 12.1 Common workflow, domain-specific payloads
+### 12.2 Metric comparability rules
+## 13. Cloud-first integration concept
+### 13.1 Conceptual boundary
+### 13.2 Proposed client-app integration principles
+### 13.3 Integration questions to resolve
+## 14. Data quality, errors, and recovery UX
+### 14.1 Exception design template
+### 14.2 Proposed exception catalog
+### 14.3 Destructive and consequential actions
+## 15. Reporting and analytics UX requirements
+### 15.1 Report scope and disclosure
+### 15.2 Performance views
+## 16. Open product decisions
+### 16.1 Recommended decision order
+## 17. Prototype data and demonstration scenarios
+### 17.1 Seeded data recommendation
+### 17.2 Scenario A --- Happy-path mixed-domain assessment
+### 17.3 Scenario B --- Recoverable operational failure
+### 17.4 Scenario C --- Permission boundary
+## 18. UX and content standards
+### 18.1 Consistency
+### 18.2 Empty, loading, error, and restricted states
+### 18.3 Tables and filters
+### 18.4 Charts and comparisons
+## 19. Traceability matrix
+## 20. Prototype review checklist
+### Organization and people
+### Sources and sessions
+### Data operations
+### Analysis and reports
+### Overall UX
+## 21. Recommended delivery sequence for the prototype
+### Phase 1 --- Validate the core workflow
+### Phase 2 --- Validate trust and administration
+### Phase 3 --- Expand performance depth
+### Phase 4 --- Prepare implementation discovery
+## 22. Decisions and next actions
+### 22.1 Current agreed direction
+### 22.2 Recommended next actions
+### 22.3 Final note
+## 23. Architecture decisions for validation (Version 0.2 addendum)
+### 23.1 Status and decision register
+### 23.2 Organization creation, joining, and switching
+### 23.3 Three resource scopes and the platform-curated catalog
+### 23.4 Publishing governance
+### 23.5 Proposed domain model changes
+### 23.6 Proposed navigation and screen impacts
+### 23.7 Requirements to add or clarify
+### 23.8 Workflow changes
+### 23.9 Conflicts and reconciliation with the existing specification
+### 23.10 Open validation questions
+### 23.11 Revised MVP boundary
+### 23.12 Updated next actions
