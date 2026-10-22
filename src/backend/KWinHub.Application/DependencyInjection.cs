@@ -1,4 +1,8 @@
+using KWinHub.Application.Authentication;
+using KWinHub.Application.Catalogs;
+using KWinHub.Application.Platform;
 using KWinHub.Application.Protocols;
+using KWinHub.Application.Registration;
 using KWinHub.Application.Results;
 using KWinHub.Application.Sessions;
 using KWinHub.Application.Subjects;
@@ -14,6 +18,11 @@ public static class DependencyInjection
         services.AddScoped<IProtocolService, ProtocolService>();
         services.AddScoped<ISessionService, SessionService>();
         services.AddScoped<IResultService, ResultService>();
+
+        services.AddScoped<IRegistrationService, RegistrationService>();
+        services.AddScoped<IAuthenticationService, AuthenticationService>();
+        services.AddScoped<IPlatformService, PlatformService>();
+        services.AddScoped<ICatalogService, CatalogService>();
 
         return services;
     }

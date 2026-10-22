@@ -1,9 +1,15 @@
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api/v1';
 
-export interface ApiError {
-  status: number;
-  message: string;
-  detail?: unknown;
+export class ApiError extends Error {
+  readonly status: number;
+  readonly detail?: unknown;
+
+  constructor(status: number, message: string, detail?: unknown) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.detail = detail;
+  }
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {

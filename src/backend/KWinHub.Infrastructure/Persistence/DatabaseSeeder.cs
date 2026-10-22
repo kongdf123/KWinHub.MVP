@@ -1,6 +1,9 @@
+using KWinHub.Domain.Catalogs;
 using KWinHub.Domain.Organizations;
 using KWinHub.Domain.Protocols;
 using KWinHub.Domain.Subjects;
+using KWinHub.Domain.Users;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace KWinHub.Infrastructure.Persistence;
@@ -10,9 +13,41 @@ public static class DatabaseSeeder
     // Deterministic IDs used by DevAuth token issuer and frontend fixtures
     public static readonly Guid DemoOrganizationId = new("11111111-1111-1111-1111-111111111111");
     public static readonly Guid DemoUserId         = new("22222222-2222-2222-2222-222222222222");
+    public static readonly Guid PlatformAdminUserId = new("33333333-3333-3333-3333-333333333333");
+
+    public const string PlatformAdminEmail = "admin@kwinhub.com";
+    public const string PlatformAdminPassword = "Admin@12345";
+    public const string DemoUserEmail = "demo@kwinhub.com";
+    public const string DemoUserPassword = "Demo@12345";
 
     public static async Task EnsureDevelopmentSeedDataAsync(KWinHubDbContext db, CancellationToken ct = default)
     {
+        // Users
+        if (!await db.Users.AnyAsync(ct))
+        {
+            var hasher = new PasswordHasher<User>();
+
+            var platformAdmin = new User(
+                email: PlatformAdminEmail,
+                passwordHash: string.Empty,
+                displayName: "Platform Administrator",
+                platformRole: User.PlatformAdminRole,
+                id: PlatformAdminUserId);
+            platformAdmin.ChangePassword(hasher.HashPassword(platformAdmin, PlatformAdminPassword));
+            platformAdmin.MarkEmailVerified();
+
+            var demoUser = new User(
+                email: DemoUserEmail,
+                passwordHash: string.Empty,
+                displayName: "Demo Coach",
+                id: DemoUserId);
+            demoUser.ChangePassword(hasher.HashPassword(demoUser, DemoUserPassword));
+            demoUser.MarkEmailVerified();
+
+            await db.Users.AddRangeAsync(new[] { platformAdmin, demoUser }, ct);
+            await db.SaveChangesAsync(ct);
+        }
+
         // Organization
         if (!await db.Organizations.AnyAsync(ct))
         {
@@ -57,6 +92,92 @@ public static class DatabaseSeeder
             await db.Subjects.AddRangeAsync(subjects, ct);
             await db.SaveChangesAsync(ct);
         }
+
+        // Global protocol catalog
+        if (!await db.GlobalProtocols.AnyAsync(ct))
+        {
+            var protocols = new[]
+            {
+                CreateGlobalProtocol("CMJ", "Countermovement Jump", "1.0", "Force Plate", "General", "Standard bilateral CMJ protocol", published: true),
+                CreateGlobalProtocol("IMTP", "Isometric Mid-Thigh Pull", "1.0", "Force Plate", "Strength", "Maximal isometric strength test", published: true),
+                CreateGlobalProtocol("DJ", "Drop Jump", "1.0", "Force Plate", "Jumping", "Drop jump from a 40cm box", published: true),
+                CreateGlobalProtocol("SJ", "Squat Jump", "1.0", "Force Plate", "Jumping", "Static squat jump", published: true),
+                CreateGlobalProtocol("CMJ-3.0", "Countermovement Jump 3.0", "2.0", "Force Plate", "General", "Next generation CMJ protocol", published: false),
+            };
+            await db.GlobalProtocols.AddRangeAsync(protocols, ct);
+            await db.SaveChangesAsync(ct);
+        }
+
+        // Global metric catalog
+        if (!await db.GlobalMetrics.AnyAsync(ct))
+        {
+            var metrics = new[]
+            {
+                new GlobalMetric("jump_height", "Jump Height", "m", "Kinematics", "Peak jump height"),
+                new GlobalMetric("peak_force", "Peak Force", "N", "Force", "Maximum force produced"),
+                new GlobalMetric("peak_power", "Peak Power", "W", "Power", "Maximum power output"),
+                new GlobalMetric("impulse", "Impulse", "N·s", "Force", "Force-time integral"),
+                new GlobalMetric("flight_time", "Flight Time", "s", "Temporal", "Time spent in the air"),
+                new GlobalMetric("ground_contact_time", "Ground Contact Time", "s", "Temporal", "Time spent on the ground"),
+                new GlobalMetric("reactive_strength_index", "Reactive Strength Index", "m/s", "Performance", "Jump height divided by ground contact time"),
+                new GlobalMetric("relative_peak_force", "Relative Peak Force", "N/kg", "Force", "Peak force normalized to body mass"),
+                new GlobalMetric("force_at_50ms", "Force at 50ms", "N", "Force", "Force at 50 milliseconds"),
+                new GlobalMetric("force_at_100ms", "Force at 100ms", "N", "Force", "Force at 100 milliseconds"),
+            };
+            await db.GlobalMetrics.AddRangeAsync(metrics, ct);
+            await db.SaveChangesAsync(ct);
+        }
+
+        // Device model catalog
+        if (!await db.DeviceModels.AnyAsync(ct))
+        {
+            var devices = new[]
+            {
+                new DeviceModel("Kistler", "9260AA6", "Force Plate", "Piezoelectric force plate"),
+                new DeviceModel("Bertec", "FP4060-10", "Force Plate", "Strain gauge force plate"),
+                new DeviceModel("Hawkin Dynamics", "HD Force Plate", "Force Plate", "Portable dual force plate"),
+            };
+            await db.DeviceModels.AddRangeAsync(devices, ct);
+            await db.SaveChangesAsync(ct);
+        }
+
+        // Algorithm version catalog
+        if (!await db.AlgorithmVersions.AnyAsync(ct))
+        {
+            var publishedAlgorithm = new AlgorithmVersion(
+                "ForcePlate Analysis",
+                "1.0.0",
+                "jump_height,peak_force,peak_power,impulse,flight_time",
+                "Initial force plate analysis pipeline");
+            publishedAlgorithm.Publish();
+
+            var draftAlgorithm = new AlgorithmVersion(
+                "ForcePlate Analysis",
+                "1.1.0",
+                "jump_height,peak_force,peak_power,impulse,flight_time,reactive_strength_index",
+                "Adds reactive strength index calculation");
+
+            await db.AlgorithmVersions.AddRangeAsync(new[] { publishedAlgorithm, draftAlgorithm }, ct);
+            await db.SaveChangesAsync(ct);
+        }
+    }
+
+    private static GlobalProtocol CreateGlobalProtocol(
+        string code,
+        string name,
+        string version,
+        string category,
+        string sport,
+        string description,
+        bool published)
+    {
+        var protocol = new GlobalProtocol(code, name, version, category, sport, description);
+        if (published)
+        {
+            protocol.Publish();
+        }
+
+        return protocol;
     }
 
     private static Protocol CreateProtocol(Guid orgId, string name, string code, string version, string category, string sport, string description)

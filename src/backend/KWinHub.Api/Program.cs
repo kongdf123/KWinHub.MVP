@@ -26,11 +26,29 @@ builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddScoped<ICurrentUserContext, CurrentUserContext>();
 builder.Services.AddSingleton<DevTokenIssuer>();
+builder.Services.AddSingleton<IJwtTokenIssuer, JwtTokenIssuer>();
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("PlatformAdmin", policy => policy.RequireClaim("platform_admin", "true"));
+});
 
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<CreateSubjectRequestValidator>();
 
 builder.Services.AddProblemDetails();
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Frontends", policy => policy
+        .WithOrigins(
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "http://localhost:5174",
+            "http://127.0.0.1:5174")
+        .AllowAnyHeader()
+        .AllowAnyMethod());
+});
 
 ConfigureAuthentication(builder.Services, builder.Configuration);
 
@@ -57,6 +75,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseCors("Frontends");
 
 app.UseAuthentication();
 app.UseAuthorization();

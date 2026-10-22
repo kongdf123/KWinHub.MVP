@@ -1,38 +1,83 @@
 import { useState } from 'react';
-import { Activity, Lock, Mail, ArrowRight } from 'lucide-react';
-import { issueDevToken, setToken, clearToken } from '@/lib/api/http';
+import { Activity, ArrowRight, Loader2, Lock, Mail } from 'lucide-react';
+import { http, setToken, clearToken } from '@/lib/api/http';
+import { LanguageSwitcher, useI18n } from '@/lib/i18n-context';
 
 interface LoginPageProps {
   onLogin: () => void;
+  onGoToRegister: () => void;
 }
 
-export function LoginPage({ onLogin }: LoginPageProps) {
-  const [email, setEmail] = useState('admin@kunwei.com');
-  const [password, setPassword] = useState('demo');
+interface LoginResponse {
+  token: string;
+  type: string;
+  userId: string;
+  email: string;
+  displayName: string;
+  organizationId: string;
+  organizationName: string;
+  organizationRole: string;
+  isPlatformAdmin: boolean;
+  emailVerified: boolean;
+  status: string;
+}
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function getErrorMessage(err: unknown, fallback: string): string {
+  if (typeof err === 'object' && err !== null) {
+    const candidate = err as { message?: unknown; detail?: unknown };
+    if (typeof candidate.message === 'string' && candidate.message.trim()) return candidate.message;
+    if (typeof candidate.detail === 'string' && candidate.detail.trim()) return candidate.detail;
+  }
+  return fallback;
+}
+
+export function LoginPage({ onLogin, onGoToRegister }: LoginPageProps) {
+  const { t } = useI18n();
+  const [email, setEmail] = useState('demo@kwinhub.com');
+  const [password, setPassword] = useState('Demo@12345');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [platformAdmin, setPlatformAdmin] = useState(false);
+
+  const consoleUrl = import.meta.env.VITE_PLATFORM_CONSOLE_URL ?? 'http://localhost:5174';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setPlatformAdmin(false);
+
+    if (!email.trim() || !password) {
+      setError(t('login.validation.required'));
+      return;
+    }
+    if (!EMAIL_PATTERN.test(email.trim())) {
+      setError(t('login.validation.email'));
+      return;
+    }
+
     setLoading(true);
     try {
-      // In development mode we skip password validation and issue a DevAuth
-      // token directly using the seeded test credentials from env vars.
-      const apiMode = import.meta.env.VITE_DATA_MODE === 'api';
-      if (apiMode) {
-        const userId = import.meta.env.VITE_DEV_USER_ID ?? '';
-        const organizationId = import.meta.env.VITE_DEV_ORG_ID ?? '';
-        const token = await issueDevToken(userId, organizationId, 'Owner');
-        setToken(token);
+      if (import.meta.env.VITE_DATA_MODE === 'api') {
+        const response = await http.post<LoginResponse>('/auth/login', {
+          email: email.trim(),
+          password,
+        });
+        setToken(response.token);
+        if (response.isPlatformAdmin) {
+          // Platform admins have no organization workspace — keep them on this screen
+          // with a shortcut into the console instead of opening the org app.
+          setPlatformAdmin(true);
+          return;
+        }
       } else {
         // Demo mode: fake token, real check so App.tsx's isLoggedIn() picks it up
         setToken('demo-token');
       }
       onLogin();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Login failed — please verify the backend is running on https://localhost:7001';
-      setError(message);
+      setError(getErrorMessage(err, t('login.error')));
       clearToken();
     } finally {
       setLoading(false);
@@ -51,43 +96,44 @@ export function LoginPage({ onLogin }: LoginPageProps) {
             <div className="w-11 h-11 rounded-xl bg-teal-500 flex items-center justify-center">
               <Activity className="w-6 h-6 text-white" />
             </div>
-            <span className="text-xl font-semibold">Kunwei Hub</span>
+            <span className="text-xl font-semibold">KWinHub</span>
           </div>
           <div>
-            <h1 className="text-4xl font-bold leading-tight mb-4">Force testing,<br />elevated to a system.</h1>
-            <p className="text-lg text-ink-300 max-w-md leading-relaxed">
-              The operating system for sports-performance testing. Capture, analyze, and act on neuromuscular data — all in one place.
-            </p>
+            <h1 className="text-4xl font-bold leading-tight mb-4">{t('brand.tagline')}</h1>
+            <p className="text-lg text-ink-300 max-w-md leading-relaxed">{t('brand.description')}</p>
             <div className="mt-8 space-y-3">
-              {['Multi-athlete testing workflows', 'Real-time validity checking', 'Automated trend analysis & alerts', 'Configurable reports & exports'].map((feat) => (
-                <div key={feat} className="flex items-center gap-3 text-ink-200">
+              {['brand.feature1', 'brand.feature2', 'brand.feature3', 'brand.feature4'].map((key) => (
+                <div key={key} className="flex items-center gap-3 text-ink-200">
                   <div className="w-5 h-5 rounded-full bg-success-500/20 flex items-center justify-center">
                     <div className="w-2 h-2 rounded-full bg-success-400" />
                   </div>
-                  <span className="text-sm">{feat}</span>
+                  <span className="text-sm">{t(key)}</span>
                 </div>
               ))}
             </div>
           </div>
-          <p className="text-xs text-ink-500">© 2026 Kunwei Performance Technologies</p>
+          <p className="text-xs text-ink-500">{t('brand.copyright')}</p>
         </div>
       </div>
 
-      <div className="flex-1 flex items-center justify-center bg-ink-50 px-6">
+      <div className="flex-1 flex items-center justify-center bg-ink-50 px-6 py-10">
         <div className="w-full max-w-sm">
-          <div className="lg:hidden flex items-center gap-2.5 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-teal-500 flex items-center justify-center">
-              <Activity className="w-5 h-5 text-white" />
+          <div className="flex items-center justify-between mb-8">
+            <div className="lg:hidden flex items-center gap-2.5">
+              <div className="w-10 h-10 rounded-xl bg-teal-500 flex items-center justify-center">
+                <Activity className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-lg font-semibold text-ink-900">KWinHub</span>
             </div>
-            <span className="text-lg font-semibold text-ink-900">Kunwei Hub</span>
+            <LanguageSwitcher className="ml-auto" />
           </div>
 
-          <h2 className="text-2xl font-semibold text-ink-900 mb-1">Welcome back</h2>
-          <p className="text-sm text-ink-500 mb-8">Sign in to your organization's testing hub</p>
+          <h2 className="text-2xl font-semibold text-ink-900 mb-1">{t('login.title')}</h2>
+          <p className="text-sm text-ink-500 mb-8">{t('login.subtitle')}</p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-ink-700 mb-1.5">Email</label>
+              <label className="block text-sm font-medium text-ink-700 mb-1.5">{t('login.email')}</label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-400" />
                 <input
@@ -100,7 +146,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-ink-700 mb-1.5">Password</label>
+              <label className="block text-sm font-medium text-ink-700 mb-1.5">{t('login.password')}</label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-400" />
                 <input
@@ -115,13 +161,22 @@ export function LoginPage({ onLogin }: LoginPageProps) {
             <div className="flex items-center justify-between text-sm">
               <label className="flex items-center gap-2 text-ink-600">
                 <input type="checkbox" defaultChecked className="rounded border-ink-300 text-teal-600 focus:ring-teal-400" />
-                Remember me
+                {t('login.remember')}
               </label>
-              <button type="button" className="text-teal-600 hover:text-teal-700 font-medium">Forgot password?</button>
+              <button type="button" className="text-teal-600 hover:text-teal-700 font-medium">
+                {t('login.forgot')}
+              </button>
             </div>
             {error && (
-              <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+              <div className="rounded-lg border border-invalid-200 bg-invalid-50 px-3 py-2 text-xs text-invalid-700">
                 {error}
+              </div>
+            )}
+            {platformAdmin && (
+              <div className="rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-xs text-teal-800">
+                <a href={consoleUrl} className="font-medium underline" target="_blank" rel="noreferrer">
+                  {t('login.platformAdmin')}
+                </a>
               </div>
             )}
             <button
@@ -129,13 +184,31 @@ export function LoginPage({ onLogin }: LoginPageProps) {
               disabled={loading}
               className="w-full flex items-center justify-center gap-2 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-medium text-sm rounded-lg transition-colors disabled:opacity-60"
             >
-              {loading ? 'Signing in...' : 'Sign In'}
-              {!loading && <ArrowRight className="w-4 h-4" />}
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  {t('login.submitting')}
+                </>
+              ) : (
+                <>
+                  {t('login.submit')}
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </button>
           </form>
 
-          <p className="text-xs text-ink-400 text-center mt-6">
-            Demo credentials are pre-filled. Just click Sign In.
+          <p className="text-xs text-ink-400 text-center mt-6">{t('login.demoHint')}</p>
+
+          <p className="text-sm text-ink-600 text-center mt-4">
+            {t('login.noAccount')}{' '}
+            <button
+              type="button"
+              onClick={onGoToRegister}
+              className="font-medium text-teal-600 hover:text-teal-700"
+            >
+              {t('login.createAccount')}
+            </button>
           </p>
         </div>
       </div>

@@ -3,6 +3,8 @@ import { AppProvider, useApp } from '@/lib/app-context';
 import { ToastContainer } from '@/components/ui/Toast';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { LoginPage } from '@/pages/LoginPage';
+import { RegisterPage } from '@/pages/RegisterPage';
+import { VerifyEmailPage } from '@/pages/VerifyEmailPage';
 import { HomePage } from '@/pages/HomePage';
 import { AthletesPage } from '@/pages/AthletesPage';
 import { AthleteProfilePage } from '@/pages/AthleteProfilePage';
@@ -30,6 +32,9 @@ import { TeamsPage } from '@/pages/admin/TeamsPage';
 import { DevicesPage } from '@/pages/admin/DevicesPage';
 import { SettingsPage } from '@/pages/admin/SettingsPage';
 import { isLoggedIn, clearToken } from '@/lib/api/http';
+import { LocaleProvider } from '@/lib/i18n-context';
+
+type AuthView = 'login' | 'register' | 'verify';
 
 function AppContent({ onLogout }: { onLogout: () => void }) {
   const { currentView, toasts, dismissToast } = useApp();
@@ -79,20 +84,55 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
 
 function App() {
   const [loggedIn, setLoggedIn] = useState(isLoggedIn());
+  const [authView, setAuthView] = useState<AuthView>('login');
+  const [pendingEmail, setPendingEmail] = useState('');
+  const [pendingToken, setPendingToken] = useState<string | null>(null);
 
   const onLogout = () => {
     clearToken();
     setLoggedIn(false);
+    setAuthView('login');
+    setPendingEmail('');
+    setPendingToken(null);
   };
 
-  if (!loggedIn) {
-    return <LoginPage onLogin={() => setLoggedIn(true)} />;
-  }
+  const renderAuth = () => {
+    switch (authView) {
+      case 'register':
+        return (
+          <RegisterPage
+            onRegistered={(email, verificationToken) => {
+              setPendingEmail(email);
+              setPendingToken(verificationToken);
+              setAuthView('verify');
+            }}
+            onGoToLogin={() => setAuthView('login')}
+          />
+        );
+      case 'verify':
+        return (
+          <VerifyEmailPage
+            email={pendingEmail}
+            initialToken={pendingToken}
+            onDone={() => setAuthView('login')}
+            onGoToLogin={() => setAuthView('login')}
+          />
+        );
+      default:
+        return <LoginPage onLogin={() => setLoggedIn(true)} onGoToRegister={() => setAuthView('register')} />;
+    }
+  };
 
   return (
-    <AppProvider>
-      <AppContent onLogout={onLogout} />
-    </AppProvider>
+    <LocaleProvider>
+      {!loggedIn ? (
+        renderAuth()
+      ) : (
+        <AppProvider>
+          <AppContent onLogout={onLogout} />
+        </AppProvider>
+      )}
+    </LocaleProvider>
   );
 }
 
