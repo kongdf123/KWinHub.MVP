@@ -1,0 +1,94 @@
+name: ForcePlateDevTool CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        configuration: [Debug, Release]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Setup NuGet/dotnet cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.nuget/packages
+            ~/.local/share/NuGet/v3-cache
+          key: dotnet-cache-${{ runner.os }}-${{ hashFiles('**/Directory.Build.props','**/*.csproj') }}
+          restore-keys: |
+            dotnet-cache-${{ runner.os }}-
+
+      - name: Restore solution
+        run: dotnet restore ForcePlateDevTool.sln
+
+      - name: Build solution
+        run: |
+          dotnet build ForcePlateDevTool.sln `
+            --configuration ${{ matrix.configuration }} `
+            --no-restore
+
+      - name: Run tests
+        run: |
+          dotnet test tests/ForcePlateDevTool.Tests/ForcePlateDevTool.Tests.csproj `
+            --configuration ${{ matrix.configuration }} `
+            --no-build `
+            --logger "console;verbosity=normal"
+
+      - name: Publish self-contained CI package (Release only)
+        if: matrix.configuration == 'Release'
+        shell: pwsh
+        run: |
+          $publishDir = "artifacts/ci-publish"
+
+          # latest tag for artifact naming
+          $latestTag = git describe --tags --abbrev=0 2>$null
+          if (-not $latestTag) {
+            Write-Host "No tags found, falling back to v0.0.0"
+            $latestTag = "v0.0.0"
+          }
+          Write-Host "Latest tag: $latestTag"
+
+          Write-Host "Publish output: $publishDir"
+          New-Item -ItemType Directory -Force -Path $publishDir | Out-Null
+
+          dotnet publish src/ForcePlateDevTool/ForcePlateDevTool.csproj `
+            --configuration Release `
+            --runtime win-x64 `
+            --self-contained true `
+            --output $publishDir
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "dotnet publish failed"
+          }
+
+          echo "CI_ARTIFACT=$publishDir" | Out-File $env:GITHUB_ENV -Append
+          echo "CI_LATEST_TAG=$latestTag" | Out-File $env:GITHUB_ENV -Append
+
+      - name: Upload CI package (Release only)
+        if: matrix.configuration == 'Release'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ForcePlateDevTool-${{ env.CI_LATEST_TAG }}
+          path: ${{ env.CI_ARTIFACT }}
+          if-no-files-found: error
