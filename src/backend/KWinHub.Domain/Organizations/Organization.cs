@@ -20,9 +20,9 @@ public class Organization : BaseEntity<Guid>
     {
     }
 
-    public Organization(string name, string slug, string? region = null, string? timezone = null, string? locale = null)
+    public Organization(string name, string slug, string? region = null, string? timezone = null, string? locale = null, Guid? id = null)
     {
-        Id = Guid.NewGuid();
+        Id = id ?? Guid.NewGuid();
         Name = name;
         Slug = slug;
         Region = region;

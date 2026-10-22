@@ -7,7 +7,7 @@ import {
   TrendingUp, GitCompare, Waves, FileText, Database, Server,
   HardDrive, BookOpen, Plug, RefreshCw, ChevronDown, ChevronRight,
   Building2, UserCog, ShieldCheck, UsersRound, Cpu, Settings,
-  FlaskConical, type LucideIcon,
+  FlaskConical, LogOut, type LucideIcon,
 } from 'lucide-react';
 import { StatusDot } from '@/components/ui/StatusBadge';
 
@@ -24,7 +24,7 @@ interface NavGroup {
   items: NavItem[];
 }
 
-export function Sidebar() {
+export function Sidebar({ onLogout }: { onLogout?: () => void }) {
   const { currentView, navigate, lang } = useApp();
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
 
@@ -165,6 +165,15 @@ export function Sidebar() {
           <FlaskConical className="w-3.5 h-3.5" />
           <span>v2.1 · {lang === 'cn' ? '处理正常' : 'Processing OK'}</span>
         </div>
+        {onLogout && (
+          <button
+            onClick={onLogout}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-kunwei-300 hover:bg-kunwei-900 hover:text-white transition-colors"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            Sign out
+          </button>
+        )}
       </div>
     </aside>
   );

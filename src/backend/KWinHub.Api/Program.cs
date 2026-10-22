@@ -1,11 +1,15 @@
 using System.Text;
 using FluentValidation;
+using FluentValidation.AspNetCore;
 using KWinHub.Api.Services;
 using KWinHub.Application;
 using KWinHub.Application.Abstractions;
 using KWinHub.Application.Subjects;
 using KWinHub.Infrastructure;
+using KWinHub.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -35,13 +39,22 @@ builder.Services.AddInfrastructure(builder.Configuration);
 
 var app = builder.Build();
 
+// Auto-migrate and seed development data
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<KWinHubDbContext>();
+    await db.Database.MigrateAsync();
+    if (app.Environment.IsDevelopment())
+    {
+        await DatabaseSeeder.EnsureDevelopmentSeedDataAsync(db);
+    }
+}
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "KWinHub API v1"));
 }
-
-app.UseProblemDetails();
 
 app.UseHttpsRedirection();
 

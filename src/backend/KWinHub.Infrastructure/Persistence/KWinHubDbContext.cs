@@ -83,7 +83,7 @@ public class KWinHubDbContext : DbContext
             b.HasIndex(s => s.OrganizationId);
             b.HasIndex(s => s.SubjectId);
             b.HasIndex(s => s.ProtocolId);
-            b.HasIndex(s => new { s.OrganizationId, s.ExternalId });
+            b.HasIndex(s => new { s.OrganizationId, s.ExternalId }).IsUnique();
         });
 
         modelBuilder.Entity<Result>(b =>

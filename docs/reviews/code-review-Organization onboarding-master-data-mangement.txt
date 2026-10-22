@@ -1,0 +1,1123 @@
+Yes — I would address both in the KWinHub MVP, but I would treat them as two separate product capabilities:
+1. Organization onboarding: How a customer organization gets access to KWinHub.
+2. KWinHub global master data management: How platform administrators manage shared data that is not owned by an individual organization, team, or athlete.
+The key architectural principle is to distinguish platform-level data from tenant-owned data. Not every record in KWinHub should belong to an organization.
+1. Should we provide an Organization registration form?
+My recommendation is yes, but keep public registration and platform approval separate.
+
+For an early MVP, I would implement an Organization onboarding page in src/frontend/KWinHub.Web.React, but I would not let an unauthenticated visitor immediately create a fully active organization with unrestricted access.
+Organization registration
+
+Organization name · Contact details · Requested account
+
+Pending approval
+
+Platform administrator reviews the request
+
+Organization activated
+
+Initial organization administrator is assigned
+
+
+This is a recommended workflow, not a description of existing KWinHub functionality.
+Suggested MVP scope
+- Public registration form with organization name, contact name, email, and password or supported identity-provider sign-in.
+- Duplicate-organization checks and email verification where applicable.
+- A PendingApproval organization state.
+- A platform-admin approval workflow.
+- Creation of the initial organization administrator and membership after approval.
+- An organization status and onboarding page.
+For a controlled internal prototype, you can simplify this further: have the platform administrator create organizations and invite the initial administrator. That avoids building public registration, email verification, and account-recovery flows before they are needed.
+
+Security note: Do not treat the registration form as a trusted way to assign PlatformAdmin or other privileged roles. Public registration should only request ordinary organization access.
+2. Where should we manage KWinHub-wide base data?
+I recommend creating a separate Platform Administration area in the React application, distinct from the normal Organization workspace.
+
+The platform administrator manages shared catalogs and definitions. Organization administrators configure which shared resources their organization uses. Team and individual users consume those resources in their workflows.
+Recommended navigation structure
+KWinHub Platform Console
+
+PlatformAdmin only
+
+
+Organizations and onboarding
+
+Global protocol catalog
+
+Metric definitions and units
+
+Device manufacturers and models
+
+Analysis algorithms and versions
+
+Platform users and roles
+
+
+
+Organization Workspace
+
+OrganizationAdmin and authorized members
+
+
+Teams and athletes
+
+Enabled protocols and organization-specific settings
+
+Sessions, measurements and results
+
+Reports and organization data
+
+
+
+I would avoid placing global catalog management inside an individual organization's Settings page. Otherwise, users can easily confuse changing a shared protocol definition with changing their organization's configuration.
+3. Which data should be global, and which should be organization-owned?
+Here is the data ownership model I would adopt for KWinHub.
+Data entity	Scope	Example
+Protocol definition	Platform	CMJ, squat, sprint testing
+Metric definition	Platform	Peak force, jump height, impulse
+Unit definition	Platform	N, kg, m, s
+Device manufacturer/model catalog	Platform	Supported force plate models
+Analysis algorithm and version	Platform	CMJ calculation implementation v1
+Organization	Platform-managed entity	Kunwei customer organization
+Enabled protocol/configuration	Organization	Organization-specific CMJ settings
+Team	Organization	Sports science department
+Athlete/subject	Organization	Individual athlete profile
+Test session	Organization	One athlete's test event
+Raw recordings and results	Organization	Force-time curve and analysis output
+Organization-specific report template	Organization	Customer-branded report
+
+A crucial distinction is that global definitions and organization-specific configurations are not the same record.
+
+For example, KWinHub might provide a global CMJ protocol definition. An organization can enable that protocol and configure permitted parameters without changing the global definition for every other customer.
+
+For force plate recalculation, I would also keep algorithm versions immutable once used to produce results. Publishing a new version should not silently change historical results.
+4. How should we implement the data model?
+Prefer explicit global definitions and organization-owned configuration records rather than adding a nullable organization ID to every table and hoping that access rules remain consistent.
+
+For example:
+GlobalProtocolDefinition
+
+Id · Code · Name · Version · Definition · Status
+
+OrganizationProtocol
+
+OrganizationId · ProtocolDefinitionId · Enabled · LocalSettings
+
+TestSession
+
+OrganizationId · SubjectId · ProtocolVersion · Session metadata
+
+
+This separation provides several benefits:
+- The platform can publish and version shared definitions.
+- Organizations can enable or disable supported protocols.
+- Organization-specific settings cannot accidentally mutate the global catalog.
+- Sessions can retain a reference to the exact protocol version used for a test.
+- Authorization rules remain explicit.
+The same pattern works for device capabilities and metric definitions. Not every global catalog needs an organization-specific join table, however; introduce one only when organizations actually need to enable, configure, or override that resource.
+5. Who can manage global base data?
+I recommend defining these roles separately:
+Role	Responsibility
+PlatformAdmin	Manage organizations, shared catalogs, platform roles and global settings
+OrganizationAdmin	Manage organization members, teams, athletes and organization settings
+Coach / Operator	Perform authorized testing and view permitted results
+Viewer	Read permitted sessions, metrics and reports
+
+These are proposed role names; align them with the existing authorization model.
+
+Platform administration must not mean unrestricted access to every organization's athlete records. Platform catalog privileges and tenant-data access privileges should be separate permissions. An administrator who manages metric definitions should not automatically gain access to all raw athlete recordings.
+
+The backend must enforce these permissions. Hiding menu items in React is only a UI behavior, not a security boundary.
+6. Where should global base data be created and maintained?
+Not every catalog needs a full CRUD screen in the first release.
+Data type	MVP management method
+Built-in protocols	Version-controlled seed data plus a read-only catalog page
+Metric definitions and units	Seed data, with controlled platform-admin editing if needed
+Device models	Seed data initially; add management UI when new models must be onboarded frequently
+Analysis algorithms	Versioned code and controlled release process, not arbitrary database editing
+Organizations	Platform-admin UI and optional registration workflow
+Organization protocol settings	Organization Settings page
+
+This keeps the MVP maintainable. A protocol definition or calculation algorithm can affect historical results, so editing it should not be equivalent to changing a display label. Use versioning, validation and an audit trail where changes affect interpretation.
+7. Concrete changes I would make in KWinHub.Web.React
+I would organize the implementation into three stages.
+1. Stage 1 — Establish ownership and authorization
+   - Document which existing entities are global versus organization-owned.
+   - Ensure tenant-owned APIs always enforce organization scope.
+   - Add platform-level authorization checks.
+   - Seed a minimal global protocol and metric catalog.
+2. Stage 2 — Add Platform Administration
+   - Add a protected Platform Console layout and navigation.
+   - Implement organization listing, registration review and activation.
+   - Add a read-only global protocol and metric catalog.
+   - Add organization-specific protocol enablement and configuration.
+3. Stage 3 — Connect testing and recalculation
+   - Make force plate ingestion reference a known subject and protocol.
+   - Record the protocol and analysis versions used for each test.
+   - Show global metric definitions consistently in results and reports.
+   - Add regression tests for tenant isolation and protocol version changes.
+My final recommendation: support organization onboarding, but keep approval-controlled activation for the MVP. Introduce a separate Platform Console for global master data, and model shared definitions independently from organization-specific settings. This gives KWinHub a clean multi-tenant foundation without requiring a large platform-management subsystem before the force plate workflow works end to end.
+
+So, we will create a seperate frontend project for Platform Console, and build a register form in src\frontend\KWinHub.Web.React?
+Not exactly. I recommend creating a separate Platform Console as a future frontend application, but not as a separate project in the first MVP iteration. Keep the organization registration form in src/frontend/KWinHub.Web.React, alongside the existing organization-facing application.
+
+The distinction is between frontend deployment architecture and user-facing product areas.
+
+Recommended project structure
+KWinHub Platform
+
+Shared backend APIs · Authentication · Authorization · PostgreSQL
+
+KWinHub.Web.React
+
+Build now
+Organization registration, login, athlete management, sessions, results and reports.
+
+Platform Console
+
+Later
+Platform administration, organization approval, global protocols, metric catalogs and device models.
+
+Both frontends can use the same backend, but their routes, navigation and permissions should be separated.
+
+What to implement now
+Feature
+
+Location
+
+MVP decision
+
+Organization registration
+
+KWinHub.Web.React
+
+Add a public registration page
+
+Login
+
+KWinHub.Web.React
+
+Keep organization login
+
+Organization onboarding status
+
+KWinHub.Web.React
+
+Show pending approval or activation status
+
+Approve/reject organizations
+
+Existing React app, protected admin route initially
+
+Build only if needed for the prototype
+
+Global master data management
+
+Future Platform Console
+
+Seed global data initially; use read-only views if useful
+
+Organization-specific settings
+
+KWinHub.Web.React
+
+Manage enabled protocols and local settings
+
+Why not create two separate frontend projects immediately?
+For the current prototype, a second frontend would add build, deployment, routing, authentication and maintenance overhead before the platform's core workflow has been validated.
+
+A better approach is to establish clear code boundaries now, then extract Platform Console into a separate project when it needs independent deployment, release cycles, or stricter operational separation.
+
+One important qualification: if the prototype is only used internally, admin-created organizations and invitations may be simpler than public self-registration. If external customers need to sign themselves up, build the registration form now, with server-side validation and controlled activation.
+
+My recommendation: keep KWinHub.Web.React as the first frontend, implement registration and onboarding there, and design the backend so a future Platform Console can use the same APIs with dedicated platform-admin permissions.
+
+
+Okay, anyway, for Organization register page, if we need the public registration, email verification, and account-recovery flows, these features, what we should prepare for, email server? when send validation email, must I have a enterpsice email server first?
+No, you do not need to own or operate an enterprise email server to implement public registration, email verification, and account recovery for KWinHub.
+
+You need a reliable way to send transactional emails. You can use a third-party email delivery service or an email service provided by your cloud platform. These services handle delivery infrastructure; KWinHub remains responsible for account security and business logic.
+
+For your current KWinHub MVP, I recommend using a transactional email provider rather than building your own mail server.
+
+1. What infrastructure do you actually need?
+1. A domain name
+
+For example, kwinhub.example.com for the application and no-reply@yourdomain.com as the sender. Use a domain you control.
+
+2. An email delivery provider
+
+A transactional email API or SMTP relay sends verification, password-reset, and account-notification emails. No self-hosted mail server is required.
+
+3. Domain authentication
+
+Configure SPF, DKIM, and DMARC DNS records as appropriate for the provider. These help receiving mail systems authenticate your messages.
+
+4. Backend email integration
+
+KWinHub calls the provider's API or SMTP service. Credentials belong on the server, never in the React frontend.
+
+You can develop and test the complete flow before purchasing a production email service. For example, a local mail-capture tool can display outgoing emails during development without actually sending them to users.
+
+2. Which email service should KWinHub use?
+Here are three practical options to evaluate.
+
+Postmark: Entrega de Correo Electrónico Rápida y Confiable | SMTP | API
+Postmark
+
+Straightforward option for application emails such as verification links and password resets. It offers an API and SMTP integration, plus a free developer tier for testing. 
+
+Postmark Support Center
++1
+
+Website: postmarkapp.com
+
+Amazon SES 独自ドメインでメール送信してamazonses.com経由と表示されるケース | DevelopersIO
+Amazon SES
+
+Good candidate if KWinHub is hosted on AWS or you want a low-level email delivery service. Domain verification and production sending access must be configured. 
+
+AWS Messaging Blog
++1
+
+Website: aws.amazon.com/ses
+
+Introduction - Prefect
+SendGrid
+
+Another established option with email APIs and domain authentication features. Account verification and sending limits depend on its current onboarding requirements. 
+
+Twilio
++1
+
+Website: sendgrid.com
+
+You do not need to select a provider before designing the application. I would create a provider-independent email interface in the backend so you can switch services without rewriting registration and account-recovery logic.
+
+One caveat for Kunwei: if KWinHub will be hosted in mainland China or primarily serve mainland Chinese email recipients, verify regional service availability, outbound connectivity, and delivery to the target mail providers before choosing a vendor.
+
+3. How the registration and recovery flow should work
+For KWinHub, there are three distinct email workflows.
+
+Workflow
+
+What happens
+
+Email verification
+
+User registers → Hub sends a verification link → user confirms ownership
+
+Organization activation
+
+Verified registration remains pending until approval, if approval is required
+
+Password recovery
+
+User requests a reset → Hub sends a short-lived, single-use reset link → user chooses a new password
+
+The email service only delivers the message. KWinHub must implement the security logic.
+
+For verification and password reset, use cryptographically random, single-use tokens with an expiry time. Store a hash of each token rather than the raw token, invalidate it after use, and rate-limit requests. Password-reset responses should not reveal whether an email address has an account. Build reset links from a configured trusted application URL, not an arbitrary Host header.
+
+For an ASP.NET Core backend, consider ASP.NET Core Identity rather than implementing password storage and account-management primitives from scratch. If you use an external identity provider instead, let it handle verification and recovery where appropriate.
+
+4. What I would prepare in the KWinHub repository
+I would introduce the following backend components:
+
+IEmailSender — provider-independent email sending interface.
+
+TransactionalEmailService — registration, verification, and recovery workflows.
+
+EmailTemplateService — templates for verification, password reset, and organization status notifications.
+
+EmailVerificationToken and PasswordResetToken — or equivalent built-in identity mechanisms.
+
+Configuration through environment variables or a secret manager; never commit API keys.
+
+Development email capture, plus provider integration tests.
+
+Audit logs for security-relevant events without recording passwords or raw verification/reset tokens.
+
+The React registration page should call the backend and show messages such as “Check your email to continue.” It should never send emails directly or contain the email provider's credentials.
+
+5. Recommended rollout
+Local development: implement the full flow using a local email-capture tool.
+
+Staging: configure a real sender domain and transactional email provider; verify delivery and expiry behavior.
+
+Production: configure SPF/DKIM and an appropriate DMARC policy, monitoring for bounces and delivery failures. 
+
+Amazon Simple Email Service
++1
+
+Public launch: add abuse controls, rate limits, secure account recovery, and the organization approval workflow.
+
+My recommendation: don't buy or set up an enterprise email server. Start with local email capture, choose a transactional email provider when staging is ready, and use a domain you control for production.
+
+One decision will help narrow the provider choice: where do you expect to host KWinHub initially?
+
+The deployment region and expected recipients affect email-provider availability and deliverability.
+
+> Where will KWinHub initially be hosted?
+AWS or another overseas cloud
+
+> Who will receive the registration and recovery emails?
+Both China and international users
+Given that KWinHub will initially run on AWS or another overseas cloud and serve both mainland Chinese and international users, I recommend using a transactional email provider with a verified sending domain, while keeping the email integration provider-independent in the backend.
+
+The main challenge is not sending email from AWS. It is ensuring reliable delivery to different recipient providers, especially mainland Chinese mailboxes, while keeping account verification and recovery secure.
+
+1. Recommended deployment approach
+KWinHub backend on AWS
+
+Registration · Verification tokens · Password recovery · Email queue
+
+Transactional email provider
+
+HTTPS API or SMTP relay · Delivery events · Bounce handling
+
+International inboxes
+
+Gmail, Outlook and other providers
+
+Mainland China inboxes
+
+163, QQ and enterprise mail systems
+
+For the first version, use one provider that can serve both audiences if real delivery tests support it. Avoid building a multi-provider routing system before you have evidence that one provider is insufficient.
+
+2. Which provider would I choose?
+My initial choice would be Amazon SES, because you are already considering AWS hosting and SES integrates directly with AWS. However, I would make the final choice conditional on delivery tests to mainland Chinese inboxes.
+
+Criterion
+
+Amazon SES
+
+Third-party transactional provider
+
+AWS integration
+
+Excellent
+
+Depends on provider
+
+Domain authentication
+
+SPF, DKIM, DMARC support 
+
+Amazon Simple Email Service
++1
+
+Usually supported; verify specifics
+
+Mainland China delivery
+
+Must be tested with your recipient domains
+
+Must also be tested
+
+Operational complexity
+
+Low-to-moderate, but SES setup and sending access require configuration
+
+Depends on onboarding and service
+
+Best fit
+
+AWS-based deployment
+
+Alternative if testing shows better delivery
+
+SES has sending quotas, and new accounts may have sandbox restrictions. You need to verify your sender domain and request production sending access before a public launch. 
+
+Amazon Web Services
++1
+
+Official setup guide: Amazon SES — Create and verify a sending identity
+
+3. A critical point about mainland China email delivery
+Don't assume that successful SMTP/API submission means an email reaches the inbox. Delivery can vary by recipient domain, sender reputation, message content, and filtering policies.
+
+Before launch, test at least:
+
+International inboxes: Gmail and Outlook.
+
+Mainland China inboxes: 163 Mail, QQ Mail, and a representative corporate mailbox.
+
+Both verification emails and password-reset emails.
+
+Delivery time, spam-folder placement, invalid addresses, bounces, and retry behavior.
+
+If SES performs poorly for a particular audience, you can consider a second provider for that audience. I would add routing only after the tests demonstrate that it is necessary.
+
+Because KWinHub will serve users in China and internationally, also review applicable privacy and data-transfer requirements for the email addresses and account data sent to the chosen provider.
+
+4. What to prepare now
+You can prepare these items in parallel with frontend development:
+
+Domain: Register or identify a domain controlled by Kunwei.
+
+Sender address: Choose a transactional sender such as no-reply@yourdomain.com.
+
+DNS access: Ensure you can publish the provider's verification records and configure SPF, DKIM, and DMARC.
+
+AWS account: Set up SES in the intended deployment region and request production sending access.
+
+Backend configuration: Implement IEmailSender, store credentials securely, and keep provider-specific code out of registration controllers.
+
+Testing: Use local email capture during development, then perform a real delivery test before public registration goes live.
+
+My recommendation is to start with one SES integration, one verified sending domain, and a real China/international inbox test matrix. That is the simplest architecture to validate before introducing multiple providers.
+
+I want to build the KWinHub Platform Console in the MVP, please suggest the project structure, and also design the Organization/Individual register form.
+
+For the KWinHub MVP, I recommend building the Platform Console as a distinct administrative area, but keeping it inside the existing React frontend project initially. This gives you a clear boundary between platform-wide administration and the organization/individual user experience without introducing the overhead of maintaining a second frontend application.
+
+The registration experience should support two account types:
+
+- Organization — sports clubs, universities, research institutions, sports teams, and performance centers that need a shared workspace.
+- Individual — coaches, athletes, researchers, and other users who want to use KWinHub without joining an organization.
+
+Both should use the same account registration and email verification infrastructure, but follow different onboarding and authorization flows.
+
+## 1. Recommended MVP project structure
+
+Assuming `src/frontend/KWinHub.Web.React` remains the primary frontend, I would organize it as follows.
+
+KWinHub.Web.React
+
+Single deployable frontend · shared authentication · separate workspaces
+
+Public
+
+Landing page, registration, email verification, login, forgot/reset password, pending approval
+
+Organization Workspace
+
+Subjects/athletes, protocols, test sessions, force-plate ingestion, results, reports, organization settings
+
+Platform Console
+
+Organization approvals, individual account management, global catalogs, platform roles, audit logs, platform settings
+
+### Suggested directory tree
+
+```
+src/frontend/KWinHub.Web.React/
+├── src/
+│   ├── app/
+│   │   ├── router/
+│   │   ├── providers/
+│   │   └── access/
+│   │       ├── RequireAuth.tsx
+│   │       ├── RequirePlatformRole.tsx
+│   │       └── RequireOrganization.tsx
+│   │
+│   ├── layouts/
+│   │   ├── PublicLayout.tsx
+│   │   ├── OrganizationLayout.tsx
+│   │   └── PlatformConsoleLayout.tsx
+│   │
+│   ├── features/
+│   │   ├── auth/
+│   │   │   ├── pages/
+│   │   │   ├── components/
+│   │   │   ├── api/
+│   │   │   └── schemas/
+│   │   ├── registration/
+│   │   │   ├── pages/
+│   │   │   │   └── RegisterPage.tsx
+│   │   │   ├── components/
+│   │   │   │   ├── AccountTypeSelector.tsx
+│   │   │   │   ├── OrganizationFields.tsx
+│   │   │   │   ├── IndividualFields.tsx
+│   │   │   │   └── RegistrationSuccess.tsx
+│   │   │   ├── api/
+│   │   │   └── schemas/
+│   │   ├── platform-console/
+│   │   │   ├── pages/
+│   │   │   │   ├── DashboardPage.tsx
+│   │   │   │   ├── OrganizationsPage.tsx
+│   │   │   │   ├── OrganizationDetailPage.tsx
+│   │   │   │   ├── UsersPage.tsx
+│   │   │   │   ├── ProtocolCatalogPage.tsx
+│   │   │   │   ├── MetricCatalogPage.tsx
+│   │   │   │   ├── DeviceCatalogPage.tsx
+│   │   │   │   ├── AlgorithmVersionsPage.tsx
+│   │   │   │   └── AuditLogPage.tsx
+│   │   │   ├── components/
+│   │   │   ├── api/
+│   │   │   └── types/
+│   │   ├── organization/
+│   │   └── individual/
+│   │
+│   ├── shared/
+│   │   ├── api/
+│   │   ├── components/
+│   │   ├── forms/
+│   │   ├── validation/
+│   │   └── types/
+│   └── main.tsx
+│
+└── tests/
+    ├── registration/
+    ├── authorization/
+    └── platform-console/
+```
+
+This is a proposed structure, not a claim about the current repository's exact files. Adapt it to the existing conventions rather than moving everything at once.
+
+### Backend boundaries
+
+The Platform Console must be enforced by the backend, not just hidden behind frontend routes.
+
+```
+src/backend/
+├── KWinHub.API/
+│   └── Controllers/
+│       ├── AuthController.cs
+│       ├── RegistrationController.cs
+│       ├── PlatformOrganizationsController.cs
+│       ├── PlatformUsersController.cs
+│       ├── PlatformCatalogController.cs
+│       └── AuditLogsController.cs
+├── KWinHub.Application/
+│   ├── Authentication/
+│   ├── Registration/
+│   ├── PlatformAdministration/
+│   └── Catalogs/
+├── KWinHub.Domain/
+│   ├── Organizations/
+│   ├── Users/
+│   ├── GlobalCatalogs/
+│   └── Audit/
+└── KWinHub.Infrastructure/
+    ├── Identity/
+    ├── Email/
+    └── Persistence/
+```
+
+Keep your actual existing project names if they differ. These are logical module boundaries; they do not require a separate backend service.
+
+## 2. What belongs in the Platform Console MVP?
+
+Prioritize the following modules:
+
+| Module             | MVP capability                                                                            | Priority |
+| ------------------ | ----------------------------------------------------------------------------------------- | -------- |
+| Dashboard          | Pending registrations, active organizations, user counts                                  | P1       |
+| Organizations      | Review applications, approve/reject, suspend/reactivate, view details                     | P0       |
+| Users              | Search users, view status, disable accounts, assign permitted roles                       | P0       |
+| Global protocols   | Manage shared protocol definitions and versions                                           | P1       |
+| Metric catalog     | Metric codes, names, units, definitions                                                   | P1       |
+| Device catalog     | Manufacturers and supported device models                                                 | P2       |
+| Algorithm versions | View version, status, and supported metrics; avoid destructive edits to released versions | P1       |
+| Audit log          | Record approval, role, account-status, and catalog changes                                | P1       |
+| Platform settings  | Email configuration status and registration policy                                        | P2       |
+
+Important distinction: platform administrators should manage global definitions and organization lifecycle, but ordinary organization data should remain tenant-isolated. A platform role should not automatically grant unrestricted access to athletes' raw recordings or test results.
+
+For the first MVP, keep the global catalogs simple: seed trusted definitions and let platform administrators review or publish changes. Avoid building a complex workflow engine, granular permission editor, or separate deployment until there is a real operational need.
+
+## 3. Registration form design
+
+I recommend a single registration page with a clear account-type switch, rather than separate registration URLs or completely separate forms. The shared fields stay consistent, and only the account-specific fields change.
+
+The design below is an interactive UI preview. It demonstrates the field structure and account-type switching; it does not submit a real registration.
+
+## KWinHub
+
+SPORTS PERFORMANCE PLATFORM
+
+# Create your account
+
+Connect your team, manage performance testing, and turn measurement data into actionable insights.
+
+How will you use KWinHub?
+
+Choose the account type that best fits your needs.
+
+OrganizationFor clubs, schools, labs and performance centersSelected
+
+IndividualFor coaches, athletes and independent researchers
+
+### Organization details
+
+Organization name \*
+
+Organization type \*
+
+Sports performance center / private facility
+
+Sports club / team
+
+School / university
+
+Research institution
+
+Other organization
+
+Country / region \*China
+
+Website (optional)
+
+Intended use \*
+
+Team and athlete testing
+
+Research and lab testing
+
+Commercial performance services
+
+Other
+
+### Account credentials
+
+Work or personal email \*
+
+Use an address you can access to verify your account.
+
+Password \*
+
+Enforce the password policy on the server and explain the requirements here.
+
+Confirm password \*
+
+I agree to the Terms of Service and acknowledge the Privacy Policy. \*
+
+Send me product updates and KWinHub news. (Optional)
+
+Continue to email verification
+
+UI preview only. No account is created and no email is sent.
+
+Already have an account? Sign in
+
+## 4. Registration and approval workflow
+
+I recommend using one registration endpoint with an explicit account type, followed by server-side branching.
+
+1\. Submit registration
+
+Validate input, check duplicate email, create an unverified account
+
+2\. Verify email
+
+Single-use, expiring verification token
+
+Organization
+
+Create organization application → Pending approval → Platform admin reviews → Organization activated
+
+Individual
+
+Create individual profile → Activate after email verification, subject to abuse checks and account policy
+
+For organization accounts, only an authorized platform administrator can approve the application. Public users must never be able to assign themselves privileged roles.
+
+### Suggested account statuses
+
+Keep account, organization, and email-verification statuses separate. One status field should not represent all three concepts.
+
+| Object                   | Suggested statuses                                 |
+| ------------------------ | -------------------------------------------------- |
+| User account             | `PendingEmailVerification`, `Active`, `Suspended`  |
+| Organization application | `Draft`, `PendingApproval`, `Approved`, `Rejected` |
+| Organization             | `PendingActivation`, `Active`, `Suspended`         |
+| Email verification       | `Unverified`, `Verified`                           |
+
+This separation makes it possible for an email-verified organization applicant to remain unable to access the organization workspace until approval is granted.
+
+## 5. Backend API and data model
+
+A small, versioned API surface is sufficient for the MVP.
+
+| Endpoint                                           | Purpose                                |
+| -------------------------------------------------- | -------------------------------------- |
+| `POST /api/v1/registrations`                       | Register an organization or individual |
+| `POST /api/v1/auth/verify-email`                   | Verify email using a token             |
+| `POST /api/v1/auth/resend-verification`            | Resend verification with rate limiting |
+| `POST /api/v1/auth/login`                          | Authenticate a user                    |
+| `POST /api/v1/auth/forgot-password`                | Request password reset                 |
+| `POST /api/v1/auth/reset-password`                 | Reset password using a one-time token  |
+| `GET /api/v1/platform/organizations`               | Platform-admin organization listing    |
+| `POST /api/v1/platform/organizations/{id}/approve` | Approve an organization application    |
+| `POST /api/v1/platform/organizations/{id}/reject`  | Reject an application                  |
+| `GET /api/v1/platform/users`                       | Search and manage platform accounts    |
+
+These are proposed contracts, not claims that the endpoints already exist in the repository.
+
+A registration request could look like this:
+
+```
+{
+  "accountType": "Organization",
+  "email": "admin@example.com",
+  "password": "user-supplied-secret",
+  "organization": {
+    "name": "Example Sports Lab",
+    "type": "ResearchInstitution",
+    "countryCode": "CN",
+    "website": "https://example.com",
+    "intendedUse": "Research"
+  },
+  "acceptTerms": true,
+  "termsVersion": "2026-10"
+}
+```
+
+For an individual, the `organization` object would be absent and an `individual` object would contain the full name, country/region, role, and optional organization affiliation.
+
+Recommended domain entities:
+
+- `User` — identity, email verification, and account status.
+- `IndividualProfile` — personal profile and user preferences.
+- `Organization` — tenant identity, status, and settings.
+- `OrganizationApplication` — submitted details, review status, reviewer, and decision timestamps.
+- `OrganizationMembership` — user, organization, membership status, and organization-scoped role.
+- `EmailVerificationToken` and `PasswordResetToken` — hashed token, expiry, use timestamp, and associated user.
+- `AuditLog` — registration decisions, account changes, membership changes, and privileged actions.
+- `TermsAcceptance` — user, policy version, timestamp, and applicable consent details.
+
+Do not automatically treat the user who registers an organization as a platform administrator. After approval, assign the applicant an Organization Admin membership for that tenant. Platform Administrator must be a separate, tightly controlled role.
+
+## 6. Important implementation details
+
+1. Use ASP.NET Core Identity or a trusted identity provider for password handling and account lifecycle. Do not implement password hashing or token security from scratch.
+2. Keep email sending server-side. Use your transactional email provider, and use a local email capture tool in development.
+3. Make registration idempotent where appropriate. Handle duplicate submissions, email collisions, expired verification tokens, and repeated approval requests safely.
+4. Validate every privileged API on the backend. Hiding the Platform Console menu is not authorization.
+5. Record consent precisely. Terms acceptance is required; marketing consent is optional and separate.
+6. Avoid collecting unnecessary personal data. Organization legal registration numbers, phone numbers, postal addresses, and identity documents can wait unless you have a specific verification or compliance requirement.
+7. Localize the form later without changing its data contract. Start with English if that is the initial launch language, but design validation messages and country/region fields for international users.
+
+## 7. Suggested MVP delivery sequence
+
+1. Authentication foundation: email/password registration, verification, login, password recovery, account status.
+2. Organization onboarding: create application, pending status, Platform Console review and approval, initial organization admin membership.
+3. Platform Console shell: protected layout, organization queue, user search, account and organization status management, audit events.
+4. Individual onboarding: profile creation, basic individual workspace, and optional organization affiliation.
+5. Global catalog administration: protocol and metric definitions, version-aware publishing, and seed data.
+6. Security tests: verify that ordinary users cannot access platform endpoints, organizations cannot read one another's data, and users cannot grant themselves privileged roles.
+
+The main scope decision is whether organization registration should be open to anyone or require an invitation. The recommendation above assumes open registration with platform-admin approval for organizations, while verified individual accounts can activate without manual approval.
+
+A few onboarding decisions would help finalize the MVP requirements and validation rules.
+
+Answer 3 questions
+
+> How should organization registration work at launch?
+Public registration with automatic activation
+
+> What should individual accounts be able to do in the MVP?
+we can see the individual as special Organization register
+
+> Which languages should the registration UI support initially?
+English, Simplified Chinese
+
+Based on your decisions, I recommend simplifying the KWinHub MVP around one registration system, one organization/tenant model, and two organization types. Individual accounts become a special type of organization rather than a completely separate product or identity workflow.
+
+This is a useful simplification for the first version, particularly because KWinHub will need to associate test sessions, force-plate data, metrics, and results with a tenant.
+
+## 1. Finalized onboarding decisions
+
+| Decision                  | MVP approach                                                            |
+| ------------------------- | ----------------------------------------------------------------------- |
+| Organization registration | Public registration with automatic activation                           |
+| Individual registration   | Register as an organization with type `Individual`                      |
+| Languages                 | English and Simplified Chinese                                          |
+| Authentication            | Shared registration, email verification, login, and password recovery   |
+| Platform Console          | Manage all organizations, users, global catalogs, and platform settings |
+| Tenant isolation          | Every organization-owned record is scoped to an `OrganizationId`        |
+
+One important security distinction: automatic activation should not mean granting unrestricted access before email verification. You can create the organization immediately, but allow access to protected workspace functions only after the account's email is verified.
+
+## 2. Simplified registration UX
+
+Use one registration page with an organization-type selector. Selecting `Individual` changes the fields shown, but not the underlying registration workflow.
+
+## KWinHub
+
+English简体中文
+
+# Create your KWinHub account
+
+Create a workspace for your organization or yourself.
+
+Account type
+
+Organization — club, school, lab or sports center
+
+Individual — personal workspace
+
+### Personal workspace
+
+Full name \*
+
+Personal workspace name \*
+
+This will be your private workspace name; you can change it later.
+
+Primary role
+
+Coach / sports scientist
+
+Athlete
+
+Researcher / student
+
+Other
+
+Country / region \*Select country or region
+
+### Login credentials
+
+Email address \*
+
+Password \*
+
+Confirm password \*
+
+I agree to the Terms of Service and Privacy Policy. \*
+
+Create account
+
+You will verify your email before accessing your workspace.
+
+This is a UI prototype, not a connected registration form. The language selector demonstrates the bilingual layout, and the submit button does not create an account.
+
+## 3. Recommended data model
+
+Instead of building a separate `IndividualAccount` tenant model, use an organization entity with a type field.
+
+```
+Organization
+├── Id
+├── Name
+├── Type              // Standard | Individual
+├── Status            // Active | Suspended
+├── CountryCode
+├── CreatedAt
+└── CreatedByUserId
+
+User
+├── Id
+├── Email
+├── PasswordHash      // managed by identity infrastructure
+├── EmailVerifiedAt
+└── Status
+
+OrganizationMembership
+├── OrganizationId
+├── UserId
+├── Role              // OrganizationAdmin | Member
+└── Status
+```
+
+For an individual registration, the backend creates:
+
+1. A user account.
+2. An organization with `Type = Individual`.
+3. An `OrganizationMembership` record granting the user `OrganizationAdmin` in that personal workspace.
+4. An email-verification request.
+
+For a standard organization, it creates the same core records, except the organization type and submitted organization details differ.
+
+### Why this structure works
+
+- Existing tenant-scoped APIs can work for both individuals and organizations.
+- Every session and result still has a clear `OrganizationId`.
+- An individual can later join a sports club through another membership without converting their personal workspace into a standard organization.
+- You avoid maintaining two parallel sets of data-access rules.
+
+One caveat: if individuals should eventually share data with organizations, use explicit membership and resource-sharing permissions. Do not automatically expose personal workspace data when someone joins an organization.
+
+## 4. Automatic activation: recommended lifecycle
+
+Register
+
+Create user, organization, and membership in one database transaction.
+
+Verify email
+
+Send a time-limited, single-use verification link.
+
+Activate access
+
+Allow the verified user to access their own workspace.
+
+Platform Console oversight
+
+Monitor suspicious registrations, suspend abusive accounts, and manage global catalogs.
+
+Public registration creates an immediate opportunity for spam or fake organizations. For the MVP, use email verification, rate limiting, duplicate checks, and administrative suspension rather than requiring manual approval for every organization.
+
+## 5. API contract and internationalization
+
+Use one registration endpoint:
+
+`POST /api/v1/registrations`
+
+The payload should include a stable account type such as `Standard` or `Individual`, plus the appropriate profile fields. The backend determines permissions and creates the organization; never trust a client-supplied role or organization status.
+
+For bilingual support:
+
+- Store country as ISO 3166-1 alpha-2 codes such as `CN`, `US`, and `JP`, not translated country names.
+- Store organization types and statuses as stable codes; translate their display labels in React.
+- Keep validation messages and email templates localized.
+- Include the chosen language as a preference, for example `en` or `zh-CN`.
+- Keep email addresses and API field names language-neutral.
+
+My final recommendation: implement a single tenant registration flow with `Standard` and `Individual` organization types, automatic organization creation, email verification, and immediate access after verification. Build the Platform Console to oversee that system, rather than creating a second identity or tenant model for individual users.
+
+One more thing, I want to build a seperate frontend for KWinHub Platform Console , does it make sense?
+
+Yes. For KWinHub, a separate frontend for the Platform Console makes sense, especially if you expect the platform to grow into a multi-tenant SaaS product serving sports organizations and individual users internationally.
+
+I would revise my earlier recommendation: keep the registration and user-facing workspace in `KWinHub.Web.React`, and create a separate `KWinHub.PlatformConsole` frontend. Both should share the same backend APIs and identity infrastructure.
+
+The key is to separate the administrative interface without duplicating the backend or creating unnecessary infrastructure.
+
+## 1. Why a separate frontend makes sense
+
+Different users and workflows
+
+The KWinHub application serves coaches, sports scientists, athletes, and lab operators. The Platform Console serves platform administrators managing organizations, accounts, global catalogs, and system operations.
+
+A clearer security boundary
+
+The console can have its own routing, navigation, build, and deployment permissions. This reduces accidental exposure of administrative UI, although backend authorization remains the actual security boundary.
+
+Independent evolution
+
+You can update platform administration without affecting the release cadence of the main application. This becomes more valuable as the number of administrative modules increases.
+
+A better fit for separate product experiences
+
+The Console can use denser data tables, audit views, bulk operations, and administrative dashboards, while the main application focuses on testing workflows and performance data.
+
+The trade-off is additional build configuration, routing, testing, shared-component management, and deployment work. For your project, I think that cost is justified if the Platform Console is a real product capability rather than a temporary admin page.
+
+## 2. Recommended project structure
+
+Keep the two frontends in the same repository initially. This is a monorepo with two independently buildable frontend applications, not two separate backend systems.
+
+```
+KWinHub.MVP/
+├── src/
+│   ├── backend/
+│   │   ├── KWinHub.API/
+│   │   ├── KWinHub.Application/
+│   │   ├── KWinHub.Domain/
+│   │   ├── KWinHub.Contracts/
+│   │   ├── KWinHub.Infrastructure/
+│   │   └── KWinHub.Workers/
+│   │
+│   └── frontend/
+│       ├── KWinHub.Web.React/        # Main user application
+│       ├── KWinHub.PlatformConsole/  # New admin frontend
+│       └── shared/                  # Optional shared frontend packages
+│           ├── api-client/
+│           ├── contracts/
+│           ├── auth/
+│           ├── ui/
+│           └── i18n/
+│
+├── tests/
+│   ├── backend/
+│   └── frontend/
+│
+└── docs/
+    ├── architecture/
+    └── api/
+```
+
+These are proposed names and boundaries. Preserve your existing repository conventions where practical.
+
+### What should be shared?
+
+| Shared across apps                           | Kept separate                                      |
+| -------------------------------------------- | -------------------------------------------------- |
+| Generated API client and DTO types           | Routing and page layouts                           |
+| Authentication primitives and token handling | Navigation and visual design                       |
+| Common form controls and UI primitives       | Organization workspace vs. platform administration |
+| Localization infrastructure                  | Feature-specific translations                      |
+| Validation utilities                         | Application-specific business workflows            |
+
+Avoid creating a large shared component library too early. Start by sharing API contracts and a few stable primitives; extract more when actual duplication appears.
+
+## 3. Define the responsibilities clearly
+
+KWinHub Web
+
+Example: `app.kwinhub.com`
+
+- Public registration and email verification
+- Organization and individual workspaces
+- Athletes, protocols, sessions, results, reports
+- Organization-specific members and settings
+
+KWinHub Platform Console
+
+Example: `admin.kwinhub.com`
+
+- Platform administrator login
+- Organization search, status management, and suspension
+- User account management and support operations
+- Global protocol, metric, device, and algorithm catalogs
+- Audit logs and platform-level configuration
+
+The domain names are examples, not assumptions about your current hosting setup.
+
+One distinction matters: organization registration should remain public on the main website. The Platform Console should not become a prerequisite for creating an organization if you want automatic activation. It should provide oversight and intervention when needed.
+
+## 4. Security architecture
+
+A separate frontend does not, by itself, secure the platform. I recommend the following controls:
+
+- Dedicated platform authorization: require a server-validated `PlatformAdmin` permission for every administrative API operation.
+- Separate application routes and deployment: deploy the Console independently if practical, and optionally restrict access through an identity provider, VPN, or other access policy as your operational requirements mature.
+- Least privilege: distinguish platform administrators from organization administrators. Do not grant access to all tenant data simply because a user can access the Console.
+- Audit logging: record approvals, suspensions, role changes, catalog publication, and other privileged actions.
+- Secure session handling: use an appropriate OAuth/OIDC or session design. If the two apps share an identity provider, define redirect URIs, audiences, scopes, cookie boundaries, and logout behavior deliberately.
+- Backend tenant isolation: continue validating `OrganizationId` and access permissions in all organization-facing APIs.
+
+For the MVP, one backend and one identity system are sufficient. You do not need microservices or a separate authentication server solely because there are two frontends.
+
+## 5. Deployment strategy
+
+KWinHub Web
+
+app.kwinhub.com
+
+HTTPS API requests
+
+Shared KWinHub Backend
+
+Authentication · business APIs · authorization · audit
+
+Shared data infrastructure
+
+PostgreSQL · raw-data storage · background processing
+
+KWinHub Platform Console
+
+admin.kwinhub.com · platform-only APIs and permissions
+
+For AWS hosting, two independent static frontend deployments behind CloudFront are a reasonable starting point, with the API hosted separately. You can deploy both apps from the same repository and CI/CD pipeline while retaining separate build artifacts and release controls.
+
+## 6. Implementation order
+
+I would build the Console in this order:
+
+1. Create the `KWinHub.PlatformConsole` React app with its own router, layout, build configuration, and English/Simplified Chinese localization.
+2. Integrate the existing authentication infrastructure and enforce a platform-specific authorization policy.
+3. Implement organization listing, details, suspension/reactivation, and user management.
+4. Add audit logging and global catalog management.
+5. Configure an independent deployment and test that an ordinary organization user cannot invoke platform APIs.
+
+Bottom line: create the separate frontend now, but keep the backend shared and the shared frontend packages minimal. This provides a clean product boundary without imposing the operational cost of separate backend services.
+
+
+
+

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Activity, Lock, Mail, ArrowRight } from 'lucide-react';
+import { issueDevToken, setToken, clearToken } from '@/lib/api/http';
 
 interface LoginPageProps {
   onLogin: () => void;
@@ -9,14 +10,33 @@ export function LoginPage({ onLogin }: LoginPageProps) {
   const [email, setEmail] = useState('admin@kunwei.com');
   const [password, setPassword] = useState('demo');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      // In development mode we skip password validation and issue a DevAuth
+      // token directly using the seeded test credentials from env vars.
+      const apiMode = import.meta.env.VITE_DATA_MODE === 'api';
+      if (apiMode) {
+        const userId = import.meta.env.VITE_DEV_USER_ID ?? '';
+        const organizationId = import.meta.env.VITE_DEV_ORG_ID ?? '';
+        const token = await issueDevToken(userId, organizationId, 'Owner');
+        setToken(token);
+      } else {
+        // Demo mode: fake token, real check so App.tsx's isLoggedIn() picks it up
+        setToken('demo-token');
+      }
       onLogin();
-    }, 600);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Login failed — please verify the backend is running on https://localhost:7001';
+      setError(message);
+      clearToken();
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -99,6 +119,11 @@ export function LoginPage({ onLogin }: LoginPageProps) {
               </label>
               <button type="button" className="text-teal-600 hover:text-teal-700 font-medium">Forgot password?</button>
             </div>
+            {error && (
+              <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                {error}
+              </div>
+            )}
             <button
               type="submit"
               disabled={loading}

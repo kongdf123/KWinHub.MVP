@@ -1,3 +1,6 @@
+using KWinHub.Application.Protocols;
+using KWinHub.Application.Results;
+using KWinHub.Application.Sessions;
 using KWinHub.Application.Subjects;
 using KWinHub.Infrastructure.Persistence;
 using KWinHub.Infrastructure.Persistence.Repositories;
@@ -20,6 +23,9 @@ public static class DependencyInjection
             options.UseNpgsql(connectionString));
 
         services.AddScoped<ISubjectRepository, SubjectRepository>();
+        services.AddScoped<IProtocolRepository, ProtocolRepository>();
+        services.AddScoped<ISessionRepository, SessionRepository>();
+        services.AddScoped<IResultRepository, ResultRepository>();
 
         return services;
     }

@@ -1,3 +1,6 @@
+using KWinHub.Application.Protocols;
+using KWinHub.Application.Results;
+using KWinHub.Application.Sessions;
 using KWinHub.Application.Subjects;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -8,6 +11,9 @@ public static class DependencyInjection
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
         services.AddScoped<ISubjectService, SubjectService>();
+        services.AddScoped<IProtocolService, ProtocolService>();
+        services.AddScoped<ISessionService, SessionService>();
+        services.AddScoped<IResultService, ResultService>();
 
         return services;
     }

@@ -29,8 +29,9 @@ import { RolesPage } from '@/pages/admin/RolesPage';
 import { TeamsPage } from '@/pages/admin/TeamsPage';
 import { DevicesPage } from '@/pages/admin/DevicesPage';
 import { SettingsPage } from '@/pages/admin/SettingsPage';
+import { isLoggedIn, clearToken } from '@/lib/api/http';
 
-function AppContent() {
+function AppContent({ onLogout }: { onLogout: () => void }) {
   const { currentView, toasts, dismissToast } = useApp();
 
   const renderView = () => {
@@ -67,7 +68,7 @@ function AppContent() {
 
   return (
     <div className="flex min-h-screen bg-ink-50">
-      <Sidebar />
+      <Sidebar onLogout={onLogout} />
       <main className="flex-1 min-w-0">
         {renderView()}
       </main>
@@ -77,7 +78,12 @@ function AppContent() {
 }
 
 function App() {
-  const [loggedIn, setLoggedIn] = useState(false);
+  const [loggedIn, setLoggedIn] = useState(isLoggedIn());
+
+  const onLogout = () => {
+    clearToken();
+    setLoggedIn(false);
+  };
 
   if (!loggedIn) {
     return <LoginPage onLogin={() => setLoggedIn(true)} />;
@@ -85,7 +91,7 @@ function App() {
 
   return (
     <AppProvider>
-      <AppContent />
+      <AppContent onLogout={onLogout} />
     </AppProvider>
   );
 }

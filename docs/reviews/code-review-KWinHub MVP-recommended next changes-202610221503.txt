@@ -1,0 +1,1069 @@
+# KWinHub MVP: recommended next changes
+
+I reviewed the current `main` branch of [KWinHub.MVP](https://github.com/kongdf123/KWinHub.MVP?utm_source=chatgpt.com), including the backend projects, `KWinHub.Web.React`, the second frontend, and the updated product/workflow documentation.
+
+My main recommendation is to turn the existing React prototype into one working end-to-end vertical slice, rather than trying to make every page fully functional at once.
+
+Your prototype already has broad UI coverage: athletes, sessions, protocols, results, comparisons, reports, data sources, sync operations, and organization administration. The largest gap is connecting that experience to real backend behavior.
+
+The product requirements define a good MVP target: create an athlete, conduct a test through an existing Kunwei client, synchronize the data, review the result, compare historical measurements, and export a basic report. The workflow specification also explicitly allows simulated ingestion and integrations in the initial prototype. That means you can demonstrate the full workflow without implementing every device integration or the complete production platform.
+
+## 1. Current state: what to keep and what to change
+
+Keep the backend's layered structure
+
+The API, Application, Domain, Contracts, Infrastructure, and Workers projects provide a reasonable foundation. Keep these boundaries instead of rewriting the backend into a single project.
+
+Keep the React UI and demo data as a prototype asset
+
+The React project already has extensive pages and a service layer that simulates asynchronous operations. Reuse the UI and replace the mock data path incrementally.
+
+Connect the React pages to real services
+
+`src/lib/services.ts` explicitly implements a mock-repository pattern, and pages such as `SessionsPage.tsx` and `HomePage.tsx` import demo data directly. A service abstraction alone does not make the UI backend-connected.
+
+Expand the backend beyond subjects
+
+The current API controllers include subject management and development token issuance. The domain and EF Core model already include protocols, measurement sessions, results, and metrics, but these are not yet exposed as a comparable set of end-to-end application workflows.
+
+One positive change compared with the earlier review: the current `SubjectsController` uses `[Authorize]`, and subject reads are scoped by the organization in the current-user context. `Program.cs` also registers JWT authentication and calls `UseAuthentication()` before `UseAuthorization()`. These are meaningful improvements, but they do not establish that tenant isolation and authorization are complete across the whole platform.
+
+## 2. Backend: what I would implement first
+
+The backend should support one complete business workflow, with PostgreSQL as the source of truth. I would not implement all the UI modules' corresponding APIs immediately.
+
+### Priority P0 — Make the core data workflow real
+
+Suggested scope: first implementation milestone
+
+| Area                 | Changes to make                                                                                     | Acceptance criteria                                                        |
+| -------------------- | --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| Subjects / athletes  | Extend the existing subject API with update, archive, search, and pagination as needed              | Create an athlete in the UI, refresh, and see the same record from the API |
+| Protocols            | Add list/detail endpoints and a small set of seeded test protocols                                  | A session can select a real protocol ID and version                        |
+| Measurement sessions | Add create, list, detail, and status endpoints                                                      | Sessions are persisted and scoped to the current organization              |
+| Results and metrics  | Add result retrieval and persist structured metrics, units, and trial-level values                  | A completed session can display persisted results                          |
+| Development data     | Seed a deterministic demo organization, user/membership, subjects, protocols, sessions, and results | Every developer can start with a predictable dataset                       |
+| Database             | Add a documented migration and startup procedure                                                    | A clean PostgreSQL database can be initialized and used reliably           |
+
+The domain model already contains `Subject`, `Protocol`, `MeasurementSession`, `Result`, and `Metric`; `KWinHubDbContext` maps these to PostgreSQL tables. The next step is to make the application layer and API controllers cover the minimum workflow, rather than introducing new domain concepts prematurely.
+
+Recommended initial API surface:
+
+```
+GET    /api/v1/subjects
+POST   /api/v1/subjects
+GET    /api/v1/subjects/{id}
+PATCH  /api/v1/subjects/{id}
+
+GET    /api/v1/protocols
+GET    /api/v1/protocols/{id}
+
+POST   /api/v1/sessions
+GET    /api/v1/sessions
+GET    /api/v1/sessions/{id}
+GET    /api/v1/sessions/{id}/status
+
+GET    /api/v1/sessions/{id}/results
+GET    /api/v1/results/{id}
+```
+
+These are proposed endpoints, not a claim that they already exist. Align their names and response schemas with the existing [REST API specification](https://github.com/kongdf123/KWinHub.MVP/blob/main/docs/api/rest-api-and-openapi-specification.md?utm_source=chatgpt.com) before implementing them. For the prototype, you can omit update/delete operations on entities that the first workflow does not need.
+
+### Priority P0 — Simulate ingestion, but persist the outcome
+
+Your [workflow specification](https://github.com/kongdf123/KWinHub.MVP/blob/main/docs/product/workflow-specification-and-prototype-requirements.md?utm_source=chatgpt.com) explicitly permits simulated ingestion and exception handling for the prototype. Use that to keep scope manageable.
+
+A good first implementation would be:
+
+1\. Existing Kunwei client or demo uploader
+
+Submit athlete, protocol, test time, trials and metrics
+
+2\. KWinHub API
+
+Authenticate · validate · deduplicate · save session
+
+3\. Simulated processing
+
+Set processing status and produce deterministic test results
+
+4\. React application
+
+Show status, results, history and comparison
+
+For the first version, the processing can be synchronous or handled by a simple background worker. If you retain asynchronous ingestion, implement the actual state transitions rather than merely returning a simulated `202 Accepted` response.
+
+At minimum, support a lifecycle such as:
+
+`RECEIVED → VALIDATING → PROCESSING → ANALYZED`
+
+with explicit failure states and a way to retry a failed operation. Persist the state in PostgreSQL so it survives a refresh or server restart.
+
+Two details are especially important:
+
+- Idempotency: a client retry must not create duplicate sessions or results. Persist the idempotency key with a unique constraint scoped appropriately to the organization or integration.
+- Reproducible demo results: use deterministic fixture data or a fixed test calculation. Do not generate random values on each request, because that makes result comparison and debugging unreliable.
+
+The existing `KWinHub.Workers/Worker.cs` is currently a logging loop. Do not turn it into a large job-processing framework yet. Either use a simple application service for the first demonstrator or give the worker one clearly defined responsibility, such as transitioning queued sessions through simulated processing.
+
+### Priority P0 — Complete the authorization boundary
+
+The current subject endpoints are a good start, but the security rule must apply to every tenant-owned resource.
+
+1. Keep JWT authentication and `[Authorize]` on protected endpoints.
+2. Resolve the organization from a validated user context; do not trust a caller-supplied organization header as proof of membership.
+3. Verify active organization membership and the required role for the operation.
+4. Scope queries for protocols, sessions, results, metrics, files, and exports to the authorized organization.
+5. Fail closed if user or organization claims are missing or invalid. Returning `Guid.Empty` from `CurrentUserContext` should not silently become an alternative tenant identity.
+6. Keep `DevAuthController` available only in Development. Its ability to issue a token for a supplied organization and role is suitable only for controlled local testing, not a production login flow.
+7. Add cross-organization tests before adding more endpoints.
+
+For the prototype, a development token issuer and seeded demo account are reasonable. A full production identity provider can be a separate milestone, but tenant isolation must be implemented and tested from the beginning.
+
+### Priority P1 — Defer infrastructure that does not prove the workflow
+
+Do not make these prerequisites for the first working vertical slice:
+
+- Microservices or a message broker.
+- Distributed caching.
+- A general-purpose workflow engine.
+- A full device-vendor plugin system.
+- Advanced analytics pipelines.
+- Every device, integration and admin API.
+- Complex permissions configuration UI.
+
+The existing project layering is sufficient. Implement the simplest maintainable solution that respects the existing contracts and can later be extended.
+
+## 3. `KWinHub.Web.React`: make it the working prototype
+
+My recommendation is to select `KWinHub.Web.React` as the primary prototype frontend, keep its current visual design, and migrate data access page by page.
+
+Repository references:
+
+- [React frontend](https://github.com/kongdf123/KWinHub.MVP/tree/main/src/frontend/KWinHub.Web.React?utm_source=chatgpt.com)
+- [Mock service layer](https://github.com/kongdf123/KWinHub.MVP/blob/main/src/frontend/KWinHub.Web.React/src/lib/services.ts?utm_source=chatgpt.com)
+- [Demo data](https://github.com/kongdf123/KWinHub.MVP/blob/main/src/frontend/KWinHub.Web.React/src/lib/demo-data.ts?utm_source=chatgpt.com)
+- [Application context](https://github.com/kongdf123/KWinHub.MVP/blob/main/src/frontend/KWinHub.Web.React/src/lib/app-context.tsx?utm_source=chatgpt.com)
+
+### Change 1 — Introduce one real API client
+
+The current `services.ts` documents the intended separation between UI and data access, but the pages still import demo data directly. That means switching the service implementation alone will not make all pages use the backend.
+
+Create a small API layer, for example:
+
+```
+src/lib/
+├── api/
+│   ├── http.ts
+│   ├── subjects-api.ts
+│   ├── protocols-api.ts
+│   ├── sessions-api.ts
+│   └── results-api.ts
+├── services/
+│   ├── subjects-service.ts
+│   ├── sessions-service.ts
+│   └── results-service.ts
+├── demo-data.ts
+├── types.ts
+└── app-context.tsx
+```
+
+This is a proposed structure; you can retain the current `services.ts` and split it only as the implementation grows.
+
+The API client should centralize:
+
+- API base URL from `VITE_API_BASE_URL`.
+- Bearer token attachment.
+- JSON serialization and response parsing.
+- Consistent handling of `400`, `401`, `403`, `404`, and `500` responses.
+- Network errors, loading states and cancellation where appropriate.
+- Request correlation IDs if the backend exposes them.
+
+For example, configure the local environment using:
+
+```
+VITE_API_BASE_URL=https://localhost:7001/api/v1
+```
+
+Use the actual API URL and port from your local launch configuration. Do not commit real credentials or signing keys into frontend environment files.
+
+### Change 2 — Keep mock mode, but make the switch explicit
+
+I would not delete `demo-data.ts`. It is useful for visual development and for screens that are not yet connected to the backend.
+
+Instead, introduce an explicit data-provider selection:
+
+```
+UI component
+    ↓
+Domain service
+    ↓
+┌────────────────────┐
+│ API provider       │  → KWinHub backend
+│ Demo provider      │  → deterministic fixtures
+└────────────────────┘
+```
+
+For example:
+
+```
+type DataMode = 'demo' | 'api';
+```
+
+Use an environment setting or a development-only configuration to select the provider. Keep the same service interface for both implementations.
+
+Important rules:
+
+- A page must not combine live API data with unrelated mock records without explicitly labeling the difference.
+- In API mode, an API failure should show an error and retry action. It should not silently fall back to demo data, because that could make users believe unsaved or stale information is real.
+- Demo mode should visibly indicate that the data is simulated.
+- Use stable demo IDs so related athletes, sessions and results stay linked.
+
+### Change 3 — Replace fake login with the correct prototype authentication flow
+
+In [`App.tsx`](https://github.com/kongdf123/KWinHub.MVP/blob/main/src/frontend/KWinHub.Web.React/src/App.tsx?utm_source=chatgpt.com), the application currently uses local `loggedIn` state. The [`LoginPage.tsx`](https://github.com/kongdf123/KWinHub.MVP/blob/main/src/frontend/KWinHub.Web.React/src/pages/LoginPage.tsx?utm_source=chatgpt.com) simulates login with a timeout; it does not authenticate against the backend.
+
+For a development prototype:
+
+1. Add a Demo sign-in action.
+2. Call the backend's development token endpoint in Development.
+3. Retain the access token in memory where practical, or use an appropriately scoped short-lived session for local testing.
+4. Attach the token to API requests.
+5. On `401`, clear the session and return to the login screen.
+6. On `403`, show a permission error rather than treating it as an expired login.
+
+Avoid adding a home-grown production login/password system. Replace development token issuance with a proper OIDC/OAuth flow before real users or sensitive data are introduced.
+
+### Change 4 — Convert the most valuable pages first
+
+Do not refactor all 25-plus views at once. Prioritize the pages that establish the business workflow.
+
+1\. `AthletesPage.tsx` and `AthleteProfilePage.tsx`
+
+Replace direct demo-data access with the subjects API. Implement create, view, search and edit for the first demonstrator.
+
+Outcome: a real athlete record can be created and revisited.
+
+2\. `ProtocolsPage.tsx` and `ProtocolDetailPage.tsx`
+
+Read the available protocols from the backend. Use a small, seeded protocol catalogue initially.
+
+Outcome: the session workflow uses stable protocol IDs and versions.
+
+3\. `SessionsPage.tsx` and `SessionDetailPage.tsx`
+
+Connect list, detail, creation and status polling. Keep the existing status badges, filters and layout where possible.
+
+Outcome: users can track a real persisted session from submission to completion.
+
+4\. `ResultsPage.tsx`, `ResultDetailPage.tsx`, and `ComparisonsPage.tsx`
+
+Read stored results and compare values from two or more sessions using the same metric definition and unit.
+
+Outcome: users can inspect real API-backed results and historical changes.
+
+5\. `ReportsPage.tsx`
+
+Add a basic report/export for the pilot workflow after the result model stabilizes. A CSV or printable HTML report is enough to start.
+
+Outcome: the first workflow produces a useful deliverable.
+
+Leave advanced dashboards, integrations, sync-center controls, device management, and sophisticated biomechanics visualizations in demo mode until their backend contracts are ready. Do not imply that the prototype can control physical devices if it only displays simulated device status.
+
+### Change 5 — Make the UI reliable when data comes from a server
+
+Mock data is always available and arrives predictably. Real APIs introduce latency, empty results and failure conditions. Add the following to the core pages:
+
+- Loading skeletons or indicators.
+- Explicit empty states.
+- Error messages with a retry action.
+- Form validation and server validation errors.
+- Disabled submit buttons while a mutation is in progress.
+- Confirmation for destructive actions.
+- A refresh strategy for session status.
+- Clear timestamps and units for measurements.
+
+You do not need to introduce a large state-management library immediately. React hooks and the existing application context can support the first slice. If the number of queries and mutations grows substantially, consider a server-state library such as TanStack Query.
+
+### Change 6 — Decide what to do with the second frontend
+
+The repository also contains `src/frontend/KWinHub.Web`, a Vue implementation with its own API code. Its current subject API sends an `X-Organization-Id` header, whereas the current React backend flow resolves organization context from token claims. That mismatch should be resolved rather than allowing two frontends to evolve against different authentication assumptions.
+
+For the MVP:
+
+- Recommended: use React as the primary prototype and mark Vue as experimental or legacy until a deliberate decision is made.
+- If Vue is still intended to be a production frontend, bring its API client and authentication model into alignment with the backend before using it for demos.
+- Avoid implementing the same business feature twice in both frontends.
+
+The purpose is not to prove that React is universally better than Vue. It is to concentrate the limited MVP effort on one coherent user experience.
+
+## 4. Testing and deployment: the minimum needed for a credible prototype
+
+The repository has unit, contract, integration and end-to-end test projects, but the checked-in integration, contract and end-to-end projects contain placeholder tests. Their presence should not be mistaken for workflow coverage.
+
+I would add these tests first:
+
+| Test                   | What it should prove                                                |
+| ---------------------- | ------------------------------------------------------------------- |
+| Backend unit tests     | Subject and session validation, status transitions, metric handling |
+| API integration tests  | Authenticated requests work against a test database                 |
+| Tenant isolation tests | Organization A cannot read or modify Organization B's records       |
+| Idempotency tests      | Repeated ingestion with the same key does not duplicate a session   |
+| React service tests    | API responses, loading, error and empty states behave correctly     |
+| End-to-end test        | Create athlete → create session → process → view result             |
+
+For the first end-to-end test, use deterministic seed data and simulated processing. There is no need to connect a real force plate or video device to validate the platform's data lifecycle.
+
+I would also make sure the team can start the backend and frontend with documented steps, initialize a clean PostgreSQL database, and run the automated checks in CI. Your existing Docker Compose setup can remain the local development foundation; production deployment automation can follow after the core workflow is stable.
+
+## 5. A practical implementation sequence
+
+Here is how I would break down the work. The time estimates are planning estimates, assuming one engineer familiar with the codebase; they are not estimates derived from an executed build.
+
+## 1
+
+Foundation and authentication
+
+Estimated: 2–4 working days
+
+- Establish seeded development data and a repeatable local setup.
+- Connect the React login flow to development authentication.
+- Implement a shared API client and one real subjects workflow.
+- Verify tenant scoping and authorization.
+
+## 2
+
+Sessions and simulated ingestion
+
+Estimated: 3–5 working days
+
+- Implement protocol and session endpoints.
+- Persist session state and structured results.
+- Implement idempotent ingestion and deterministic processing.
+- Connect the sessions list and detail pages.
+
+## 3
+
+Results and first customer workflow
+
+Estimated: 2–4 working days
+
+- Connect result details and historical comparison.
+- Add a basic report/export.
+- Add integration and end-to-end tests.
+- Demonstrate the entire workflow using API-backed data.
+
+That suggests roughly 1.5–3 weeks for a focused first demonstrator, excluding major design changes, difficult environment issues, and integration with a real client application. If the first Kunwei client is straightforward to integrate, it can be included in the same milestone; otherwise, prove the ingestion contract with a small demo uploader first.
+
+## 6. Definition of done for the prototype
+
+I would consider the prototype successful when the following checklist is complete.
+
+### Prototype acceptance checklist
+
+0 / 12 complete
+
+Backend
+
+A clean database can be initialized from documented steps.
+
+Subject, protocol, session and result APIs are persisted and organization-scoped.
+
+A repeated ingestion request cannot create duplicate sessions.
+
+Simulated processing persists success and failure states.
+
+React
+
+Login obtains a development token and API requests use it.
+
+Athletes and sessions are read from the backend, not imported demo arrays.
+
+A user can submit a session and refresh the page without losing its state.
+
+Results and a basic report reflect persisted backend data.
+
+Quality
+
+Cross-organization access tests pass.
+
+Core API integration and end-to-end tests pass.
+
+Loading, empty, error and retry states are demonstrated.
+
+The team can run the application from documented setup instructions.
+
+Reset checklistCopy checklist
+
+## Final recommendation
+
+Keep the architecture you have, but narrow the implementation to one organization, one real athlete workflow, one protocol, one ingestion path, and persisted results. The React application should be the main interface for that workflow; demo data should remain a deliberate development mode rather than an invisible substitute for the backend.
+
+Once that path works reliably, you will have a much stronger foundation for integrating real Kunwei desktop/mobile applications, devices, raw measurement files, and more advanced sports-science analysis.
+
+One detail would help me refine the API and implementation sequence further: which Kunwei client should the first working integration target?
+
+The first client integration determines the ingestion payload and the best prototype workflow to implement.
+
+Answer 1 question
+
+> Which client should we integrate first?
+Force plate / strength testing
+I recommend making force plate / strength testing the first client integration for KWinHub MVP.
+
+The goal should be to prove one complete workflow: a force plate client sends a test result to KWinHub, the backend validates and persists it, and the React application displays the session and analyzed metrics.
+
+1. Proposed MVP integration
+Force plate client application
+
+Athlete · Protocol · Capture · Raw measurements
+
+HTTPS · REST API · JSON
+
+KWinHub API
+
+Authentication · Tenant validation · Ingestion · Idempotency
+
+KWinHub backend and database
+
+Subjects · Protocols · Sessions · Results · Metrics · Processing status
+
+KWinHub React frontend
+
+Session history · Metric results · Charts · Reports
+
+This is a proposed architecture for the MVP, not a claim that all these APIs already exist in the repository.
+
+2. What should we implement first?
+Priority
+
+Capability
+
+MVP scope
+
+P0
+
+Client authentication
+
+Development token initially; production-grade authentication later
+
+P0
+
+Subject mapping
+
+Resolve the athlete to a KWinHub subject ID
+
+P0
+
+Protocol mapping
+
+Identify the test protocol and its version
+
+P0
+
+Session creation
+
+Create a session with athlete, protocol, timestamp, and client metadata
+
+P0
+
+Result ingestion
+
+Submit measurements and persist them
+
+P0
+
+Result visualization
+
+Display saved metrics in React
+
+P1
+
+Duplicate protection
+
+Make retries safe with an idempotency key
+
+P1
+
+Processing status
+
+Track received, processing, completed, and failed states
+
+P2
+
+Device discovery and control
+
+Integrate device management only if needed for the chosen workflow
+
+Important distinction: KWinHub should initially integrate with the force plate client application, not attempt to control every force plate device directly. Let the existing client SDK handle device discovery, acquisition, and hardware-specific behavior.
+
+3. Define a stable ingestion contract
+I would introduce a versioned endpoint such as:
+
+POST /api/v1/ingestions/force-plate
+
+Example request:
+
+{
+  "externalSessionId": "fp-session-20261022-001",
+  "subjectId": "kwinhub-subject-id",
+  "protocolCode": "CMJ",
+  "startedAt": "2026-10-22T09:30:00Z",
+  "device": {
+    "manufacturer": "Kunwei",
+    "model": "ForcePlate",
+    "serialNumber": "FP-DEMO-001"
+  },
+  "measurements": [
+    {
+      "metricCode": "jump_height",
+      "value": 0.42,
+      "unit": "m"
+    },
+    {
+      "metricCode": "peak_force",
+      "value": 1850,
+      "unit": "N"
+    }
+  ]
+}
+
+These metric codes and values are illustrative examples, not verified specifications for Kunwei's actual device or calculation algorithms. The final schema should follow the real client's data model.
+
+The response should include a KWinHub ingestion ID, session ID, processing status, and validation errors where applicable.
+
+Design rules worth establishing now
+Stable identity: Map client-side athlete and session IDs to KWinHub IDs explicitly.
+
+Idempotency: Retrying the same submission must not create duplicate sessions or results.
+
+Units and semantics: Store units and metric definitions; don't silently convert or reinterpret values.
+
+Raw versus derived data: Preserve raw samples when needed for reanalysis, but don't require high-frequency raw data in the first API if the client can provide validated summary metrics.
+
+Tenant isolation: Derive organization access from authenticated claims and membership, not a client-supplied organization ID.
+
+Auditability: Keep the source client, device metadata, timestamps, and processing outcome.
+
+4. The first end-to-end milestone
+Seed one development organization, a few athletes, and a CMJ protocol.
+Connect the React frontend to the backend so it can select an athlete and protocol.
+Have the force plate client submit one completed test, initially using a simulator or fixture if necessary.
+Persist the session and result in PostgreSQL, with duplicate submission protection.
+Open the session in React and verify that the saved metrics survive a page refresh.
+Test invalid subjects, malformed measurements, repeated submissions, and cross-organization access.
+This gives you a demonstrable vertical slice without waiting for a complete device integration framework.
+
+5. One key question before finalizing the design
+How does the current Kunwei force plate client expose its test data? That determines whether KWinHub needs a push API integration, a local adapter, or a more involved device workflow.
+
+Knowing the current client interface will help define the smallest reliable integration.
+
+Once this is clear, the next step is to define the concrete API contract and implementation tasks against the existing KWinHub repository.
+
+> How can the force plate client currently expose results?
+We can support the 1,2,3, including the API, export, local db.
+
+> What data can it provide after a test?
+Both raw data and summary metrics
+Given these capabilities, I recommend designing the first KWinHub force plate integration around a canonical ingestion API with three interchangeable input adapters: direct REST API, file import, and local database/service integration.
+
+Since the client can provide both raw time-series data and summary metrics, KWinHub should preserve the original measurements and the client-calculated results, rather than accepting only summary values. This gives us a practical MVP now while keeping the door open for future reanalysis and comparisons across protocols or devices.
+
+1. Recommended integration architecture
+Kunwei force plate client
+
+Acquisition · Device SDK · Raw samples · Summary metrics
+
+REST adapter
+
+Push JSON
+
+File adapter
+
+JSON / CSV
+
+Local adapter
+
+DB / local service
+
+Shared ingestion pipeline
+
+Normalize · Validate · Deduplicate · Persist · Process
+
+KWinHub storage and application
+
+Sessions · Raw data · Metrics · Status · React results and reports
+
+The key design decision is that all three adapters feed the same ingestion pipeline. We should not build three independent business workflows or let each adapter define its own session and result semantics.
+
+2. Which integration method should we implement first?
+I would prioritize them in this order:
+
+1. REST API
+
+Primary
+The preferred long-term integration. The force plate client submits completed tests directly to KWinHub, with explicit authentication, validation, and acknowledgements.
+
+Best for automated integration and near-real-time result availability.
+
+2. JSON / CSV import
+
+Early MVP
+Use a file exported by the client to validate the data contract and build repeatable demo scenarios. JSON is preferable for preserving structured metadata and raw samples; CSV is useful for tabular time-series data.
+
+Best for prototyping, troubleshooting, and offline workflows.
+
+3. Local database / service
+
+Later
+Build an adapter for the specific local storage technology or service that the client exposes. Prefer a documented local service or read-only database access over directly coupling KWinHub to the client's internal database schema.
+
+Best when the existing client cannot push results directly.
+
+These methods are complementary, not mutually exclusive. The file importer can serve as an integration test fixture even after the REST API is operational.
+
+3. Define the canonical data contract
+I suggest separating each completed test into three logical records.
+
+Record
+
+Purpose
+
+Core fields
+
+Session
+
+Identifies the test event
+
+Subject, protocol, start/end time, source client, device
+
+Raw measurement
+
+Preserves the original signal
+
+Sample rate, channel definitions, timestamps, values, units
+
+Metric result
+
+Stores calculated outcomes
+
+Metric code, value, unit, calculation source, algorithm version
+
+For example, a countermovement jump (CMJ) session could contain force samples over time plus summary metrics such as peak force or jump height. The exact fields and calculations must be verified against the actual Kunwei client output.
+
+Important data-model decisions
+Raw data: Keep it separate from ordinary session metadata. For large time-series payloads, consider object/file storage with metadata and a checksum in PostgreSQL rather than storing every sample in a large JSON column.
+
+Summary metrics: Persist each metric with its unit, metric definition, and provenance. Distinguish values calculated by the client from values calculated by KWinHub.
+
+Protocol versioning: Record the protocol and calculation version used for a test. A metric can change meaning when its calculation algorithm changes.
+
+Data integrity: Validate sample count, timestamps, channel names, units, and payload size. Preserve the original uploaded artifact when practical and permitted.
+
+Idempotency: Use a stable external session ID and an idempotency key so a timeout and retry cannot create duplicate results.
+
+A possible API surface is:
+
+POST /api/v1/ingestions/force-plate
+GET  /api/v1/ingestions/{ingestionId}
+
+GET  /api/v1/sessions
+GET  /api/v1/sessions/{sessionId}
+GET  /api/v1/sessions/{sessionId}/results
+GET  /api/v1/sessions/{sessionId}/raw-data
+The ingestion endpoint can accept session metadata, summary metrics, and either inline raw samples or a reference to an uploaded raw-data artifact. For large recordings, a separate upload flow is preferable.
+
+For local database integration, the adapter should read the client data and transform it into the same canonical contract; it should not bypass KWinHub's authorization, validation, or persistence rules.
+
+4. Implementation plan for the existing KWinHub MVP
+I would divide the work into four milestones.
+
+Milestone 1 — Contract and fixtures
+
+Define the force plate JSON schema, metric naming and unit conventions, and sample data. Create representative success, invalid-data, and duplicate-submission fixtures.
+
+Milestone 2 — Backend ingestion
+
+Implement the API endpoint, authentication and tenant checks, idempotency, PostgreSQL persistence, raw-data storage strategy, and processing status. Start with deterministic processing; avoid adding a message broker unless the actual workload requires it.
+
+Milestone 3 — React integration
+
+Connect athlete selection, protocol selection, session history, and result details to live backend APIs. Make sure refreshes show persisted results, not demo data.
+
+Milestone 4 — Additional adapters
+
+Add JSON/CSV import and the specific local database/service adapter, both using the same canonical ingestion pipeline. Test that the same source test produces equivalent stored results regardless of its entry method.
+
+5. One remaining architecture decision
+Before implementing raw-data storage, I would confirm how large a typical force plate recording is and how frequently it will be uploaded. That determines whether PostgreSQL alone is sufficient for the prototype or whether we should introduce object storage from the start.
+
+Force plate integration assumptions
+Select the closest estimates. We can proceed with sensible defaults if you do not know yet.
+
+Typical raw recording size per test
+
+
+Small — under 1 MB
+
+Medium — 1–20 MB
+
+Large — over 20 MB
+
+Unknown
+How should client data reach the Hub?
+
+
+Usually online; upload after each test
+
+Must support offline capture and later sync
+
+Both online and offline
+Should KWinHub recalculate metrics from raw data?
+
+
+Not in the first version; retain raw data for future use
+
+Yes, recalculation is required in the MVP
+
+Not decided
+My default recommendation is REST API first, JSON fixtures for development, PostgreSQL for session and metric metadata, and a separate raw-data storage abstraction. Start with database-backed storage if recordings are small and the prototype is strictly local; keep the interface flexible enough to move large recordings to object storage later.
+
+Refine the KWinHub force plate MVP architecture using these assumptions: typical raw recording size: 1–20 MB; connectivity: both online and offline; metric recalculation: required in MVP. Recommend storage, upload protocol, and implementation tasks.
+KWinHub Force Plate MVP: Refined Architecture
+Given the three constraints — 1–20 MB raw recordings, online and offline operation, and metric recalculation in the MVP — I recommend a local-first client integration with resumable uploads, durable raw-data storage, and a versioned analysis pipeline on the Hub.
+
+The most important design choice is to treat a force plate test as an immutable measurement event. Preserve the original raw signal, store the client's original metrics, and let KWinHub produce its own versioned analysis results. That gives you reproducibility and lets you compare algorithms without overwriting the original test data.
+
+1. Recommended architecture
+Kunwei force plate desktop client
+
+Device SDK · Local queue · Raw signal · Client metrics · Sync worker
+
+Online
+
+Upload now, receive acknowledgement
+
+Offline
+
+Queue locally, sync on reconnection
+
+KWinHub ingestion API
+
+Auth · Upload sessions · Validation · Deduplication · Acknowledgement
+
+PostgreSQL
+
+Sessions, metadata, metrics, status, algorithm versions
+
+Raw-data storage
+
+Original recording files, checksums, immutable references
+
+Analysis worker and React UI
+
+Versioned recalculation · Results · Comparisons · Reports
+
+This architecture can be implemented within the current KWinHub layered backend and React frontend. It does not require microservices or a message broker for the first prototype.
+
+2. Storage recommendation
+Use PostgreSQL for structured data and S3-compatible object storage for raw recordings. Keep the storage interface abstract so local development and production can use different providers.
+
+Data
+
+Recommended storage
+
+Reason
+
+Subjects, protocols, sessions
+
+PostgreSQL
+
+Relationships, authorization, transactions
+
+Client-reported metrics
+
+PostgreSQL
+
+Queryable and auditable
+
+KWinHub-calculated metrics
+
+PostgreSQL
+
+Versioned results and comparisons
+
+Raw force time-series
+
+Object storage
+
+Efficient binary storage and retrieval
+
+Original uploaded file
+
+Object storage
+
+Preserve source evidence for reanalysis
+
+Upload progress and processing status
+
+PostgreSQL
+
+Durable state across restarts
+
+Temporary client-side upload queue
+
+Local disk/database
+
+Offline support and recovery
+
+Which object storage?
+MinIO Logo PNG Vector (SVG) Free Download
+Development: MinIO or another S3-compatible service
+
+Run it alongside PostgreSQL in Docker Compose. This lets the team develop and test the same object-storage abstraction without requiring a cloud account.
+
+AWS S3 Training Certification Course Online [Best Price]
+Production: managed object storage
+
+Use an S3-compatible managed service or the cloud provider's native object storage. Configure private access, encryption, retention, backup, and lifecycle policies according to the deployment environment.
+
+A raw-data record in PostgreSQL could look conceptually like this:
+
+RawDataArtifact
+  Id
+  SessionId
+  ObjectKey
+  OriginalFileName
+  MediaType
+  SizeBytes
+  Sha256
+  SampleRateHz
+  ChannelMetadata
+  CreatedAt
+  RetentionStatus
+The actual waveform does not need to live in a PostgreSQL row. Store its object key and metadata there. Avoid publicly accessible object URLs; the backend should authorize access before issuing a short-lived download URL or streaming the file.
+
+MVP simplification: If MinIO adds too much setup overhead initially, implement a local filesystem provider behind the same IRawDataStorage abstraction. Do not let filesystem paths become part of the public API or database contract.
+
+3. Upload protocol: reliable online and offline sync
+For recordings of 1–20 MB, I would start with a three-step upload protocol, with retries and checksum validation. Whole-file uploads are usually sufficient at this size; add chunk-level resumability only if testing shows that network interruptions make retries too expensive.
+
+Proposed flow
+1
+Create an ingestion
+
+POST /api/v1/ingestions
+
+Send the external session ID, subject mapping, protocol, recording metadata, file size, checksum, and client version.
+
+The Hub creates an ingestion ID and returns the next upload action.
+
+2
+Upload the raw file
+
+PUT /api/v1/ingestions/{id}/raw-data
+
+Upload the binary payload. Validate file size and SHA-256 checksum before marking the artifact as complete. For object storage, the API can instead issue a short-lived, scoped upload URL.
+
+3
+Finalize and process
+
+POST /api/v1/ingestions/{id}/complete
+
+Verify the artifact, validate the measurements, persist client metrics, and enqueue or start recalculation. Return a durable processing status.
+
+These are proposed endpoints. The implementation should align with the repository's existing REST conventions.
+
+Important retry behavior
+The client generates a stable external session ID before attempting upload.
+
+A retry of the same test returns the existing ingestion rather than creating another one.
+
+The Hub verifies the checksum and recognizes an already uploaded identical artifact.
+
+An incomplete upload is not treated as a completed measurement.
+
+If the server accepts the data but the acknowledgement is lost, the client can query the ingestion status instead of resubmitting a new test.
+
+A processing failure does not require uploading the raw file again unless the artifact itself is invalid or missing.
+
+For 20 MB recordings, test ordinary upload and retry behavior first. If a recording takes a long time to upload over unreliable connections, introduce a resumable upload session with chunk offsets, per-chunk checksums, and explicit finalization.
+
+4. Offline-first client design
+The client should save a completed measurement locally before attempting network transmission. This prevents a Hub outage or disconnected network from losing test data.
+
+Use a local durable queue with these states:
+
+Captured locally
+
+Queued for sync
+
+Uploading
+
+Hub accepted
+
+Retry later
+
+Implementation rules:
+
+Store the raw recording and queue metadata in a durable local location, with the external session ID and checksum.
+
+Retry transient network errors with exponential backoff and jitter; do not retry permanent validation errors indefinitely.
+
+Keep the queued file until the Hub has durably accepted the artifact. If the Hub's acceptance and the client acknowledgement become ambiguous, query status first.
+
+Show local sync state in the client: Pending, Uploading, Synced, or Needs attention.
+
+Support multiple pending tests and restart recovery.
+
+Avoid automatic deletion of local recordings until the retention and recovery policy is clear.
+
+An important distinction: uploaded does not mean analyzed. The Hub may have the original file safely stored while recalculation is still running or has failed.
+
+5. Recalculation architecture
+Because recalculation is required in the MVP, make the analysis pipeline an explicit backend capability rather than a side effect hidden inside the upload endpoint.
+
+Recommended processing sequence
+1
+Artifact verified
+
+Checksum and file format validated
+
+2
+Signal validated
+
+Channels, sample rate, units and timestamps checked
+
+3
+Analysis executed
+
+Versioned algorithm computes metrics
+
+4
+Results persisted
+
+Metrics and provenance saved transactionally
+
+5
+Session completed
+
+Status exposed to React
+
+Separate client and Hub calculations
+Store both sources of metrics, for example:
+
+Client result: the value originally calculated by the force plate client.
+
+Hub result: the value calculated from the preserved raw signal by the KWinHub analysis implementation.
+
+Each calculated result should carry:
+
+Metric code and unit.
+
+Algorithm name and version.
+
+Input artifact ID and checksum.
+
+Processing timestamp and status.
+
+Any relevant parameters or calibration references.
+
+Do not overwrite client metrics with Hub metrics. They may legitimately differ because of filtering, event detection, calibration, or algorithm-version differences.
+
+Also, do not invent or approximate the force plate algorithms. For the first protocol, verify the mathematical definitions, signal-processing parameters, units, and expected output against Kunwei's current implementation and validated test recordings. Add reference datasets with expected results as regression tests.
+
+For the MVP, a database-backed job table and a simple worker are enough. Make jobs idempotent and recoverable after a process restart; introduce a message broker later only if workload or throughput justifies it.
+
+6. Implementation tasks against KWinHub
+The work should proceed in the following order.
+
+P0 — Storage and domain model
+
+Add ingestion and raw-artifact metadata entities.
+
+Separate client-reported metrics from versioned Hub-calculated metrics.
+
+Add migration and development seed data.
+
+Implement IRawDataStorage and a local or S3-compatible provider.
+
+Enforce tenant-scoped access and private artifact access.
+
+P0 — Ingestion API
+
+Implement create, upload, complete, and status endpoints.
+
+Add idempotency constraints and checksum verification.
+
+Validate payload sizes, metadata, and file formats.
+
+Add explicit failure states and safe retry behavior.
+
+Ensure incomplete uploads cannot appear as completed sessions.
+
+P0 — Analysis pipeline
+
+Define a versioned raw-signal input format.
+
+Port or implement one verified force plate analysis protocol.
+
+Persist original and recalculated metrics separately.
+
+Add job recovery and deterministic regression tests.
+
+Expose processing status and analysis errors.
+
+P0 — Client sync and React
+
+Persist a local outbox and retry policy in the desktop client.
+
+Implement a sync worker that recovers pending uploads after restart.
+
+Connect React session lists, result details, and status polling to live APIs.
+
+Display upload status separately from analysis status.
+
+Keep demo mode explicit; do not silently show mock data after an API error.
+
+P1 — Reliability and validation
+
+Test interrupted uploads and reconnection.
+
+Test duplicate submissions and lost acknowledgements.
+
+Test cross-tenant access, expired credentials, and malformed files.
+
+Compare Hub metrics against known-good client outputs.
+
+Verify backup and recovery of raw artifacts and metadata.
+
+7. MVP acceptance criteria
+The integration is ready for demonstration when all of the following are true:
+
+Acceptance checklist
+
+0 of 9
+
+
+An online test uploads raw data and client metrics successfully.
+
+A test captured offline survives client restart and syncs after reconnection.
+
+Repeated submissions do not create duplicate sessions or results.
+
+Raw recordings are durably stored and checksum-verified.
+
+Hub recalculation produces versioned results from the preserved raw data.
+
+Client and Hub metrics remain separately accessible.
+
+A failed analysis can be retried without uploading the raw recording again.
+
+React displays the session, upload state, analysis state and persisted metrics.
+
+Tenant isolation and invalid-payload tests pass.
+Final recommendation
+For the first release, use PostgreSQL + S3-compatible raw-data storage + a durable local client outbox + a versioned analysis worker. Implement whole-file uploads with checksums and retry-safe ingestion first; add chunked uploads only if real connectivity tests justify the extra complexity.
+
+The main dependency is not the upload mechanism. It is obtaining a validated raw-data schema and a reproducible implementation of one Kunwei force plate protocol. Confirm those two pieces early, and the rest of the MVP can be developed against fixtures in parallel.
