@@ -5,7 +5,7 @@ const TOKEN_KEY = 'kwinhub_console_token';
 
 // Prototype mode: serve all requests from the in-memory mock layer until the
 // platform backend is available. Set VITE_USE_MOCK_API=false to call the API.
-const USE_MOCK_API = (import.meta.env.VITE_USE_MOCK_API ?? 'true') !== 'false';
+export const isMockApiEnabled = (import.meta.env.VITE_USE_MOCK_API ?? 'true') !== 'false';
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -15,7 +15,7 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  if (USE_MOCK_API) return mockRequest<T>(path, options);
+  if (isMockApiEnabled) return mockRequest<T>(path, options);
 
   const token = getToken();
   const headers = new Headers(options.headers);

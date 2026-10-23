@@ -52,14 +52,23 @@ const en = {
   'common.confirm': 'Confirm',
 
   // Login
-  'login.title': 'KWinHub Platform Console',
-  'login.subtitle': 'Platform administration',
-  'login.email': 'Email',
+  'login.productLabel': 'Platform Management',
+  'login.title': 'Platform administrator sign in',
+  'login.subtitle': 'Sign in to manage the KWinHub SaaS platform and its services.',
+  'login.formTitle': 'Administrator access',
+  'login.accessDescription':
+    'Use your authorized platform administrator account to continue.',
+  'login.audienceNote':
+    'This console is for KWinHub platform administrators. Tenant members and customer users should use the KWinHub application.',
+  'login.footer': 'Secure access for platform operations',
+  'login.email': 'Administrator email',
+  'login.emailPlaceholder': 'Enter your administrator email',
   'login.password': 'Password',
-  'login.signIn': 'Sign in',
+  'login.passwordPlaceholder': 'Enter your password',
+  'login.signIn': 'Sign in to PlatformConsole',
   'login.signingIn': 'Signing in…',
-  'login.notAdmin': 'This account is not a platform administrator.',
-  'login.restricted': 'Platform administrator access only',
+  'login.notAdmin': 'This account is not authorized to access the platform console.',
+  'login.restricted': 'Restricted administrative access',
 
   // Statuses
   'status.active': 'Active',
@@ -286,14 +295,22 @@ const zhCN: Dictionary = {
   'common.confirm': '确认',
 
   // Login
-  'login.title': 'KWinHub 平台控制台',
-  'login.subtitle': '平台管理',
-  'login.email': '邮箱',
+  'login.productLabel': '平台管理',
+  'login.title': '平台管理员登录',
+  'login.subtitle': '登录以管理 KWinHub SaaS 平台及其服务。',
+  'login.formTitle': '管理员身份验证',
+  'login.accessDescription': '请使用已获授权的平台管理员账号继续。',
+  'login.audienceNote':
+    '本控制台仅供 KWinHub 平台管理员使用。租户成员及客户用户请通过 KWinHub 应用访问。',
+  'login.footer': '平台运营安全访问',
+  'login.email': '管理员邮箱',
+  'login.emailPlaceholder': '请输入管理员邮箱',
   'login.password': '密码',
-  'login.signIn': '登录',
-  'login.signingIn': '登录中…',
-  'login.notAdmin': '该账号不是平台管理员。',
-  'login.restricted': '仅限平台管理员访问',
+  'login.passwordPlaceholder': '请输入密码',
+  'login.signIn': '登录平台控制台',
+  'login.signingIn': '正在登录…',
+  'login.notAdmin': '此账号无权访问平台控制台。',
+  'login.restricted': '仅限授权管理员访问',
 
   // Statuses
   'status.active': '启用',
