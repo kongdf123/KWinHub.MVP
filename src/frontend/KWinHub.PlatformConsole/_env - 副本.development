@@ -1,0 +1,5 @@
+VITE_API_BASE_URL=https://localhost:7001/api/v1
+VITE_APP_NAME=KWinHub Platform Console
+# Prototype demo: use the in-memory mock API instead of the real backend.
+# Set to false once the KWinHub.Api server is running and reachable.
+VITE_USE_MOCK_API=true

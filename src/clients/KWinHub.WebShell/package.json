@@ -1,0 +1,16 @@
+{
+  "name": "kwinhub-webshell",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Desktop shell that hosts KWinHub.Web.React and KWinHub.PlatformConsole in one Tauri window.",
+  "scripts": {
+    "build:frontends": "node scripts/build-frontends.mjs",
+    "tauri": "tauri",
+    "dev": "npm run build:frontends && tauri dev",
+    "build": "tauri build"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
+  }
+}

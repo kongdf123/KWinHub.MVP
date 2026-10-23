@@ -49,6 +49,8 @@ lerna-debug.log*
 coverage/
 *.tsbuildinfo
 vite.config.ts.timestamp-*
+node-compile-cache/
+node-jiti/
 
 # Test results
 [Tt]est[Rr]esults/

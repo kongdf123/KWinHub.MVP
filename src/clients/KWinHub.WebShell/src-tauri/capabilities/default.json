@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Default capability set for the single main window. The app only renders local bundled assets and needs no extra permissions.",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}

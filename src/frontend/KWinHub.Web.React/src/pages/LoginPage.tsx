@@ -41,7 +41,12 @@ export function LoginPage({ onLogin, onGoToRegister }: LoginPageProps) {
   const [error, setError] = useState<string | null>(null);
   const [platformAdmin, setPlatformAdmin] = useState(false);
 
-  const consoleUrl = import.meta.env.VITE_PLATFORM_CONSOLE_URL ?? 'http://localhost:5174';
+  // Inside the Tauri desktop shell, the console is bundled next to this app
+  // (../console/) and the link switches views in-app instead of opening a tab.
+  const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+  const consoleUrl = isTauri
+    ? '../console/index.html'
+    : (import.meta.env.VITE_PLATFORM_CONSOLE_URL ?? 'http://localhost:5174');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -174,7 +179,7 @@ export function LoginPage({ onLogin, onGoToRegister }: LoginPageProps) {
             )}
             {platformAdmin && (
               <div className="rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-xs text-teal-800">
-                <a href={consoleUrl} className="font-medium underline" target="_blank" rel="noreferrer">
+                <a href={consoleUrl} className="font-medium underline" {...(isTauri ? {} : { target: '_blank', rel: 'noreferrer' })}>
                   {t('login.platformAdmin')}
                 </a>
               </div>
