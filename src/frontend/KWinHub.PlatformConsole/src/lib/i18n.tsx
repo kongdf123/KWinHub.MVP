@@ -60,6 +60,12 @@ const en = {
     'Use your authorized platform administrator account to continue.',
   'login.audienceNote':
     'This console is for KWinHub platform administrators. Tenant members and customer users should use the KWinHub application.',
+  'login.brandHeadline': 'One platform. Complete oversight.',
+  'login.brandDescription':
+    'Manage the organizations, accounts, and shared resources that power the KWinHub ecosystem.',
+  'login.feature.organizations': 'Organization and user administration',
+  'login.feature.catalogs': 'Global protocols, metrics, and device catalogs',
+  'login.feature.audit': 'Platform-wide administrative audit visibility',
   'login.footer': 'Secure access for platform operations',
   'login.email': 'Administrator email',
   'login.emailPlaceholder': 'Enter your administrator email',
@@ -302,6 +308,11 @@ const zhCN: Dictionary = {
   'login.accessDescription': '请使用已获授权的平台管理员账号继续。',
   'login.audienceNote':
     '本控制台仅供 KWinHub 平台管理员使用。租户成员及客户用户请通过 KWinHub 应用访问。',
+  'login.brandHeadline': '统一平台，全局掌控。',
+  'login.brandDescription': '集中管理 KWinHub 生态中的组织、账号和共享资源。',
+  'login.feature.organizations': '组织与用户管理',
+  'login.feature.catalogs': '全局方案、指标及设备目录管理',
+  'login.feature.audit': '平台级管理操作审计',
   'login.footer': '平台运营安全访问',
   'login.email': '管理员邮箱',
   'login.emailPlaceholder': '请输入管理员邮箱',
