@@ -46,6 +46,7 @@ lerna-debug.log*
 .env
 .env.*
 !.env.example
+!.env.development
 coverage/
 *.tsbuildinfo
 vite.config.ts.timestamp-*
