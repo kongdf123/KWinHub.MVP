@@ -39,11 +39,13 @@ pub fn run() {
                 _ => return,
             };
             if let Some(window) = app.get_webview_window("main") {
-                // Tauri maps tauri://localhost to the platform-specific asset
-                // protocol base (http://tauri.localhost on Windows).
-                let url = tauri::Url::parse(&format!("tauri://localhost/{path}"))
-                    .expect("valid app url");
-                let _ = window.navigate(url);
+                // On Windows/WebView2 the app is served from http://tauri.localhost
+                // (tauri://localhost is an internal alias that WebView2 cannot
+                // resolve, so navigate() and window.location both silently no-op).
+                // Use window.location.origin in JS to get the correct base URL
+                // regardless of platform.
+                let script = format!("window.location.href = window.location.origin + '/{path}';");
+                let _ = window.eval(script);
             }
         })
         .run(tauri::generate_context!())
