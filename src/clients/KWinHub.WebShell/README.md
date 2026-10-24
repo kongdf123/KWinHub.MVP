@@ -9,16 +9,24 @@ web server, no dev server, and no backend required for the MVP.
 ```
 KWinHub WebShell.exe   (Tauri 2, Windows WebView2)
 └── main window
-    ├── index.html            shell home (local navigation page)
-    ├── web/index.html        KWinHub Web SPA      (demo data by default)
-    └── console/index.html    Platform Console SPA (mock API by default)
+    └── index.html            persistent shell: top tab bar + view stage
+        ├── #home             landing cards (optional destination)
+        ├── web/index.html    KWinHub Web SPA      (demo data by default)  <- iframe
+        └── console/index.html Platform Console SPA (mock API by default) <- iframe
 ```
 
 - Both frontends are production Vite builds (`--base=./`), packaged as local assets.
-- Switching between views is done by the native **Navigate** menu
-  (`Ctrl+0` Home, `Ctrl+1` KWinHub Web, `Ctrl+2` Platform Console), by the shell home
-  page, and by in-app links (e.g. the "Platform Console" link on the KWinHub Web
-  login page switches views in-app when running inside the shell).
+- The shell keeps both frontends mounted in hidden iframes and switches which one is
+  visible. Switching does **not** reload the page, so each frontend keeps its current
+  route and in-memory UI state (e.g. an unsaved KWinHub Web form or the Platform
+  Console hash route) when you switch away and back.
+- Navigation has three equivalent entry points that all call the same `switchView()`:
+  the visible **tab bar** in the shell header, the native **Navigate** menu
+  (`Ctrl+0` Home, `Ctrl+1` KWinHub Web, `Ctrl+2` Platform Console), and the shell's
+  own keyboard shortcuts.
+- KWinHub Web's in-app "Platform Console" link (platform admin login) is intercepted by
+  the shell (same-origin iframe access) and switches to the Console view, so the demo's
+  in-app navigation still works without modifying either frontend.
 - No ASP.NET Core, PostgreSQL, Redis, or MinIO process is started or required.
 - Tauri capabilities are minimal: only `core:default` for the `main` window
   (no filesystem, shell, or http permissions).
@@ -147,7 +155,7 @@ Store any future desktop-only state under the app data dir
 - Windows only (WebView2). NSIS installer downloads WebView2 at install time if
   missing (`downloadBootstrapper`); needs internet on first install unless the
   runtime is already present.
-- PlatformConsole uses hash-based deep links; page refresh inside the shell keeps
-  the current hash route. KWinHub Web uses in-memory view state and restarts on its
-  home view after navigation away.
+- In-memory state is preserved **within a running session** (the iframes stay
+  mounted). It is not persisted across application restarts — mock/demo edits are
+  still lost on close, same as before.
 - No auto-updater configured.

@@ -1,7 +1,9 @@
 //! KWinHub WebShell — single-window Tauri host for the two KWinHub web
-//! frontends. A native "Navigate" menu switches the webview between the
-//! shell home page, KWinHub Web, and Platform Console. All assets are
-//! bundled locally; no web server is involved.
+//! frontends. A persistent HTML shell (`index.html`) keeps both frontends
+//! mounted in hidden iframes; the native "Navigate" menu and its keyboard
+//! shortcuts toggle which iframe is visible instead of reloading the page,
+//! so each frontend's route and in-memory UI state are preserved. All assets
+//! are bundled locally; no web server is involved.
 
 use tauri::menu::{MenuBuilder, MenuItemBuilder, SubmenuBuilder};
 use tauri::Manager;
@@ -32,19 +34,17 @@ pub fn run() {
             Ok(())
         })
         .on_menu_event(|app, event| {
-            let path = match event.id().as_ref() {
-                NAV_HOME => "index.html",
-                NAV_WEB => "web/index.html",
-                NAV_CONSOLE => "console/index.html",
+            let view = match event.id().as_ref() {
+                NAV_HOME => "home",
+                NAV_WEB => "web",
+                NAV_CONSOLE => "console",
                 _ => return,
             };
             if let Some(window) = app.get_webview_window("main") {
-                // On Windows/WebView2 the app is served from http://tauri.localhost
-                // (tauri://localhost is an internal alias that WebView2 cannot
-                // resolve, so navigate() and window.location both silently no-op).
-                // Use window.location.origin in JS to get the correct base URL
-                // regardless of platform.
-                let script = format!("window.location.href = window.location.origin + '/{path}';");
+                // Delegate to the persistent shell: it toggles iframe visibility
+                // rather than reloading the page, so each frontend keeps its
+                // current route and in-memory state.
+                let script = format!("if (typeof window.switchView === 'function') {{ window.switchView({:?}); }}", view);
                 let _ = window.eval(script);
             }
         })
