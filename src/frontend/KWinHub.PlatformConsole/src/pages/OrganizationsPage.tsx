@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api, type PlatformOrganizationResponse } from '../lib/api';
 import { useI18n } from '../lib/i18n';
-import { navigate } from '../lib/router';
+import { navigate, useHashRoute } from '../lib/router';
 import {
   Button,
   Card,
@@ -19,13 +19,14 @@ import {
 
 export function OrganizationsPage() {
   const { t } = useI18n();
+  const route = useHashRoute();
 
   const [organizations, setOrganizations] = useState<PlatformOrganizationResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [status, setStatus] = useState('');
+  const [status, setStatus] = useState(route.query.get('status') ?? '');
   const [type, setType] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
 

@@ -128,7 +128,7 @@ function App() {
       {!loggedIn ? (
         renderAuth()
       ) : (
-        <AppProvider>
+        <AppProvider onLogout={onLogout}>
           <AppContent onLogout={onLogout} />
         </AppProvider>
       )}

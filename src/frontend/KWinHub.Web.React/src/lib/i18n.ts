@@ -2,40 +2,43 @@ import type { Lang } from './types';
 
 export const STRINGS: Record<string, { en: string; cn: string }> = {
   // Nav — top level
-  'nav.home': { en: 'Home', cn: '首页' },
-  'nav.athletes': { en: 'Subjects', cn: '受试者' },
+  'nav.home': { en: 'Overview', cn: '概览' },
+  'nav.athletes': { en: 'Athletes', cn: '运动员' },
+  'nav.teams': { en: 'Teams', cn: '队伍' },
 
-  // Nav — DATA group
-  'nav.group.data': { en: 'DATA', cn: '数据' },
-  'nav.sessions': { en: 'Measurement Sessions', cn: '测试记录' },
+  // Nav — PEOPLE group
+  'nav.group.people': { en: 'PEOPLE', cn: '人员' },
+
+  // Nav — TESTING group
+  'nav.group.testing': { en: 'TESTING', cn: '测试' },
+  'nav.sessions': { en: 'Sessions', cn: '测试记录' },
+  'nav.protocols': { en: 'Protocols', cn: '方案' },
+  'nav.devices': { en: 'Devices', cn: '设备' },
+  'nav.syncCenter': { en: 'Sync Center', cn: '同步中心' },
+
+  // Nav — ANALYSIS & REPORTS group
+  'nav.group.analysis': { en: 'ANALYSIS & REPORTS', cn: '分析与报告' },
   'nav.results': { en: 'Results', cn: '结果' },
-  'nav.datasets': { en: 'Datasets', cn: '数据集' },
-  'nav.rawData': { en: 'Raw Data', cn: '原始数据' },
-  'nav.dataSources': { en: 'Data Sources', cn: '数据源' },
-
-  // Nav — ANALYSIS group
-  'nav.group.analysis': { en: 'ANALYSIS', cn: '分析' },
   'nav.performance': { en: 'Performance', cn: '表现' },
   'nav.trends': { en: 'Trends', cn: '趋势' },
   'nav.comparisons': { en: 'Comparisons', cn: '对比' },
   'nav.biomechanics': { en: 'Biomechanics', cn: '生物力学' },
   'nav.dashboards': { en: 'Dashboards', cn: '仪表盘' },
-
-  // Nav — PLATFORM group
-  'nav.group.platform': { en: 'PLATFORM', cn: '平台' },
-  'nav.protocols': { en: 'Protocols', cn: '方案库' },
   'nav.reports': { en: 'Reports', cn: '报告' },
-  'nav.integrations': { en: 'Integrations', cn: '集成' },
-  'nav.syncCenter': { en: 'Sync Center', cn: '同步中心' },
 
-  // Nav — ADMIN group
+  // Nav — DATA & INTEGRATIONS group
+  'nav.group.data': { en: 'DATA & INTEGRATIONS', cn: '数据与集成' },
+  'nav.datasets': { en: 'Datasets', cn: '数据集' },
+  'nav.rawData': { en: 'Raw Data', cn: '原始数据' },
+  'nav.dataSources': { en: 'Data Sources', cn: '数据源' },
+  'nav.integrations': { en: 'Integrations', cn: '集成' },
+
+  // Nav — ADMINISTRATION group
   'nav.group.admin': { en: 'ADMINISTRATION', cn: '管理' },
   'nav.organization': { en: 'Organization', cn: '组织' },
   'nav.users': { en: 'Users', cn: '用户' },
   'nav.roles': { en: 'Roles & Permissions', cn: '角色权限' },
-  'nav.teams': { en: 'Teams & Groups', cn: '队伍分组' },
-  'nav.devices': { en: 'Devices', cn: '设备' },
-  'nav.settings': { en: 'System Settings', cn: '系统设置' },
+  'nav.settings': { en: 'Settings', cn: '设置' },
 
   // Legacy nav (kept for compatibility)
   'nav.data': { en: 'Data Center', cn: '数据中心' },

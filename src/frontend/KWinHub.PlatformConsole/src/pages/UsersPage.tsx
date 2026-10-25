@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { CheckCircle2, XCircle } from 'lucide-react';
 import { api, type PlatformUserResponse } from '../lib/api';
 import { useI18n, type TranslationKey } from '../lib/i18n';
+import { useHashRoute } from '../lib/router';
 import {
   Button,
   Card,
@@ -36,13 +37,14 @@ const ACTION_CONFIRMATIONS: Record<UserAction, TranslationKey> = {
 
 export function UsersPage() {
   const { t } = useI18n();
+  const route = useHashRoute();
 
   const [users, setUsers] = useState<PlatformUserResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [status, setStatus] = useState('');
+  const [status, setStatus] = useState(route.query.get('status') ?? '');
   const [reloadKey, setReloadKey] = useState(0);
 
   const [pending, setPending] = useState<{ user: PlatformUserResponse; action: UserAction } | null>(
@@ -132,6 +134,7 @@ export function UsersPage() {
             <option value="Active">{t('status.active')}</option>
             <option value="Suspended">{t('status.suspended')}</option>
             <option value="Disabled">{t('status.disabled')}</option>
+            <option value="PendingEmailVerification">{t('status.pendingEmailVerification')}</option>
           </Select>
         </div>
 

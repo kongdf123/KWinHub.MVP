@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import {
   AlertTriangle,
+  ArrowRight,
   Ban,
   Building2,
   CheckCircle2,
+  ShieldAlert,
   UserRound,
   Users,
 } from 'lucide-react';
@@ -102,6 +104,81 @@ export function DashboardPage() {
               icon={<AlertTriangle size={18} />}
               accent="warning"
             />
+          </div>
+
+          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            {(data.suspendedOrganizations > 0 || data.pendingVerificationUsers > 0) && (
+              <Card className="p-5">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle size={16} className="text-attention-600" />
+                  <h2 className="text-sm font-semibold text-ink-900">{t('dashboard.needsAttention')}</h2>
+                </div>
+                <div className="mt-4 space-y-3">
+                  {data.suspendedOrganizations > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => navigate('/organizations?status=Suspended')}
+                      className="flex w-full items-center justify-between rounded-md border border-ink-200 px-4 py-3 text-left transition-colors hover:bg-ink-50"
+                    >
+                      <span className="flex items-center gap-2 text-sm text-ink-700">
+                        <Ban size={15} className="text-attention-600" />
+                        <span className="font-semibold text-ink-900">{data.suspendedOrganizations}</span>
+                        {t('dashboard.suspendedOrgs')}
+                      </span>
+                      <ArrowRight size={15} className="text-ink-400" />
+                    </button>
+                  )}
+                  {data.pendingVerificationUsers > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => navigate('/users?status=PendingEmailVerification')}
+                      className="flex w-full items-center justify-between rounded-md border border-ink-200 px-4 py-3 text-left transition-colors hover:bg-ink-50"
+                    >
+                      <span className="flex items-center gap-2 text-sm text-ink-700">
+                        <Users size={15} className="text-attention-600" />
+                        <span className="font-semibold text-ink-900">{data.pendingVerificationUsers}</span>
+                        {t('dashboard.pendingUsers')}
+                      </span>
+                      <ArrowRight size={15} className="text-ink-400" />
+                    </button>
+                  )}
+                </div>
+              </Card>
+            )}
+
+            <Card className="p-5">
+              <div className="flex items-center gap-2">
+                <ShieldAlert size={16} className="text-teal-600" />
+                <h2 className="text-sm font-semibold text-ink-900">{t('dashboard.securityEvents')}</h2>
+              </div>
+              {data.recentAuditLogs.length === 0 ? (
+                <EmptyState title={t('dashboard.noAuditEvents')} />
+              ) : (
+                <ul className="mt-3 space-y-2">
+                  {data.recentAuditLogs
+                    .filter((log) =>
+                      /(status|suspend|admin|delete|create|grant|revoke)/i.test(log.action)
+                    )
+                    .slice(0, 4)
+                    .map((log) => (
+                      <li key={log.id} className="flex items-start gap-3 rounded-md px-2 py-1.5 hover:bg-ink-50">
+                        <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-teal-500" />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate font-mono text-xs text-ink-700">{log.action}</p>
+                          <p className="mt-0.5 truncate text-xs text-ink-400">
+                            {log.actorEmail ?? t('audit.system')} · {formatDateTime(log.createdAt)}
+                          </p>
+                        </div>
+                      </li>
+                    ))}
+                  {data.recentAuditLogs.some((log) =>
+                    /(status|suspend|admin|delete|create|grant|revoke)/i.test(log.action)
+                  ) ? null : (
+                    <li className="px-2 py-1.5 text-xs text-ink-400">{t('dashboard.noAuditEvents')}</li>
+                  )}
+                </ul>
+              )}
+            </Card>
           </div>
 
           <div className="mt-5 grid gap-5 xl:grid-cols-2">

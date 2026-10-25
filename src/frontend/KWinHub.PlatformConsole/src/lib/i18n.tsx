@@ -33,6 +33,10 @@ const en = {
   'nav.devices': 'Devices',
   'nav.algorithms': 'Algorithms',
   'nav.auditLogs': 'Audit log',
+  'nav.group.overview': 'Overview',
+  'nav.group.tenants': 'Tenants & Access',
+  'nav.group.catalogs': 'Platform Catalogs',
+  'nav.group.security': 'Security & Audit',
 
   // Common
   'common.loading': 'Loading…',
@@ -146,6 +150,8 @@ const en = {
   'orgDetail.memberJoined': 'Joined',
   'orgDetail.noMembers': 'No members in this organization',
   'orgDetail.notFound': 'Organization not found',
+  'orgDetail.tab.overview': 'Overview',
+  'orgDetail.tab.members': 'Members',
 
   // Users
   'users.title': 'Users',
@@ -253,6 +259,16 @@ const en = {
   'audit.entity.globalMetric': 'Global metric',
   'audit.entity.deviceModel': 'Device model',
   'audit.entity.algorithmVersion': 'Algorithm version',
+  'audit.export': 'Export CSV',
+  'audit.exportNone': 'No records to export',
+  'audit.search': 'Search actor, action, or summary…',
+
+  // Dashboard extras
+  'dashboard.needsAttention': 'Needs attention',
+  'dashboard.suspendedOrgs': 'suspended organizations',
+  'dashboard.pendingUsers': 'users pending verification',
+  'dashboard.viewFiltered': 'View filtered list',
+  'dashboard.securityEvents': 'Recent security-sensitive actions',
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -282,6 +298,10 @@ const zhCN: Dictionary = {
   'nav.devices': '设备',
   'nav.algorithms': '算法',
   'nav.auditLogs': '审计日志',
+  'nav.group.overview': '概览',
+  'nav.group.tenants': '租户与访问',
+  'nav.group.catalogs': '平台目录',
+  'nav.group.security': '安全与审计',
 
   // Common
   'common.loading': '加载中…',
@@ -393,6 +413,8 @@ const zhCN: Dictionary = {
   'orgDetail.memberJoined': '加入时间',
   'orgDetail.noMembers': '该组织暂无成员',
   'orgDetail.notFound': '未找到组织',
+  'orgDetail.tab.overview': '概览',
+  'orgDetail.tab.members': '成员',
 
   // Users
   'users.title': '用户',
@@ -500,6 +522,16 @@ const zhCN: Dictionary = {
   'audit.entity.globalMetric': '全局指标',
   'audit.entity.deviceModel': '设备型号',
   'audit.entity.algorithmVersion': '算法版本',
+  'audit.export': '导出 CSV',
+  'audit.exportNone': '没有可导出的记录',
+  'audit.search': '搜索操作人、操作或摘要…',
+
+  // Dashboard extras
+  'dashboard.needsAttention': '需要关注',
+  'dashboard.suspendedOrgs': '个已暂停组织',
+  'dashboard.pendingUsers': '个待验证用户',
+  'dashboard.viewFiltered': '查看筛选列表',
+  'dashboard.securityEvents': '最近安全相关操作',
 };
 
 const DICTIONARIES: Record<Locale, Dictionary> = {

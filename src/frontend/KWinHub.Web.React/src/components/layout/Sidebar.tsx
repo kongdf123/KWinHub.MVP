@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '@/lib/app-context';
 import { t as tr } from '@/lib/i18n';
 import { DEMO_ORG } from '@/lib/demo-data';
 import {
   Activity, LayoutDashboard, Users, ClipboardList, BarChart3,
   TrendingUp, GitCompare, Waves, FileText, Database, Server,
-  HardDrive, BookOpen, Plug, RefreshCw, ChevronDown, ChevronRight,
+  HardDrive, Plug, RefreshCw, ChevronDown, ChevronRight,
   Building2, UserCog, ShieldCheck, UsersRound, Cpu, Settings,
   FlaskConical, LogOut, type LucideIcon,
 } from 'lucide-react';
@@ -25,7 +25,7 @@ interface NavGroup {
 }
 
 export function Sidebar({ onLogout }: { onLogout?: () => void }) {
-  const { currentView, navigate, lang } = useApp();
+  const { currentView, navigate, lang, canAccess } = useApp();
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
 
   const toggleGroup = (id: string) => {
@@ -38,53 +38,49 @@ export function Sidebar({ onLogout }: { onLogout?: () => void }) {
     icon: LayoutDashboard,
   };
 
+  const allItems: NavItem[] = [
+    { view: 'athletes', label: tr('nav.athletes', lang), icon: Users, matchViews: ['athletes', 'athlete-profile'] },
+    { view: 'teams', label: tr('nav.teams', lang), icon: UsersRound, matchViews: ['teams'] },
+    { view: 'sessions', label: tr('nav.sessions', lang), icon: ClipboardList, matchViews: ['sessions', 'session-detail'] },
+    { view: 'protocols', label: tr('nav.protocols', lang), icon: FileText, matchViews: ['protocols', 'protocol-detail'] },
+    { view: 'devices', label: tr('nav.devices', lang), icon: Cpu, matchViews: ['devices'] },
+    { view: 'sync-center', label: tr('nav.syncCenter', lang), icon: RefreshCw, matchViews: ['sync-center'] },
+    { view: 'results', label: tr('nav.results', lang), icon: BarChart3, matchViews: ['results', 'result-detail'] },
+    { view: 'performance', label: tr('nav.performance', lang), icon: TrendingUp, matchViews: ['performance'] },
+    { view: 'trends', label: tr('nav.trends', lang), icon: TrendingUp, matchViews: ['trends'] },
+    { view: 'comparisons', label: tr('nav.comparisons', lang), icon: GitCompare, matchViews: ['comparisons'] },
+    { view: 'biomechanics', label: tr('nav.biomechanics', lang), icon: Waves, matchViews: ['biomechanics'] },
+    { view: 'dashboards', label: tr('nav.dashboards', lang), icon: LayoutDashboard, matchViews: ['dashboards'] },
+    { view: 'reports', label: tr('nav.reports', lang), icon: FileText, matchViews: ['reports'] },
+    { view: 'datasets', label: tr('nav.datasets', lang), icon: Database, matchViews: ['datasets', 'dataset-detail'] },
+    { view: 'raw-data', label: tr('nav.rawData', lang), icon: HardDrive, matchViews: ['raw-data'] },
+    { view: 'data-sources', label: tr('nav.dataSources', lang), icon: Server, matchViews: ['data-sources', 'data-source-detail'] },
+    { view: 'integrations', label: tr('nav.integrations', lang), icon: Plug, matchViews: ['integrations'] },
+    { view: 'organization', label: tr('nav.organization', lang), icon: Building2, matchViews: ['organization'] },
+    { view: 'users', label: tr('nav.users', lang), icon: UserCog, matchViews: ['users'] },
+    { view: 'roles', label: tr('nav.roles', lang), icon: ShieldCheck, matchViews: ['roles'] },
+    { view: 'settings', label: tr('nav.settings', lang), icon: Settings, matchViews: ['settings'] },
+  ];
+
+  const byView = new Map(allItems.map((i) => [i.view, i]));
+  const pick = (views: string[]): NavItem[] =>
+    views.map((v) => byView.get(v)).filter((i): i is NavItem => !!i && canAccess(i.view));
+
   const groups: NavGroup[] = [
-    {
-      id: 'data',
-      labelKey: 'nav.group.data',
-      items: [
-        { view: 'athletes', label: tr('nav.athletes', lang), icon: Users, matchViews: ['athletes', 'athlete-profile'] },
-        { view: 'sessions', label: tr('nav.sessions', lang), icon: ClipboardList, matchViews: ['sessions', 'session-detail'] },
-        { view: 'results', label: tr('nav.results', lang), icon: BarChart3, matchViews: ['results', 'result-detail'] },
-        { view: 'datasets', label: tr('nav.datasets', lang), icon: Database, matchViews: ['datasets', 'dataset-detail'] },
-        { view: 'raw-data', label: tr('nav.rawData', lang), icon: HardDrive, matchViews: ['raw-data'] },
-        { view: 'data-sources', label: tr('nav.dataSources', lang), icon: Server, matchViews: ['data-sources', 'data-source-detail'] },
-      ],
-    },
+    { id: 'people', labelKey: 'nav.group.people', items: pick(['athletes', 'teams']) },
+    { id: 'testing', labelKey: 'nav.group.testing', items: pick(['sessions', 'protocols', 'devices', 'sync-center']) },
     {
       id: 'analysis',
       labelKey: 'nav.group.analysis',
-      items: [
-        { view: 'performance', label: tr('nav.performance', lang), icon: TrendingUp, matchViews: ['performance'] },
-        { view: 'trends', label: tr('nav.trends', lang), icon: TrendingUp, matchViews: ['trends'] },
-        { view: 'comparisons', label: tr('nav.comparisons', lang), icon: GitCompare, matchViews: ['comparisons'] },
-        { view: 'biomechanics', label: tr('nav.biomechanics', lang), icon: Waves, matchViews: ['biomechanics'] },
-        { view: 'dashboards', label: tr('nav.dashboards', lang), icon: LayoutDashboard, matchViews: ['dashboards'] },
-      ],
+      items: pick(['results', 'performance', 'trends', 'comparisons', 'biomechanics', 'dashboards', 'reports']),
     },
     {
-      id: 'platform',
-      labelKey: 'nav.group.platform',
-      items: [
-        { view: 'protocols', label: tr('nav.protocols', lang), icon: BookOpen, matchViews: ['protocols', 'protocol-detail'] },
-        { view: 'reports', label: tr('nav.reports', lang), icon: FileText, matchViews: ['reports'] },
-        { view: 'integrations', label: tr('nav.integrations', lang), icon: Plug, matchViews: ['integrations'] },
-        { view: 'sync-center', label: tr('nav.syncCenter', lang), icon: RefreshCw, matchViews: ['sync-center'] },
-      ],
+      id: 'data',
+      labelKey: 'nav.group.data',
+      items: pick(['datasets', 'raw-data', 'data-sources', 'integrations']),
     },
-    {
-      id: 'admin',
-      labelKey: 'nav.group.admin',
-      items: [
-        { view: 'organization', label: tr('nav.organization', lang), icon: Building2, matchViews: ['organization'] },
-        { view: 'users', label: tr('nav.users', lang), icon: UserCog, matchViews: ['users'] },
-        { view: 'roles', label: tr('nav.roles', lang), icon: ShieldCheck, matchViews: ['roles'] },
-        { view: 'teams', label: tr('nav.teams', lang), icon: UsersRound, matchViews: ['teams'] },
-        { view: 'devices', label: tr('nav.devices', lang), icon: Cpu, matchViews: ['devices'] },
-        { view: 'settings', label: tr('nav.settings', lang), icon: Settings, matchViews: ['settings'] },
-      ],
-    },
-  ];
+    { id: 'admin', labelKey: 'nav.group.admin', items: pick(['organization', 'users', 'roles', 'settings']) },
+  ].filter((g) => g.items.length > 0);
 
   const isItemActive = (item: NavItem) => {
     const matchViews = item.matchViews || [item.view];
@@ -92,6 +88,13 @@ export function Sidebar({ onLogout }: { onLogout?: () => void }) {
   };
 
   const isGroupActive = (group: NavGroup) => group.items.some(isItemActive);
+
+  useEffect(() => {
+    const activeGroup = groups.find(isGroupActive);
+    if (activeGroup && collapsedGroups[activeGroup.id]) {
+      setCollapsedGroups((prev) => ({ ...prev, [activeGroup.id]: false }));
+    }
+  }, [currentView]);
 
   const renderItem = (item: NavItem) => {
     const Icon = item.icon;
@@ -149,7 +152,7 @@ export function Sidebar({ onLogout }: { onLogout?: () => void }) {
       </div>
 
       <nav className="flex-1 px-3 py-2 overflow-y-auto scrollbar-thin">
-        {renderItem(topItem)}
+        {canAccess(topItem.view) && renderItem(topItem)}
         {groups.map(renderGroup)}
       </nav>
 

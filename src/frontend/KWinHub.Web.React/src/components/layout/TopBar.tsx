@@ -1,7 +1,7 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useApp } from '@/lib/app-context';
 import { t as tr } from '@/lib/i18n';
-import { DEMO_TEAMS } from '@/lib/demo-data';
+import { DEMO_TEAMS, DEMO_ATHLETES, DEMO_SESSIONS, getProtocol } from '@/lib/demo-data';
 import { Search, Bell, ChevronDown, User, Settings, LogOut, HelpCircle, Languages } from 'lucide-react';
 
 interface TopBarProps {
@@ -10,26 +10,81 @@ interface TopBarProps {
   actions?: React.ReactNode;
 }
 
+type SearchResult = {
+  id: string;
+  label: string;
+  sub: string;
+  view: string;
+  params: Record<string, string>;
+  kind: 'athlete' | 'session';
+};
+
 export function TopBar({ title, subtitle, actions }: TopBarProps) {
-  const { selectedTeamId, setSelectedTeamId, addToast, lang, setLang } = useApp();
+  const { selectedTeamId, setSelectedTeamId, lang, setLang, navigate, logout, addToast } = useApp();
   const [teamMenuOpen, setTeamMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const teamRef = useRef<HTMLDivElement>(null);
   const userRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (teamRef.current && !teamRef.current.contains(e.target as Node)) setTeamMenuOpen(false);
       if (userRef.current && !userRef.current.contains(e.target as Node)) setUserMenuOpen(false);
       if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifOpen(false);
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) setSearchOpen(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
   const selectedTeam = DEMO_TEAMS.find((t) => t.id === selectedTeamId) || DEMO_TEAMS[0];
+
+  const searchResults = useMemo<SearchResult[]>(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return [];
+    const athletes: SearchResult[] = DEMO_ATHLETES
+      .filter((a) => `${a.firstName} ${a.lastName}`.toLowerCase().includes(q) || a.position.toLowerCase().includes(q))
+      .slice(0, 5)
+      .map((a) => ({
+        id: `ath-${a.id}`,
+        label: `${a.lastName} ${a.firstName}`,
+        sub: a.position,
+        view: 'athlete-profile',
+        params: { athleteId: a.id },
+        kind: 'athlete' as const,
+      }));
+    const sessions: SearchResult[] = DEMO_SESSIONS
+      .filter((s) => s.protocolName.toLowerCase().includes(q))
+      .slice(0, 5)
+      .map((s) => ({
+        id: `ses-${s.id}`,
+        label: getProtocol(s.protocolId)?.name || s.protocolName,
+        sub: new Date(s.date).toLocaleDateString(lang === 'cn' ? 'zh-CN' : 'en-US'),
+        view: 'session-detail',
+        params: { sessionId: s.id },
+        kind: 'session' as const,
+      }));
+    return [...athletes, ...sessions].slice(0, 8);
+  }, [searchQuery, lang]);
+
+  const notifications = lang === 'cn'
+    ? [
+        { msg: '张伟 需关注 — 不对称性 >15%', time: '10分钟前', action: () => navigate('athlete-profile', { athleteId: 'a-1' }) },
+        { msg: '设备 KW-FP-00125 已离线', time: '2小时前', action: () => navigate('devices') },
+        { msg: '3名运动员本周未测试', time: '5小时前', action: () => navigate('athletes') },
+        { msg: '赛季前测试窗口将在3天后关闭', time: '1天前', action: () => navigate('sessions') },
+      ]
+    : [
+        { msg: 'Zhang Wei flagged for attention — asymmetry >15%', time: '10 min ago', action: () => navigate('athlete-profile', { athleteId: 'a-1' }) },
+        { msg: 'Device KW-FP-00125 went offline', time: '2 hours ago', action: () => navigate('devices') },
+        { msg: '3 athletes have not tested this week', time: '5 hours ago', action: () => navigate('athletes') },
+        { msg: 'Pre-season testing window closes in 3 days', time: '1 day ago', action: () => navigate('sessions') },
+      ];
 
   return (
     <header className="sticky top-0 z-30 bg-white border-b border-ink-200 px-6 py-3 flex items-center justify-between gap-4">
@@ -41,13 +96,30 @@ export function TopBar({ title, subtitle, actions }: TopBarProps) {
       <div className="flex items-center gap-3 shrink-0">
         {actions}
 
-        <div className="relative hidden md:block">
+        <div className="relative hidden md:block" ref={searchRef}>
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-400" />
           <input
             type="text"
+            value={searchQuery}
+            onChange={(e) => { setSearchQuery(e.target.value); setSearchOpen(true); }}
+            onFocus={() => setSearchOpen(true)}
             placeholder={tr('common.search', lang)}
             className="w-56 pl-9 pr-3 py-2 text-sm bg-ink-50 border border-ink-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-teal-400 transition-all"
           />
+          {searchOpen && searchResults.length > 0 && (
+            <div className="absolute right-0 top-full mt-1 w-72 bg-white rounded-lg shadow-lg border border-ink-200 py-1 z-20 animate-slide-up max-h-80 overflow-y-auto scrollbar-thin">
+              {searchResults.map((r) => (
+                <button
+                  key={r.id}
+                  onClick={() => { navigate(r.view, r.params); setSearchOpen(false); setSearchQuery(''); }}
+                  className="w-full flex flex-col items-start px-3 py-2 hover:bg-ink-50 transition-colors text-left"
+                >
+                  <span className="text-sm text-ink-900">{r.label}</span>
+                  <span className="text-xs text-ink-400">{r.kind === 'athlete' ? (lang === 'cn' ? '运动员' : 'Athlete') : (lang === 'cn' ? '测试记录' : 'Session')} · {r.sub}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <button
@@ -97,21 +169,15 @@ export function TopBar({ title, subtitle, actions }: TopBarProps) {
                 <h3 className="text-sm font-semibold text-ink-900">{lang === 'cn' ? '通知' : 'Notifications'}</h3>
               </div>
               <div className="max-h-72 overflow-y-auto scrollbar-thin">
-                {(lang === 'cn' ? [
-                  { msg: '张伟 需关注 — 不对称性 >15%', time: '10分钟前' },
-                  { msg: '设备 KW-FP-00125 已离线', time: '2小时前' },
-                  { msg: '3名运动员本周未测试', time: '5小时前' },
-                  { msg: '赛季前测试窗口将在3天后关闭', time: '1天前' },
-                ] : [
-                  { msg: 'Zhang Wei flagged for attention — asymmetry >15%', time: '10 min ago' },
-                  { msg: 'Device KW-FP-00125 went offline', time: '2 hours ago' },
-                  { msg: '3 athletes have not tested this week', time: '5 hours ago' },
-                  { msg: 'Pre-season testing window closes in 3 days', time: '1 day ago' },
-                ]).map((n, i) => (
-                  <div key={i} className="px-3 py-2.5 hover:bg-ink-50 border-b border-ink-50 last:border-0 transition-colors">
+                {notifications.map((n, i) => (
+                  <button
+                    key={i}
+                    onClick={() => { n.action(); setNotifOpen(false); }}
+                    className="w-full text-left px-3 py-2.5 hover:bg-ink-50 border-b border-ink-50 last:border-0 transition-colors"
+                  >
                     <p className="text-sm text-ink-800">{n.msg}</p>
                     <p className="text-xs text-ink-400 mt-0.5">{n.time}</p>
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
@@ -134,17 +200,17 @@ export function TopBar({ title, subtitle, actions }: TopBarProps) {
                 <p className="text-sm font-medium text-ink-900">Li Wei</p>
                 <p className="text-xs text-ink-500">{lang === 'cn' ? '组织管理员' : 'Organization Admin'}</p>
               </div>
-              <button onClick={() => { addToast(lang === 'cn' ? '个人资料（演示）' : 'Profile (demo)', 'info'); setUserMenuOpen(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-ink-700 hover:bg-ink-50 transition-colors">
+              <button onClick={() => { addToast(lang === 'cn' ? '个人资料功能即将推出' : 'Profile coming soon', 'info'); setUserMenuOpen(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-ink-700 hover:bg-ink-50 transition-colors">
                 <User className="w-4 h-4" /> {lang === 'cn' ? '个人资料' : 'My Profile'}
               </button>
-              <button onClick={() => { addToast(lang === 'cn' ? '设置（演示）' : 'Settings (demo)', 'info'); setUserMenuOpen(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-ink-700 hover:bg-ink-50 transition-colors">
+              <button onClick={() => { navigate('settings'); setUserMenuOpen(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-ink-700 hover:bg-ink-50 transition-colors">
                 <Settings className="w-4 h-4" /> {lang === 'cn' ? '设置' : 'Settings'}
               </button>
-              <button onClick={() => { addToast(lang === 'cn' ? '帮助（演示）' : 'Help (demo)', 'info'); setUserMenuOpen(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-ink-700 hover:bg-ink-50 transition-colors">
+              <button onClick={() => { addToast(lang === 'cn' ? '帮助功能即将推出' : 'Help coming soon', 'info'); setUserMenuOpen(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-ink-700 hover:bg-ink-50 transition-colors">
                 <HelpCircle className="w-4 h-4" /> {lang === 'cn' ? '帮助' : 'Help & Support'}
               </button>
               <div className="border-t border-ink-100 mt-1 pt-1">
-                <button onClick={() => addToast(lang === 'cn' ? '已登出（演示）' : 'Signed out (demo)', 'info')} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-invalid-600 hover:bg-invalid-50 transition-colors">
+                <button onClick={() => { logout(); }} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-invalid-600 hover:bg-invalid-50 transition-colors">
                   <LogOut className="w-4 h-4" /> {lang === 'cn' ? '退出登录' : 'Sign Out'}
                 </button>
               </div>

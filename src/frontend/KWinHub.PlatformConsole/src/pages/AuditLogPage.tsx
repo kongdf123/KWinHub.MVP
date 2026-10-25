@@ -1,10 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { Download } from 'lucide-react';
 import { api, type AuditLogResponse } from '../lib/api';
 import { useI18n, type TranslationKey } from '../lib/i18n';
 import {
+  Button,
   Card,
   EmptyState,
   ErrorBanner,
+  Input,
   PageHeader,
   Select,
   Spinner,
@@ -38,6 +41,7 @@ export function AuditLogPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [entityType, setEntityType] = useState('');
+  const [search, setSearch] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
@@ -69,6 +73,42 @@ export function AuditLogPage() {
     };
   }, [entityType, reloadKey]);
 
+  const filteredLogs = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return logs;
+    return logs.filter(
+      (log) =>
+        (log.actorEmail ?? '').toLowerCase().includes(q) ||
+        log.action.toLowerCase().includes(q) ||
+        (log.summary ?? '').toLowerCase().includes(q) ||
+        (log.entityId ?? '').toLowerCase().includes(q)
+    );
+  }, [logs, search]);
+
+  function exportCsv() {
+    if (filteredLogs.length === 0) return;
+    const headers = ['Time', 'Actor', 'Action', 'Entity Type', 'Entity ID', 'Summary'];
+    const rows = filteredLogs.map((log) => [
+      formatDateTime(log.createdAt),
+      log.actorEmail ?? t('audit.system'),
+      log.action,
+      log.entityType,
+      log.entityId ?? '',
+      (log.summary ?? '').replace(/"/g, '""'),
+    ]);
+    const csv = [
+      headers.join(','),
+      ...rows.map((row) => row.map((cell) => `"${cell}"`).join(',')),
+    ].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `audit-log-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div>
       <PageHeader title={t('audit.title')} subtitle={t('audit.subtitle')} />
@@ -80,7 +120,13 @@ export function AuditLogPage() {
       ) : null}
 
       <Card>
-        <div className="border-b border-ink-200 p-4">
+        <div className="flex flex-wrap items-center gap-2 border-b border-ink-200 p-4">
+          <Input
+            className="max-w-xs"
+            placeholder={t('audit.search')}
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
           <Select
             className="max-w-[220px]"
             value={entityType}
@@ -92,12 +138,22 @@ export function AuditLogPage() {
               </option>
             ))}
           </Select>
+          <div className="ml-auto">
+            <Button
+              variant="secondary"
+              onClick={exportCsv}
+              disabled={filteredLogs.length === 0}
+            >
+              <Download size={14} />
+              {t('audit.export')}
+            </Button>
+          </div>
         </div>
 
         {loading ? (
           <Spinner />
-        ) : logs.length === 0 ? (
-          <EmptyState title={t('audit.empty')} />
+        ) : filteredLogs.length === 0 ? (
+          <EmptyState title={search ? t('common.noResults') : t('audit.empty')} />
         ) : (
           <Table
             headers={[
@@ -109,7 +165,7 @@ export function AuditLogPage() {
               t('audit.summary'),
             ]}
           >
-            {logs.map((log) => {
+            {filteredLogs.map((log) => {
               const entityLabelKey = ENTITY_LABELS[log.entityType];
               return (
                 <tr key={log.id}>

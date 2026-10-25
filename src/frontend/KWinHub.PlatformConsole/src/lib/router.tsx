@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-export type Route = { path: string; params: Record<string, string> };
+export type Route = { path: string; params: Record<string, string>; query: URLSearchParams };
 
 function readPath(): string {
   const raw = window.location.hash.replace(/^#/, '');
@@ -9,16 +9,26 @@ function readPath(): string {
   return path.startsWith('/') ? path : `/${path}`;
 }
 
+function readQuery(): URLSearchParams {
+  const raw = window.location.hash.replace(/^#/, '');
+  const queryPart = raw.split('?')[1] ?? '';
+  return new URLSearchParams(queryPart);
+}
+
 export function useHashRoute(): Route {
   const [path, setPath] = useState<string>(readPath);
+  const [query, setQuery] = useState<URLSearchParams>(readQuery);
 
   useEffect(() => {
-    const handleChange = () => setPath(readPath());
+    const handleChange = () => {
+      setPath(readPath());
+      setQuery(readQuery());
+    };
     window.addEventListener('hashchange', handleChange);
     return () => window.removeEventListener('hashchange', handleChange);
   }, []);
 
-  return { path, params: {} };
+  return { path, params: {}, query };
 }
 
 export function navigate(path: string): void {
