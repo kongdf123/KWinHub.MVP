@@ -1,0 +1,242 @@
+The PlatformConsole deserves a slightly different treatment from Web.React. It is an administrative console, so the sidebar should prioritize compactness, predictable navigation, tenant/security task access, and a clear administrative identity rather than displaying sports-performance navigation categories.
+
+From the current `Layout.tsx`, the console already has several good foundations: grouped navigation, active-route styling, a scrollable navigation area, a fixed sidebar, and a compact email/sign-out footer. The improvements should build on those foundations.
+
+## 1. PlatformConsole-specific defects and solutions
+
+| Issue in current implementation                                            | Recommended solution                                                                      |
+| -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Fixed 240px sidebar with no compact mode                                   | Keep 240px expanded; optionally add a 64–72px icon rail                                   |
+| Section labels use very small 10px uppercase text                          | Use readable 11–12px section labels with consistent spacing                               |
+| Active item uses a green tint and left border, but can be more distinctive | Use a subtle green surface, stronger text, and a 2–3px accent indicator                   |
+| Brand badge and brand header occupy separate vertical areas                | Combine them into a more compact brand block without losing the Platform Console identity |
+| Footer only shows email and sign-out                                       | Use a compact account area; retain the email and sign-out action                          |
+| Collapsible groups have no explicit accessibility state                    | Add `aria-expanded`, stable IDs, and keyboard-visible focus styles                        |
+| Main content is offset by a hard-coded `pl-[240px]`                        | Derive sidebar and content offsets from the same expanded/collapsed state                 |
+| Header has theme and language controls but no responsive strategy          | Preserve these controls and prevent them from overflowing at narrower widths              |
+
+Unlike Web.React, PlatformConsole should not have the sports-performance app's larger athlete-navigation groups or a demo system-health card unless the console has an actual operational requirement for one.
+
+## 2. Proposed PlatformConsole sidebar design
+
+### Kunwei Hub
+
+Platform Console
+
+PLATFORM ADMINISTRATION
+
+OVERVIEW
+
+Dashboard
+
+TENANTS & USERS
+
+Organizations
+
+Platform users
+
+CATALOGS
+
+Test protocols
+
+Metrics
+
+Devices
+
+Algorithms
+
+SECURITY & AUDIT
+
+Audit logs
+
+Platform administrator
+
+admin\@example.com
+
+Concept mockup. The account label is illustrative; the actual signed-in user's email should be displayed. All existing routes remain available.
+
+The important visual difference is that PlatformConsole should feel like a focused control plane: compact brand header, distinct functional sections, restrained active state, and a tidy account footer.
+
+## 3. Implementation recommendations
+
+### A. Navigation hierarchy
+
+Keep the current route structure and labels, but use these visual groupings:
+
+- Overview — Dashboard
+- Tenants & Users — Organizations, Users
+- Catalogs — Protocols, Metrics, Devices, Algorithms
+- Security & Audit — Audit logs
+
+The group headings can be slightly more descriptive than the current short labels if that helps first-time administrators. Ensure the translation keys are updated for both English and Chinese.
+
+### B. Active navigation state
+
+Use a consistent state design:
+
+- Default: neutral sidebar text.
+- Hover: subtle background change.
+- Active: light green-tinted surface, readable accent text, and a narrow left indicator.
+- Focus: visible keyboard ring.
+- Disabled, if used: reduced emphasis and a clear disabled state.
+
+The active state should not depend on color alone. Keep the current `isActive()` logic for exact routes and nested routes, including organization details.
+
+### C. Collapsible sidebar
+
+A compact mode is useful for a console where administrators may need wider tables. However, make it optional and preserve the current expanded layout as the default.
+
+When collapsed:
+
+- Show only icons, with tooltips and accessible labels.
+- Hide group labels and text without hiding any destinations.
+- Keep the current route visibly selected.
+- Ensure the content area's left offset updates with the sidebar width.
+- Preserve the user's preference during navigation; persist it only if the product needs that behavior.
+
+### D. Fix group collapse behavior
+
+In the current implementation, a group can remain collapsed when a route inside it becomes active. Add logic to ensure the active route's group is expanded. Do not automatically expand every group or erase the user's other collapse choices.
+
+Also add `aria-expanded` to the group toggle buttons, and ensure focus remains visible when navigating using the keyboard.
+
+### E. Footer and header
+
+The footer currently contains the administrator email and sign-out button. Keep both, but reduce unnecessary padding and align them with the sidebar's overall spacing. Consider using an avatar or account icon to help distinguish the account area.
+
+In the header, keep the breadcrumb/title, theme selector, language switcher, and admin-role indicator. At narrower widths, make the title truncate gracefully and allow controls to adapt without horizontal overflow.
+
+## 4. Ready-to-use prompt for your AI coding agent
+
+# Task: Professional Sidebar UX Improvements — KWinHub.PlatformConsole
+
+## Objective
+
+Improve the sidebar UI/UX in `src/frontend/KWinHub.PlatformConsole/src/components/Layout.tsx` so that it feels like a polished, enterprise-grade SaaS administration console.
+
+This is a focused navigation improvement, not a redesign of the entire PlatformConsole.
+
+## Current architecture to preserve
+
+The current Layout already has:
+
+- Fixed 240px sidebar
+- Grouped navigation in `NAV_GROUPS`
+- Route-aware active states using `useHashRoute()`
+- Collapsible navigation groups
+- ThemeSwitcher and LanguageSwitcher in the header
+- Administrator email and sign-out in the sidebar footer
+- Semantic CSS color tokens for Classic and Light themes
+
+Extend these existing patterns instead of introducing a competing navigation or theme architecture.
+
+## 1. Sidebar visual design
+
+- Preserve Kunwei's brand identity.
+- Create a clear hierarchy between brand, group headings, navigation items, and account footer.
+- Use consistent icon sizing, indentation, spacing, and item heights.
+- Use restrained section headings with readable 11–12px typography.
+- Keep the expanded width near 240px.
+- Use a restrained active state: subtle green-tinted surface, readable accent text, and a narrow accent indicator.
+- Provide distinct default, hover, active, and keyboard-focus states.
+- Avoid excessive bright-green surfaces, decorative separators, and unnecessary shadows.
+- Keep the existing navigation destinations and route order.
+
+## 2. Navigation groups
+
+Keep the existing route definitions and translation system. Improve labels only where needed for clarity.
+
+Recommended grouping:
+
+- Overview: Dashboard
+- Tenants & Users: Organizations, Users
+- Catalogs: Protocols, Metrics, Devices, Algorithms
+- Security & Audit: Audit logs
+
+Update English and Chinese translations consistently if group labels change. Do not remove or rename routes.
+
+## 3. Group behavior and accessibility
+
+- Add `aria-expanded` to collapsible group buttons.
+- Provide visible keyboard focus and native button interaction.
+- Automatically expand the group containing the active route.
+- Preserve other groups' collapsed states when navigating.
+- Keep active-state matching correct for nested routes such as organization details.
+- Ensure the active destination remains discoverable when using compact mode.
+
+## 4. Optional compact sidebar mode
+
+If practical within the existing architecture, add an icon-rail mode approximately 64–72px wide.
+
+- Keep expanded mode as the default.
+- Add a visible toggle with an accessible label.
+- Provide tooltips and accessible names for icon-only navigation.
+- Keep active routes visually identifiable.
+- Update the main-content offset and header layout from the same sidebar state; do not hard-code conflicting widths.
+- Ensure the sidebar, main content, and header work at narrower desktop widths.
+- If a compact mode would require disproportionate changes, implement the visual and interaction refinements first and report compact mode as a follow-up rather than destabilizing the console.
+
+## 5. Footer and header
+
+- Keep the signed-in administrator email and sign-out action.
+- Refine footer spacing and hierarchy without removing account information.
+- Keep ThemeSwitcher, LanguageSwitcher, page title, and administrator-role indicator.
+- Prevent header controls from overflowing at narrower widths.
+- Do not invent a live system-status indicator.
+
+## 6. Theme compatibility
+
+Ensure the sidebar works correctly in both Kunwei Classic and Performance Light.
+
+Use existing semantic tokens:
+
+- `surface-sidebar`
+- `surface-sidebar-hover`
+- `content-sidebar`
+- `content-sidebar-muted`
+- `border-sidebar`
+- `accent`
+- `accent-soft`
+
+Add new tokens only when necessary. Avoid hard-coded theme-sensitive colors in Layout.tsx.
+
+## 7. Scope constraints
+
+Do not modify:
+
+- Authentication or authorization
+- API calls
+- Route names or route matching
+- Business logic or page content
+- Existing language-switching behavior
+- Theme persistence behavior
+
+Do not remove navigation destinations to make the sidebar shorter.
+
+## 8. Validation
+
+Run the existing build, type-check, and lint commands.
+
+Test:
+
+- Both themes
+- Every navigation group expanded and collapsed
+- Direct navigation to organization detail routes
+- Active-group auto-expansion
+- Sign-out behavior
+- Keyboard navigation and focus visibility
+- Long email addresses and long translated labels
+- Narrow desktop viewport and compact mode, if implemented
+- No horizontal overflow or content overlap
+
+Report changed files, validation results, and known limitations.
+
+## 5. Recommended order of work
+
+1. Refine sidebar spacing, typography, group headings, and active states.
+2. Fix automatic expansion of the active route's group and keyboard accessibility.
+3. Compress the footer and test long labels in English and Chinese.
+4. Add compact mode only after the expanded layout is stable.
+5. Validate Classic and Light themes, then test the main console pages.
+
+My recommendation: implement the expanded-sidebar refinement first and keep the compact mode as a controlled enhancement. PlatformConsole has fewer navigation items than Web.React, so its greatest gains will come from better hierarchy and consistent interaction states—not from making the navigation significantly more complex.

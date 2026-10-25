@@ -1,15 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useApp } from '@/lib/app-context';
 import { t as tr } from '@/lib/i18n';
 import { DEMO_ORG } from '@/lib/demo-data';
 import {
   Activity, LayoutDashboard, Users, ClipboardList, BarChart3,
   TrendingUp, GitCompare, Waves, FileText, Database, Server,
-  HardDrive, Plug, RefreshCw, ChevronDown, ChevronRight,
+  HardDrive, Plug, RefreshCw, ChevronDown,
   Building2, UserCog, ShieldCheck, UsersRound, Cpu, Settings,
-  FlaskConical, LogOut, type LucideIcon,
+  LogOut, PanelLeftClose, PanelLeftOpen, type LucideIcon,
 } from 'lucide-react';
-import { StatusDot } from '@/components/ui/StatusBadge';
 
 interface NavItem {
   view: string;
@@ -27,10 +26,11 @@ interface NavGroup {
 export function Sidebar({ onLogout }: { onLogout?: () => void }) {
   const { currentView, navigate, lang, canAccess } = useApp();
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
+  const [compact, setCompact] = useState(false);
 
-  const toggleGroup = (id: string) => {
+  const toggleGroup = useCallback((id: string) => {
     setCollapsedGroups((prev) => ({ ...prev, [id]: !prev[id] }));
-  };
+  }, []);
 
   const topItem: NavItem = {
     view: 'home',
@@ -66,117 +66,199 @@ export function Sidebar({ onLogout }: { onLogout?: () => void }) {
   const pick = (views: string[]): NavItem[] =>
     views.map((v) => byView.get(v)).filter((i): i is NavItem => !!i && canAccess(i.view));
 
-  const groups: NavGroup[] = [
-    { id: 'people', labelKey: 'nav.group.people', items: pick(['athletes', 'teams']) },
-    { id: 'testing', labelKey: 'nav.group.testing', items: pick(['sessions', 'protocols', 'devices', 'sync-center']) },
-    {
-      id: 'analysis',
-      labelKey: 'nav.group.analysis',
-      items: pick(['results', 'performance', 'trends', 'comparisons', 'biomechanics', 'dashboards', 'reports']),
+  const groups = useMemo<NavGroup[]>(
+    () =>
+      [
+        { id: 'people', labelKey: 'nav.group.people', items: pick(['athletes', 'teams']) },
+        { id: 'testing', labelKey: 'nav.group.testing', items: pick(['sessions', 'protocols', 'devices', 'sync-center']) },
+        {
+          id: 'analysis',
+          labelKey: 'nav.group.analysis',
+          items: pick(['results', 'performance', 'trends', 'comparisons', 'biomechanics', 'dashboards', 'reports']),
+        },
+        {
+          id: 'data',
+          labelKey: 'nav.group.data',
+          items: pick(['datasets', 'raw-data', 'data-sources', 'integrations']),
+        },
+        { id: 'admin', labelKey: 'nav.group.admin', items: pick(['organization', 'users', 'roles', 'settings']) },
+      ].filter((g) => g.items.length > 0),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [lang, canAccess],
+  );
+
+  const isItemActive = useCallback(
+    (item: NavItem) => {
+      const matchViews = item.matchViews || [item.view];
+      return matchViews.includes(currentView);
     },
-    {
-      id: 'data',
-      labelKey: 'nav.group.data',
-      items: pick(['datasets', 'raw-data', 'data-sources', 'integrations']),
-    },
-    { id: 'admin', labelKey: 'nav.group.admin', items: pick(['organization', 'users', 'roles', 'settings']) },
-  ].filter((g) => g.items.length > 0);
+    [currentView],
+  );
 
-  const isItemActive = (item: NavItem) => {
-    const matchViews = item.matchViews || [item.view];
-    return matchViews.includes(currentView);
-  };
-
-  const isGroupActive = (group: NavGroup) => group.items.some(isItemActive);
-
-  useEffect(() => {
-    const activeGroup = groups.find(isGroupActive);
-    if (activeGroup && collapsedGroups[activeGroup.id]) {
-      setCollapsedGroups((prev) => ({ ...prev, [activeGroup.id]: false }));
+  const activeGroupId = useMemo(() => {
+    for (const g of groups) {
+      if (g.items.some(isItemActive)) return g.id;
     }
-  }, [currentView]);
+    return null;
+  }, [groups, isItemActive]);
 
-  const renderItem = (item: NavItem) => {
+  // Auto-expand the group that contains the active page without disturbing the
+  // user's other collapse choices. Uses a functional state update so it never
+  // reads a stale `collapsedGroups` closure, and depends only on `activeGroupId`.
+  useEffect(() => {
+    if (!activeGroupId) return;
+    setCollapsedGroups((prev) =>
+      prev[activeGroupId] ? { ...prev, [activeGroupId]: false } : prev,
+    );
+  }, [activeGroupId]);
+
+  const renderNavItem = (item: NavItem) => {
     const Icon = item.icon;
     const active = isItemActive(item);
+    const base =
+      'relative w-full flex items-center gap-3 rounded-lg font-medium transition-colors duration-150 motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface-sidebar';
+
+    if (compact) {
+      return (
+        <button
+          key={item.view}
+          type="button"
+          onClick={() => navigate(item.view)}
+          aria-label={item.label}
+          title={item.label}
+          aria-current={active ? 'page' : undefined}
+          className={`${base} h-9 w-full justify-center ${
+            active
+              ? 'bg-accent-soft text-accent'
+              : 'text-content-sidebar hover:bg-surface-sidebar-hover hover:text-content-sidebar'
+          }`}
+        >
+          <Icon className="w-[18px] h-[18px] shrink-0" strokeWidth={1.75} />
+        </button>
+      );
+    }
+
     return (
       <button
         key={item.view}
+        type="button"
         onClick={() => navigate(item.view)}
-        className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors ${
-          active ? 'bg-accent text-surface-sidebar' : 'text-content-sidebar hover:bg-surface-sidebar-hover hover:text-content-primary'
+        aria-current={active ? 'page' : undefined}
+        className={`${base} h-9 px-3 border-l-2 ${
+          active
+            ? 'bg-accent-soft text-accent border-accent'
+            : 'border-transparent text-content-sidebar hover:bg-surface-sidebar-hover hover:text-content-sidebar'
         }`}
       >
-        <Icon className="shrink-0" style={{ width: 16, height: 16 }} />
-        <span className="truncate">{item.label}</span>
-        {active && <ChevronRight className="w-3.5 h-3.5 ml-auto shrink-0" />}
+        <Icon className="w-[18px] h-[18px] shrink-0" strokeWidth={1.75} />
+        <span className="truncate text-[13px]">{item.label}</span>
       </button>
     );
   };
 
   const renderGroup = (group: NavGroup) => {
     const collapsed = collapsedGroups[group.id];
-    const groupActive = isGroupActive(group);
+    const groupActive = group.id === activeGroupId;
+
+    if (compact) {
+      return (
+        <div key={group.id} className="space-y-1">
+          {group.items.map(renderNavItem)}
+        </div>
+      );
+    }
+
     return (
       <div key={group.id}>
         <button
+          type="button"
           onClick={() => toggleGroup(group.id)}
-          className={`w-full flex items-center gap-2 px-3 pt-4 pb-1.5 text-[11px] font-semibold tracking-wider transition-colors ${
+          aria-expanded={!collapsed}
+          className={`w-full flex items-center gap-2 px-3 pt-4 pb-1.5 text-[11px] font-semibold uppercase tracking-wider transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded ${
             groupActive ? 'text-accent' : 'text-content-sidebar-muted hover:text-content-sidebar'
           }`}
         >
-          <ChevronDown className={`w-3 h-3 transition-transform shrink-0 ${collapsed ? '-rotate-90' : ''}`} />
-          {tr(group.labelKey, lang)}
+          <ChevronDown className={`w-3 h-3 transition-transform duration-150 motion-reduce:transition-none shrink-0 ${collapsed ? '-rotate-90' : ''}`} />
+          <span className="truncate">{tr(group.labelKey, lang)}</span>
         </button>
         {!collapsed && (
-          <div className="space-y-0.5">
-            {group.items.map(renderItem)}
+          <div className="space-y-1">
+            {group.items.map(renderNavItem)}
           </div>
         )}
       </div>
     );
   };
 
+  const orgName = lang === 'cn' ? DEMO_ORG.nameCn : DEMO_ORG.name;
+  const collapseLabel = compact
+    ? (lang === 'cn' ? '展开侧边栏' : 'Expand sidebar')
+    : (lang === 'cn' ? '收起侧边栏' : 'Collapse sidebar');
+  const signOutLabel = lang === 'cn' ? '退出登录' : 'Sign out';
+
   return (
-    <aside className="w-60 bg-surface-sidebar text-content-sidebar flex flex-col h-screen sticky top-0 shrink-0">
-      <div className="px-5 py-5 border-b border-sidebar">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-lg bg-accent flex items-center justify-center shrink-0">
-            <Activity className="w-5 h-5 text-surface-sidebar" />
-          </div>
-          <div className="min-w-0">
-            <h1 className="text-sm font-semibold text-content-sidebar truncate">Kunwei Hub</h1>
-            <p className="text-xs text-content-sidebar-muted truncate">{lang === 'cn' ? DEMO_ORG.nameCn : DEMO_ORG.name}</p>
-          </div>
+    <aside
+      className={`${compact ? 'w-[68px]' : 'w-60'} bg-surface-sidebar text-content-sidebar flex flex-col h-screen sticky top-0 shrink-0 transition-[width] duration-200 motion-reduce:transition-none`}
+    >
+      {/* Brand header — aligned with the app top bar (h-16) */}
+      <div className="h-16 px-3 flex items-center gap-2.5 shrink-0">
+        <div className="w-9 h-9 rounded-lg bg-accent flex items-center justify-center shrink-0">
+          <Activity className="w-5 h-5 text-surface-sidebar" />
         </div>
+        {!compact && (
+          <div className="min-w-0 flex-1">
+            <h1 className="text-sm font-semibold text-content-sidebar truncate">Kunwei Hub</h1>
+            <p className="text-xs text-content-sidebar-muted truncate">{orgName}</p>
+          </div>
+        )}
       </div>
 
-      <nav className="flex-1 px-3 py-2 overflow-y-auto scrollbar-thin">
-        {canAccess(topItem.view) && renderItem(topItem)}
+      {/* Independently scrollable navigation */}
+      <nav className="flex-1 px-1.5 py-3 overflow-y-auto scrollbar-thin">
+        {canAccess(topItem.view) && (
+          <div className="mb-2">
+            {renderNavItem(topItem)}
+          </div>
+        )}
         {groups.map(renderGroup)}
       </nav>
 
-      <div className="px-3 py-3 border-t border-sidebar space-y-2">
-        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface-sidebar-hover">
-          <StatusDot status="processing" size="sm" />
-          <div className="flex-1 min-w-0">
-            <p className="text-xs text-content-sidebar-muted truncate">{tr('common.status', lang)}</p>
-            <p className="text-xs text-accent font-medium">{tr('common.allSystems', lang)}</p>
+      {/* Compact footer — no live-telemetry claims for static demo data */}
+      <div className="border-t border-sidebar px-2.5 py-2.5 space-y-1 shrink-0">
+        {!compact && (
+          <div className="px-2 py-1 text-[11px] text-content-sidebar-muted flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-success-500 shrink-0" />
+            <span className="truncate">v2.1 · {lang === 'cn' ? '演示环境' : 'Demo'}</span>
           </div>
-        </div>
-        <div className="flex items-center gap-2 px-3 py-2 text-xs text-content-sidebar-muted">
-          <FlaskConical className="w-3.5 h-3.5" />
-          <span>v2.1 · {lang === 'cn' ? '处理正常' : 'Processing OK'}</span>
-        </div>
-        {onLogout && (
-          <button
-            onClick={onLogout}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-content-sidebar-muted hover:bg-surface-sidebar-hover hover:text-content-primary transition-colors"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            Sign out
-          </button>
         )}
+        <div className="flex items-center gap-1">
+          {onLogout && (
+            <button
+              type="button"
+              onClick={onLogout}
+              aria-label={signOutLabel}
+              title={signOutLabel}
+              className={`flex items-center gap-2 rounded-lg text-content-sidebar-muted hover:bg-surface-sidebar-hover hover:text-content-sidebar transition-colors duration-150 motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                compact ? 'h-9 w-full justify-center' : 'h-9 px-3 text-[13px] font-medium flex-1'
+              }`}
+            >
+              <LogOut className="w-[18px] h-[18px] shrink-0" strokeWidth={1.75} />
+              {!compact && <span>{signOutLabel}</span>}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setCompact((c) => !c)}
+            aria-label={collapseLabel}
+            title={collapseLabel}
+            aria-expanded={!compact}
+            className={`flex items-center justify-center rounded-lg text-content-sidebar-muted hover:bg-surface-sidebar-hover hover:text-content-sidebar transition-colors duration-150 motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-accent h-9 ${
+              compact ? 'w-full' : 'w-9 shrink-0'
+            }`}
+          >
+            {compact ? <PanelLeftOpen className="w-[18px] h-[18px]" strokeWidth={1.75} /> : <PanelLeftClose className="w-[18px] h-[18px]" strokeWidth={1.75} />}
+          </button>
+        </div>
       </div>
     </aside>
   );

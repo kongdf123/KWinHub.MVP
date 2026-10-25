@@ -1,0 +1,240 @@
+I agree. Looking at the screenshot as a senior SaaS product designer, I would treat the sidebar as a core navigation-system redesign, not merely a color or spacing adjustment.
+
+The current sidebar is functional, but its visual language feels closer to a traditional desktop application than a polished, modern sports-performance SaaS platform. The main opportunity is to make navigation easier to scan, reduce visual noise, and give the user's current location a clearer sense of hierarchy—without removing any existing features.
+
+## 1. What I would change in the current sidebar
+
+## 2. The five biggest sidebar UX problems
+
+[Web Navigation Sidebar by Masum Parvej for Halal Lab on Dribbble](https://images.openai.com/static-rsc-4/KX_k3JveyjK_Tw-xI_q_mFjkwZlEvvOa7IMC_5iezoT0gbVOPmxVKjOJR8_qOhJ9kDBR-LQ0oeHx7diPt-c3qKpJIVZBl7D6o8t7KUNru4NKgqQ0JxtB20pwE5vs3rL0FRLOpl73k-sRvlrTj4TfraCxpN7fu1Fo59GpFJl5Jb0?purpose=inline)
+
+01 — Too many navigation items compete for attention
+
+The current sidebar contains many destinations across five groups. Every item has roughly equal visual weight, making the user scan a long list instead of quickly identifying the relevant area.
+
+Design change: preserve all destinations, but use stronger group hierarchy, consistent item spacing, and concise labels. Consider a collapsible sidebar for users who prefer more workspace.
+
+[Bonsai Sidebar Navigation 🚀 | Hugeicons Pro by Hugeicons on Dribbble](https://images.openai.com/static-rsc-4/rfERgs9lYCvCHSLWdzTS-3P1nQ3Iayqsg9Re-WhSkhxbJhIZ4zCvQun7zBGfsJug2RSJm5PW2dSkmihcSKwnYdIxmALzd8BrppGiqPTnBAOGYu1F1nSTisoEKaCgsDyuOYiELi-opQGi_cxDnaLVxi6fg2UE8aewtTZkOfT_ryc?purpose=inline)
+
+02 — The active state is visually too loud
+
+The bright green active pill is highly noticeable against the dark background. That works for brand emphasis, but repeated large green surfaces can make the sidebar feel heavier than the content.
+
+Design change: use a slightly softer green-tinted surface, a narrow accent indicator, and a clear foreground color. Reserve the strongest green for primary actions and selected controls where appropriate.
+
+[SaaS Sidebar Navigation — Light & Dark Mode by Hema malini M on Dribbble](https://images.openai.com/static-rsc-4/UWzxBJRlo4_EJf8t-U8-8b1t3XzqjFMP6iYnKSg9hWsVqJstSSDfbf1qHDFCgkAFnozkXp8os-TgcLrlMkcTa4jb3geSl-THfASpH8zNPrXLn4lNn10qttHYMfjxDPpEdC2xAmueSNieih9ewXXk3GuRoZMnS9di327Cya9ZbXo?purpose=inline)
+
+03 — Group headings and items need clearer hierarchy
+
+In the screenshot, headings such as People, Testing, and Analysis & Reports use small colored text and chevrons. The distinction between section headings and clickable destinations could be stronger and more consistent.
+
+Design change: use a uniform section-header style, smaller but readable muted typography, consistent indentation, and a reliable expand/collapse affordance. Keep section headings clickable only for expanding or collapsing their groups.
+
+[Sidebar x ManyReach by Bricx | UI/UX Design For SaaS on Dribbble](https://images.openai.com/static-rsc-4/Fg4ixRyH9CKWbEoyO1hxbf6hfLlSzC3Hy833542CMtfo15iw9EkekTY8OKqq6Wh6YXXs_MR6SWtCSSG62F-dNgcvtgSDDy-4ShPm8EzmXLBiCcfJbC2zxcnbrCs_nsI75-zRsEXNUz0y3vGbSZq0O6Yp5KiDvWA7qdFef2Urme8?purpose=inline)
+
+04 — The footer consumes too much vertical space
+
+The system-status card, version row, and sign-out control occupy a substantial fixed area. With many navigation items, this reduces the available browsing height and increases scrolling.
+
+Design change: compress the footer into a subtle system-status row and a compact account/action area. Retain version information only if users genuinely need it. If system status is not live telemetry, don't present it as a verified operational status.
+
+[Browse thousands of Sidebar Collapse images for design inspiration | Dribbble](https://images.openai.com/static-rsc-4/8k9nhqtA0n8tBTEn1e74X49hWxO5GS9TEGNGg-qnH0jSusweomqBVI8Mfgs4vuCO0Ge5NsbRVWzix8-QDmx2tq98wfaLFgpYW3rKWLT-lb7bqwc0BdYjJb_QYeg9kr9DGYOl3eCzV-aP-zRxcauZVYFyKzlmuizNewWInWR3Two?purpose=inline)
+
+05 — No compact navigation mode
+
+The sidebar uses a fixed 240px width. That is reasonable for a desktop application, but users with smaller displays or dense tables would benefit from reclaiming horizontal space.
+
+Design change: add a collapsible icon-rail mode, with tooltips, accessible labels, and a clear expand control. Keep the full-width sidebar as the default until usability testing supports a different default.
+
+These images are visual references for design direction, not screenshots of your application.
+
+## 3. The sidebar structure I recommend
+
+Keep the existing routes and navigation destinations. Improve how they're organized and presented.
+
+### Kunwei Hub
+
+Sports Performance Platform
+
+Overview
+
+PEOPLE
+
+Athletes
+
+Teams
+
+TESTING
+
+Test sessions
+
+Protocols
+
+Devices
+
+Sync center
+
+ANALYSIS & REPORTING
+
+Results
+
+Performance
+
+Comparisons
+
+DATA & ADMINISTRATION
+
+Datasets & integrations
+
+Administration
+
+System status
+
+Status information
+
+Conceptual mockup: proposed hierarchy and styling, not a pixel-accurate reproduction. Existing destinations should remain available even when groups are collapsed.
+
+### Proposed navigation hierarchy
+
+| Section              | Destinations                                                                 |
+| -------------------- | ---------------------------------------------------------------------------- |
+| Overview             | Home/dashboard landing page                                                  |
+| People               | Athletes, Teams                                                              |
+| Testing              | Test sessions, Protocols, Devices, Sync center                               |
+| Analysis & Reporting | Results, Performance, Trends, Comparisons, Biomechanics, Dashboards, Reports |
+| Data & Integrations  | Datasets, Raw data, Data sources, Integrations                               |
+| Administration       | Organization, Users, Roles, Settings                                         |
+
+This is largely the grouping your code already has. The improvement is to make the visual hierarchy, spacing, and behavior more polished—not to invent another navigation taxonomy.
+
+One important point: don't hide useful destinations just to make the sidebar shorter. Collapse groups, add a compact mode, and improve hierarchy before considering removing or merging menu items.
+
+## 4. Detailed design specifications
+
+These are starting values to validate against the existing app rather than rigid requirements.
+
+| Element                 | Recommendation                                                    |
+| ----------------------- | ----------------------------------------------------------------- |
+| Expanded width          | 248px; current 240px is also acceptable                           |
+| Compact width           | 64–72px                                                           |
+| Brand header            | 64–72px tall, aligned with the app header                         |
+| Navigation item height  | 36–40px                                                           |
+| Item horizontal padding | 12px                                                              |
+| Icon size               | 16–18px, consistent throughout                                    |
+| Group heading           | 10–11px, medium/semibold, restrained letter spacing               |
+| Spacing between groups  | 12–16px                                                           |
+| Item corner radius      | 7–9px                                                             |
+| Active state            | Soft green surface, strong readable text, subtle accent indicator |
+| Hover state             | Subtle surface change; no layout shift                            |
+| Footer                  | Compact, separated by a subtle border                             |
+| Animation               | Short 150–200ms transition; respect reduced-motion preferences    |
+
+### Interaction rules
+
+- Active page: one clearly selected item; if it belongs to a collapsed group, automatically expand that group.
+- Group collapse: preserve user choices when navigating between pages, except that the active page's group must remain visible.
+- Compact mode: use tooltips, accessible names, and a visible expand/collapse control.
+- Scrolling: keep the brand header and footer fixed while the navigation list scrolls independently.
+- Responsive layout: do not let the sidebar squeeze the athlete table excessively on smaller desktop displays.
+- Permissions: retain the existing `canAccess()` filtering and make sure hidden destinations are not exposed by the compact mode.
+
+## 5. Specific code-level issue to address
+
+In the current `Sidebar.tsx`, the effect that automatically expands the active navigation group depends only on `currentView`:
+
+```
+useEffect(() => {
+  const activeGroup = groups.find(isGroupActive);
+  if (activeGroup && collapsedGroups[activeGroup.id]) {
+    setCollapsedGroups((prev) => ({
+      ...prev,
+      [activeGroup.id]: false,
+    }));
+  }
+}, [currentView]);
+```
+
+However, it also reads `groups` and `collapsedGroups`, which are derived from other state and functions. That can produce stale-closure or hook-dependency lint concerns.
+
+Ask the coding agent to refactor this carefully, preferably deriving the active group from the current view and ensuring the active group is expanded without unnecessarily resetting the user's other collapse choices. Verify that switching between athlete list and athlete detail views still highlights the correct navigation item.
+
+## 6. Ready-to-use instructions for your AI coding agent
+
+# UI/UX Task: Professional SaaS Sidebar Redesign — KWinHub.Web.React
+
+## Goal
+
+Redesign the sidebar in `src/frontend/KWinHub.Web.React/src/components/layout/Sidebar.tsx` to feel like a polished, enterprise-grade sports-performance SaaS platform.
+
+This is a focused navigation UI/UX improvement. Do not redesign the whole application.
+
+## Design direction
+
+Use a refined, restrained visual style:
+
+- Preserve Kunwei's dark-green brand identity in Kunwei Classic.
+- Use semantic tokens so the sidebar also works in Performance Light.
+- Establish clear hierarchy between the brand header, Overview, group headings, navigation items, and footer.
+- Reduce the visual weight of the active state while keeping it unmistakable.
+- Use consistent icon size, indentation, item height, spacing, typography, borders, and interaction states.
+- Avoid excessive bright-green surfaces, decorative separators, unnecessary shadows, and visual clutter.
+
+## Layout requirements
+
+1. Keep all existing navigation destinations and permission checks.
+2. Keep the current group taxonomy and order unless there is a compelling, documented UX reason to adjust labels.
+3. Keep the brand header visually aligned with the app's top header.
+4. Make the navigation list independently scrollable.
+5. Keep the footer compact so it does not consume excessive vertical space.
+6. Retain system status only if its displayed status is meaningful; do not imply live telemetry if it is static demo data.
+7. Keep the expanded sidebar width near its current 240px, unless responsive testing justifies a small adjustment.
+8. Implement a compact 64–72px icon-rail mode only if it can be done without destabilizing layout or navigation. If implemented, provide tooltips, accessible names, and a visible expand/collapse control.
+
+## Navigation item behavior
+
+- Use a consistent item height of approximately 36–40px.
+- Use 16–18px icons with consistent alignment.
+- Use readable 10–11px group headings with consistent spacing.
+- Provide distinct default, hover, active, focus, and disabled states.
+- Keep active-page styling subtle but unmistakable: a restrained green-tinted surface and/or narrow accent indicator.
+- Keep group expand/collapse controls accessible and visually consistent.
+- Preserve the user's collapsed-group preferences while ensuring the active page's group is expanded.
+- Ensure detail views such as athlete profiles still activate their parent navigation item.
+
+## Theme compatibility
+
+- Use existing semantic tokens and extend them where necessary.
+- Ensure all sidebar surfaces, text, borders, hover states, and active states work in both Kunwei Classic and Performance Light.
+- Do not blindly replace brand or status colors.
+- Preserve contrast and visible keyboard focus in both themes.
+
+## Accessibility
+
+- Use native buttons for interactive navigation items.
+- Provide accessible labels for icon-only controls.
+- Support keyboard operation and visible focus.
+- Respect reduced-motion preferences.
+- Avoid relying on color alone for active navigation.
+
+## Scope constraints
+
+Do not change API calls, routes, view names, authorization rules, page content, or business logic. Do not remove existing destinations to shorten the sidebar. Preserve logout behavior.
+
+Inspect the current theme tokens and component conventions before editing. Avoid introducing dependencies unless strictly necessary.
+
+## Validation
+
+- Run the existing build, type-check, and lint commands.
+- Test both themes.
+- Test a short viewport and a long navigation list.
+- Test collapsing groups, navigating to detail views, switching views, and logging out.
+- Verify role-based item visibility.
+- Verify the sidebar does not cause horizontal overflow or squeeze the main content excessively.
+
+Report changed files, validation results, and any remaining limitations.
+
+## My final recommendation
+
+Prioritize three changes: (1) hierarchy and active-state refinement, (2) a compact footer and better scrolling behavior, and (3) a collapsible sidebar with accessible interactions. Keep the existing navigation taxonomy and route behavior.
+
+That gives KWinHub a much more professional SaaS navigation experience while keeping the work focused, reversible, and compatible with the new theme system.

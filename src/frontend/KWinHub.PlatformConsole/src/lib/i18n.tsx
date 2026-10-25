@@ -34,8 +34,8 @@ const en = {
   'nav.algorithms': 'Algorithms',
   'nav.auditLogs': 'Audit log',
   'nav.group.overview': 'Overview',
-  'nav.group.tenants': 'Tenants & Access',
-  'nav.group.catalogs': 'Platform Catalogs',
+  'nav.group.tenants': 'Tenants & Users',
+  'nav.group.catalogs': 'Catalogs',
   'nav.group.security': 'Security & Audit',
 
   // Common
@@ -299,8 +299,8 @@ const zhCN: Dictionary = {
   'nav.algorithms': '算法',
   'nav.auditLogs': '审计日志',
   'nav.group.overview': '概览',
-  'nav.group.tenants': '租户与访问',
-  'nav.group.catalogs': '平台目录',
+  'nav.group.tenants': '租户与用户',
+  'nav.group.catalogs': '资源目录',
   'nav.group.security': '安全与审计',
 
   // Common
