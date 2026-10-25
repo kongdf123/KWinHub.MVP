@@ -596,11 +596,11 @@ export function LanguageSwitcher({ dark = false }: { dark?: boolean }) {
 
   const baseClass = dark
     ? 'border-white/10 text-ink-300'
-    : 'border-ink-200 text-ink-600';
+    : 'border-default text-content-secondary';
   const activeClass = dark
     ? 'bg-teal-500/20 text-teal-300'
-    : 'bg-teal-50 text-teal-700';
-  const idleClass = dark ? 'hover:text-white' : 'hover:text-ink-900';
+    : 'bg-accent-soft text-accent';
+  const idleClass = dark ? 'hover:text-white' : 'hover:text-content-primary';
 
   return (
     <div className={`inline-flex overflow-hidden rounded-md border text-xs font-medium ${baseClass}`}>
@@ -615,7 +615,7 @@ export function LanguageSwitcher({ dark = false }: { dark?: boolean }) {
         type="button"
         onClick={() => setLocale('zh-CN')}
         className={`border-l px-2.5 py-1 transition-colors ${
-          dark ? 'border-white/10' : 'border-ink-200'
+          dark ? 'border-white/10' : 'border-default'
         } ${locale === 'zh-CN' ? activeClass : idleClass}`}
       >
         {t('lang.zh')}

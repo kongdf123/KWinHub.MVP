@@ -4,6 +4,17 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>KWinHub Platform Console</title>
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem('kwinhub.platform-console.theme');
+          var theme = stored === 'light' ? 'light' : 'classic';
+          document.documentElement.setAttribute('data-theme', theme);
+        } catch (e) {
+          document.documentElement.setAttribute('data-theme', 'classic');
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

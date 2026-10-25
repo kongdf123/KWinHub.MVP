@@ -8,6 +8,29 @@ export default {
         mono: ['JetBrains Mono', 'SF Mono', 'Menlo', 'monospace'],
       },
       colors: {
+        surface: {
+          app: 'var(--surface-app)',
+          panel: 'var(--surface-panel)',
+          sidebar: 'var(--surface-sidebar)',
+          header: 'var(--surface-header)',
+          hover: 'var(--surface-hover)',
+          'sidebar-hover': 'var(--surface-sidebar-hover)',
+        },
+        content: {
+          primary: 'var(--text-primary)',
+          secondary: 'var(--text-secondary)',
+          sidebar: 'var(--text-sidebar)',
+          'sidebar-muted': 'var(--text-sidebar-muted)',
+        },
+        border: {
+          DEFAULT: 'var(--border-default)',
+          sidebar: 'var(--border-sidebar)',
+        },
+        accent: {
+          DEFAULT: 'var(--accent-primary)',
+          hover: 'var(--accent-hover)',
+          soft: 'var(--accent-soft)',
+        },
         ink: {
           50: '#f7f8f9',
           100: '#eef0f3',

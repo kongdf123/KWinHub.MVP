@@ -4,6 +4,63 @@
 @tailwind components;
 @tailwind utilities;
 
+:root,
+[data-theme="classic"] {
+  color-scheme: light;
+
+  --surface-app: #f7f8f9;
+  --surface-panel: #ffffff;
+  --surface-sidebar: #1c1f27;
+  --surface-header: #ffffff;
+  --surface-hover: #eef0f3;
+  --surface-sidebar-hover: rgba(255, 255, 255, 0.05);
+
+  --text-primary: #2a2e38;
+  --text-secondary: #737d91;
+  --text-sidebar: #eef0f3;
+  --text-sidebar-muted: #737d91;
+
+  --border-default: #dde1e7;
+  --border-sidebar: rgba(255, 255, 255, 0.08);
+
+  --accent-primary: #06b56b;
+  --accent-hover: #009256;
+  --accent-soft: rgba(6, 181, 107, 0.16);
+
+  --status-success: #10b981;
+  --status-warning: #f59e0b;
+  --status-danger: #ef4444;
+  --focus-ring: #06b56b;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+
+  --surface-app: #f5f7f8;
+  --surface-panel: #ffffff;
+  --surface-sidebar: #ffffff;
+  --surface-header: #ffffff;
+  --surface-hover: #edf2f1;
+  --surface-sidebar-hover: #edf2f1;
+
+  --text-primary: #202a32;
+  --text-secondary: #64717c;
+  --text-sidebar: #34443f;
+  --text-sidebar-muted: #64717c;
+
+  --border-default: #dce3e5;
+  --border-sidebar: #dce3e5;
+
+  --accent-primary: #287765;
+  --accent-hover: #205f53;
+  --accent-soft: rgba(40, 119, 101, 0.12);
+
+  --status-success: #10b981;
+  --status-warning: #f59e0b;
+  --status-danger: #ef4444;
+  --focus-ring: #287765;
+}
+
 @layer base {
   * {
     -webkit-font-smoothing: antialiased;
@@ -11,10 +68,11 @@
   }
   body {
     font-family: 'Inter', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
-    @apply bg-ink-50 text-ink-900;
+    background-color: var(--surface-app);
+    color: var(--text-primary);
   }
   ::selection {
-    @apply bg-teal-200 text-teal-900;
+    background-color: var(--accent-soft);
   }
 }
 

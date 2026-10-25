@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { LanguageSwitcher, useI18n, type TranslationKey } from '../lib/i18n';
 import { useHashRoute } from '../lib/router';
+import { ThemeSwitcher } from './ThemeSwitcher';
 
 type NavItem = {
   path: string;
@@ -81,19 +82,19 @@ export function Layout({
   const toggle = (label: string) => setCollapsed((prev) => ({ ...prev, [label]: !prev[label] }));
 
   return (
-    <div className="min-h-screen bg-ink-50">
-      <aside className="fixed inset-y-0 left-0 z-20 flex w-[240px] flex-col bg-ink-950 text-ink-200">
+    <div className="min-h-screen bg-surface-app">
+      <aside className="fixed inset-y-0 left-0 z-20 flex w-[240px] flex-col bg-surface-sidebar text-content-sidebar border-r border-sidebar">
         <div className="px-5 pb-3 pt-5">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-teal-500 text-ink-950">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent text-surface-sidebar">
               <ShieldCheck size={18} />
             </div>
             <div className="min-w-0">
-              <div className="truncate text-sm font-semibold text-white">{t('layout.brand')}</div>
-              <div className="truncate text-[11px] text-ink-400">{t('layout.console')}</div>
+              <div className="truncate text-sm font-semibold text-content-sidebar">{t('layout.brand')}</div>
+              <div className="truncate text-[11px] text-content-sidebar-muted">{t('layout.console')}</div>
             </div>
           </div>
-          <div className="mt-3 inline-flex rounded bg-teal-500/20 px-2 py-0.5 text-[10px] font-semibold tracking-widest text-teal-300">
+          <div className="mt-3 inline-flex rounded bg-accent-soft px-2 py-0.5 text-[10px] font-semibold tracking-widest text-accent">
             {t('layout.badge')}
           </div>
         </div>
@@ -108,7 +109,7 @@ export function Layout({
                   type="button"
                   onClick={() => toggle(group.labelKey)}
                   className={`flex w-full items-center gap-1.5 px-3 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-wider transition-colors ${
-                    groupActive ? 'text-teal-400' : 'text-ink-500 hover:text-ink-300'
+                    groupActive ? 'text-accent' : 'text-content-sidebar-muted hover:text-content-sidebar'
                   }`}
                 >
                   <ChevronDown
@@ -127,8 +128,8 @@ export function Layout({
                         href={`#${item.path}`}
                         className={`mb-0.5 flex items-center gap-2.5 rounded-md border-l-2 px-3 py-2 text-sm transition-colors ${
                           active
-                            ? 'border-teal-400 bg-teal-500/20 font-medium text-teal-300'
-                            : 'border-transparent text-ink-300 hover:bg-white/5 hover:text-white'
+                            ? 'border-accent bg-accent-soft font-medium text-accent'
+                            : 'border-transparent text-content-sidebar hover:bg-surface-sidebar-hover hover:text-content-primary'
                         }`}
                       >
                         <Icon size={17} />
@@ -141,14 +142,14 @@ export function Layout({
           })}
         </nav>
 
-        <div className="border-t border-white/10 p-4">
-          <div className="truncate text-xs text-ink-400" title={email}>
+        <div className="border-t border-sidebar p-4">
+          <div className="truncate text-xs text-content-sidebar-muted" title={email}>
             {email}
           </div>
           <button
             type="button"
             onClick={onSignOut}
-            className="mt-2 flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm text-ink-300 transition-colors hover:bg-white/5 hover:text-white"
+            className="mt-2 flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm text-content-sidebar transition-colors hover:bg-surface-sidebar-hover hover:text-content-primary"
           >
             <LogOut size={16} />
             {t('layout.signOut')}
@@ -157,21 +158,22 @@ export function Layout({
       </aside>
 
       <div className="pl-[240px]">
-        <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b border-ink-200 bg-white px-6">
-          <div className="flex min-w-0 items-center gap-2 text-sm text-ink-400">
+        <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b border-default bg-surface-header px-6">
+          <div className="flex min-w-0 items-center gap-2 text-sm text-content-secondary">
             <span className="whitespace-nowrap">{t('layout.console')}</span>
             <ChevronDown size={14} className="shrink-0 -rotate-90" />
-            <span className="truncate font-semibold text-ink-900">{title}</span>
+            <span className="truncate font-semibold text-content-primary">{title}</span>
           </div>
           <div className="flex items-center gap-3">
+            <ThemeSwitcher />
             <LanguageSwitcher />
-            <span className="rounded-full bg-ink-100 px-2.5 py-1 text-xs font-medium text-ink-700">
+            <span className="rounded-full bg-surface-hover px-2.5 py-1 text-xs font-medium text-content-primary">
               {t('layout.adminRole')}
             </span>
           </div>
         </header>
 
-        <main className="scrollbar-thin h-[calc(100vh-3.5rem)] overflow-y-auto bg-ink-50 p-6">
+        <main className="scrollbar-thin h-[calc(100vh-3.5rem)] overflow-y-auto bg-surface-app p-6">
           {children}
         </main>
       </div>

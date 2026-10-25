@@ -224,12 +224,12 @@ export function LanguageSwitcher({ className = '' }: { className?: string }) {
   const base = 'px-2.5 py-1 text-xs font-medium rounded-full transition-colors';
 
   return (
-    <div className={`inline-flex items-center gap-0.5 rounded-full border border-ink-200 bg-white p-0.5 ${className}`}>
+    <div className={`inline-flex items-center gap-0.5 rounded-full border border-default bg-surface-panel p-0.5 ${className}`}>
       <button
         type="button"
         onClick={() => setLocale('en')}
         aria-pressed={locale === 'en'}
-        className={`${base} ${locale === 'en' ? 'bg-teal-600 text-white' : 'text-ink-600 hover:bg-ink-50'}`}
+        className={`${base} ${locale === 'en' ? 'bg-accent text-surface-sidebar' : 'text-content-secondary hover:bg-surface-hover'}`}
       >
         English
       </button>
@@ -237,7 +237,7 @@ export function LanguageSwitcher({ className = '' }: { className?: string }) {
         type="button"
         onClick={() => setLocale('zh-CN')}
         aria-pressed={locale === 'zh-CN'}
-        className={`${base} ${locale === 'zh-CN' ? 'bg-teal-600 text-white' : 'text-ink-600 hover:bg-ink-50'}`}
+        className={`${base} ${locale === 'zh-CN' ? 'bg-accent text-surface-sidebar' : 'text-content-secondary hover:bg-surface-hover'}`}
       >
         简体中文
       </button>

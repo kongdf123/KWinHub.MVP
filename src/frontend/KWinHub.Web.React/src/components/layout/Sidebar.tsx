@@ -104,7 +104,7 @@ export function Sidebar({ onLogout }: { onLogout?: () => void }) {
         key={item.view}
         onClick={() => navigate(item.view)}
         className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors ${
-          active ? 'bg-teal-500 text-white' : 'text-kunwei-200 hover:bg-kunwei-900 hover:text-white'
+          active ? 'bg-accent text-surface-sidebar' : 'text-content-sidebar hover:bg-surface-sidebar-hover hover:text-content-primary'
         }`}
       >
         <Icon className="shrink-0" style={{ width: 16, height: 16 }} />
@@ -122,7 +122,7 @@ export function Sidebar({ onLogout }: { onLogout?: () => void }) {
         <button
           onClick={() => toggleGroup(group.id)}
           className={`w-full flex items-center gap-2 px-3 pt-4 pb-1.5 text-[11px] font-semibold tracking-wider transition-colors ${
-            groupActive ? 'text-teal-400' : 'text-kunwei-400 hover:text-kunwei-200'
+            groupActive ? 'text-accent' : 'text-content-sidebar-muted hover:text-content-sidebar'
           }`}
         >
           <ChevronDown className={`w-3 h-3 transition-transform shrink-0 ${collapsed ? '-rotate-90' : ''}`} />
@@ -138,15 +138,15 @@ export function Sidebar({ onLogout }: { onLogout?: () => void }) {
   };
 
   return (
-    <aside className="w-60 bg-kunwei-970 text-kunwei-100 flex flex-col h-screen sticky top-0 shrink-0">
-      <div className="px-5 py-5 border-b border-kunwei-900">
+    <aside className="w-60 bg-surface-sidebar text-content-sidebar flex flex-col h-screen sticky top-0 shrink-0">
+      <div className="px-5 py-5 border-b border-sidebar">
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-lg bg-teal-500 flex items-center justify-center shrink-0">
-            <Activity className="w-5 h-5 text-white" />
+          <div className="w-9 h-9 rounded-lg bg-accent flex items-center justify-center shrink-0">
+            <Activity className="w-5 h-5 text-surface-sidebar" />
           </div>
           <div className="min-w-0">
-            <h1 className="text-sm font-semibold text-white truncate">Kunwei Hub</h1>
-            <p className="text-xs text-kunwei-300 truncate">{lang === 'cn' ? DEMO_ORG.nameCn : DEMO_ORG.name}</p>
+            <h1 className="text-sm font-semibold text-content-sidebar truncate">Kunwei Hub</h1>
+            <p className="text-xs text-content-sidebar-muted truncate">{lang === 'cn' ? DEMO_ORG.nameCn : DEMO_ORG.name}</p>
           </div>
         </div>
       </div>
@@ -156,22 +156,22 @@ export function Sidebar({ onLogout }: { onLogout?: () => void }) {
         {groups.map(renderGroup)}
       </nav>
 
-      <div className="px-3 py-3 border-t border-kunwei-900 space-y-2">
-        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-kunwei-960">
+      <div className="px-3 py-3 border-t border-sidebar space-y-2">
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface-sidebar-hover">
           <StatusDot status="processing" size="sm" />
           <div className="flex-1 min-w-0">
-            <p className="text-xs text-kunwei-300 truncate">{tr('common.status', lang)}</p>
-            <p className="text-xs text-success-400 font-medium">{tr('common.allSystems', lang)}</p>
+            <p className="text-xs text-content-sidebar-muted truncate">{tr('common.status', lang)}</p>
+            <p className="text-xs text-accent font-medium">{tr('common.allSystems', lang)}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2 px-3 py-2 text-xs text-kunwei-400">
+        <div className="flex items-center gap-2 px-3 py-2 text-xs text-content-sidebar-muted">
           <FlaskConical className="w-3.5 h-3.5" />
           <span>v2.1 · {lang === 'cn' ? '处理正常' : 'Processing OK'}</span>
         </div>
         {onLogout && (
           <button
             onClick={onLogout}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-kunwei-300 hover:bg-kunwei-900 hover:text-white transition-colors"
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-content-sidebar-muted hover:bg-surface-sidebar-hover hover:text-content-primary transition-colors"
           >
             <LogOut className="w-3.5 h-3.5" />
             Sign out
