@@ -62,6 +62,43 @@ npm install
 npm run build          # = build:frontends + cargo release build + NSIS bundling
 ```
 
+### Verified build environment
+
+The versions below were used to produce a successful release build (EXE + NSIS
+installer). Team members should match these where possible to avoid toolchain
+surprises. Newer minor/patch versions usually work; if a build fails on a
+different version, fall back to these.
+
+| Tool | Version | Notes |
+|---|---|---|
+| OS | Windows 10.0.26300 | Windows 10 22H2 or later required |
+| Node.js | v22.14.0 | LTS; any Node 20+ should work |
+| npm | 11.12.1 | bundled with Node 22 |
+| Rust (rustc) | 1.97.0 (2026-07-07) | via rustup; `rustup default stable-x86_64-pc-windows-msvc` |
+| Cargo | 1.97.0 | shipped with the toolchain above |
+| Rust toolchain | `stable-x86_64-pc-windows-msvc` | **MSVC, not GNU** (default on Windows) |
+| Rust target | `x86_64-pc-windows-msvc` | required for the Windows build |
+| Cargo.toml `rust-version` | 1.77.2 | minimum supported Rust version |
+| Tauri CLI (npm) | `@tauri-apps/cli@2.12.4` | devDependency in `package.json` |
+| Tauri crate (Rust) | `tauri@2.12.5` | resolved in `Cargo.lock` |
+| tauri-build | `2.7.4` | resolved in `Cargo.lock` |
+| Vite (KWinHub.Web.React) | 5.4.8 | frontend devDependency |
+| Vite (KWinHub.PlatformConsole) | 5.4.21 | frontend devDependency |
+| Visual Studio Build Tools | installed | workload: "Desktop development with C++" |
+| WebView2 Runtime | 155.0.4283.62 | evergreen; installer downloads it if missing |
+
+Quick verification commands (run in PowerShell):
+
+```powershell
+node --version                  # v22.x
+npm --version                   # 11.x
+rustc --version                 # 1.97.0
+cargo --version                 # 1.97.0
+rustup show active-toolchain    # stable-x86_64-pc-windows-msvc
+cd src/clients/KWinHub.WebShell
+npm list @tauri-apps/cli        # 2.12.4
+```
+
 Outputs:
 
 - App exe: `src-tauri/target/release/kwinhub-webshell.exe`
