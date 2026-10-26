@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useApp } from '@/lib/app-context';
 import { t as tr } from '@/lib/i18n';
 import { TopBar } from '@/components/layout/TopBar';
+import { WORKSPACE_TABS_BY_VIEW } from '@/lib/navigation';
 import { DataTable } from '@/components/ui/DataTable';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { DEMO_USERS, DEMO_TEAMS } from '@/lib/demo-data';
@@ -9,8 +10,10 @@ import { Search, UserPlus } from 'lucide-react';
 import type { User } from '@/lib/types';
 
 export function UsersPage() {
-  const { lang, addToast } = useApp();
+  const { lang, addToast, navigate, canAccess } = useApp();
   const [search, setSearch] = useState('');
+
+  const workspaceTabs = (WORKSPACE_TABS_BY_VIEW['users'] ?? []).filter((tab) => canAccess(tab.view));
 
   const filtered = useMemo(() => {
     return DEMO_USERS.filter((u) => {
@@ -21,15 +24,37 @@ export function UsersPage() {
 
   return (
     <div>
-      <TopBar
-        title={tr('admin.users', lang)}
-        actions={
-          <button onClick={() => addToast(lang === 'cn' ? '添加用户（演示）' : 'Add user (demo)', 'info')} className="flex items-center gap-2 px-3 py-2 bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium rounded-lg transition-colors">
-            <UserPlus className="w-4 h-4" /> {lang === 'cn' ? '添加用户' : 'Add User'}
-          </button>
-        }
-      />
-      <div className="p-6 space-y-4">
+      <TopBar />
+
+      <div className="px-6 pt-6">
+        <div className="flex items-center justify-between gap-4">
+          <h2 className="text-xl font-semibold text-content-primary">{tr('nav.settings', lang)}</h2>
+          <div className="text-sm text-content-secondary">{/* page count or subtitle here */}</div>
+        </div>
+
+        {workspaceTabs.length > 1 && (
+          <nav aria-label={tr('nav.settings', lang)} className="flex items-center gap-1 mt-4 border-b border-default">
+            {workspaceTabs.map((tab) => {
+              const active = tab.view === 'users';
+              return (
+                <button
+                  key={tab.view}
+                  type="button"
+                  onClick={() => navigate(tab.view)}
+                  aria-current={active ? 'page' : undefined}
+                  className={`px-4 py-2.5 -mb-px text-sm font-medium border-b-2 whitespace-nowrap transition-colors duration-150 motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                    active ? 'border-accent text-accent' : 'border-transparent text-content-secondary hover:text-content-primary'
+                  }`}
+                >
+                  {tr(tab.labelKey, lang)}
+                </button>
+              );
+            })}
+          </nav>
+        )}
+      </div>
+
+      <div className="px-6 py-6 space-y-4">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-400" />
           <input

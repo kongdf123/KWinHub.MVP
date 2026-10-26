@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useApp } from '@/lib/app-context';
 import { t as tr } from '@/lib/i18n';
 import { TopBar } from '@/components/layout/TopBar';
+import { WORKSPACE_TABS_BY_VIEW } from '@/lib/navigation';
 import { ForceTimeCurve } from '@/components/ui/ForceTimeCurve';
 import { DEMO_SESSIONS, DEMO_PROTOCOLS, DEMO_ATHLETES, getProtocol } from '@/lib/demo-data';
 import { Waves, Activity, Zap, Video, Users, Radio, Navigation, Flag, ChevronRight } from 'lucide-react';
@@ -40,10 +41,13 @@ const PHASE_METRICS = [
 ];
 
 export function BiomechanicsPage() {
-  const { lang } = useApp();
+  const { lang, navigate, canAccess } = useApp();
   const [sessionId, setSessionId] = useState(DEMO_SESSIONS[0]?.id || '');
   const [phaseTab, setPhaseTab] = useState<PhaseTab>('phases');
   const [selectedTrial, setSelectedTrial] = useState(0);
+
+  const workspaceTabs = (WORKSPACE_TABS_BY_VIEW['biomechanics'] ?? []).filter((tab) => canAccess(tab.view));
+
   const session = DEMO_SESSIONS.find((s) => s.id === sessionId);
   const trial = session?.trials[selectedTrial];
   const athlete = session ? DEMO_ATHLETES.find((a) => a.id === session.athleteId) : undefined;
@@ -51,11 +55,37 @@ export function BiomechanicsPage() {
 
   return (
     <div>
-      <TopBar
-        title={tr('biomechanics.title', lang)}
-        subtitle={tr('biomechanics.subtitle', lang)}
-      />
-      <div className="p-6 space-y-6">
+      <TopBar />
+
+      <div className="px-6 pt-6">
+        <div className="flex items-center justify-between gap-4">
+          <h2 className="text-xl font-semibold text-content-primary">{tr('nav.workspace.analysis', lang)}</h2>
+          <div className="text-sm text-content-secondary">{/* page count or subtitle here */}</div>
+        </div>
+
+        {workspaceTabs.length > 1 && (
+          <nav aria-label={tr('nav.workspace.analysis', lang)} className="flex items-center gap-1 mt-4 border-b border-default">
+            {workspaceTabs.map((tab) => {
+              const active = tab.view === 'biomechanics';
+              return (
+                <button
+                  key={tab.view}
+                  type="button"
+                  onClick={() => navigate(tab.view)}
+                  aria-current={active ? 'page' : undefined}
+                  className={`px-4 py-2.5 -mb-px text-sm font-medium border-b-2 whitespace-nowrap transition-colors duration-150 motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                    active ? 'border-accent text-accent' : 'border-transparent text-content-secondary hover:text-content-primary'
+                  }`}
+                >
+                  {tr(tab.labelKey, lang)}
+                </button>
+              );
+            })}
+          </nav>
+        )}
+      </div>
+
+      <div className="px-6 py-6 space-y-6">
         <div className="flex flex-wrap items-center gap-3">
           <select value={sessionId} onChange={(e) => { setSessionId(e.target.value); setSelectedTrial(0); }} className="text-sm bg-white border border-ink-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400 transition-all">
             {DEMO_SESSIONS.map((s) => {

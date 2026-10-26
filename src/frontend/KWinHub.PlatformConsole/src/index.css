@@ -8,29 +8,39 @@
 [data-theme="classic"] {
   color-scheme: light;
 
-  --surface-app: #f7f8f9;
+  /* Workspace — cool light-gray + white surfaces */
+  --surface-app: #f5f7f8;
   --surface-panel: #ffffff;
-  --surface-sidebar: #1c1f27;
   --surface-header: #ffffff;
-  --surface-hover: #eef0f3;
-  --surface-sidebar-hover: rgba(255, 255, 255, 0.05);
+  --surface-hover: #eef1f1;
 
-  --text-primary: #2a2e38;
-  --text-secondary: #737d91;
-  --text-sidebar: #eef0f3;
-  --text-sidebar-muted: #737d91;
+  /* Sidebar — deep black-green foundation */
+  --surface-sidebar: #102523;
+  --surface-sidebar-hover: #1b403b;
+  --surface-sidebar-active: #21514b;
+  --border-sidebar: #284541;
 
-  --border-default: #dde1e7;
-  --border-sidebar: rgba(255, 255, 255, 0.08);
+  /* Text */
+  --text-primary: #172126;
+  --text-secondary: #718087;
+  --text-sidebar: #d7e5e1;
+  --text-sidebar-active: #ffffff;
+  --text-sidebar-muted: #a8c1bc;
 
-  --accent-primary: #06b56b;
-  --accent-hover: #009256;
-  --accent-soft: rgba(6, 181, 107, 0.28);
+  /* Border */
+  --border-default: #e2e8e9;
 
-  --status-success: #10b981;
-  --status-warning: #f59e0b;
-  --status-danger: #ef4444;
-  --focus-ring: #06b56b;
+  /* Brand — teal for primary actions, mint for restrained highlights */
+  --accent-primary: #168373;
+  --accent-hover: #0d675c;
+  --accent-soft: #e6f4f1;
+  --accent-highlight: #46baa4;
+
+  /* Semantic status colors */
+  --status-success: #168373;
+  --status-warning: #b78021;
+  --status-danger: #b9564e;
+  --focus-ring: #168373;
 }
 
 [data-theme="light"] {
@@ -42,23 +52,26 @@
   --surface-header: #ffffff;
   --surface-hover: #edf2f1;
   --surface-sidebar-hover: #edf2f1;
+  --surface-sidebar-active: #e6f4f1;
 
-  --text-primary: #202a32;
-  --text-secondary: #64717c;
+  --text-primary: #172126;
+  --text-secondary: #718087;
   --text-sidebar: #34443f;
+  --text-sidebar-active: #168373;
   --text-sidebar-muted: #64717c;
 
-  --border-default: #dce3e5;
-  --border-sidebar: #dce3e5;
+  --border-default: #e2e8e9;
+  --border-sidebar: #e2e8e9;
 
-  --accent-primary: #287765;
-  --accent-hover: #205f53;
-  --accent-soft: rgba(40, 119, 101, 0.12);
+  --accent-primary: #168373;
+  --accent-hover: #0d675c;
+  --accent-soft: #e6f4f1;
+  --accent-highlight: #46baa4;
 
-  --status-success: #10b981;
-  --status-warning: #f59e0b;
-  --status-danger: #ef4444;
-  --focus-ring: #287765;
+  --status-success: #168373;
+  --status-warning: #b78021;
+  --status-danger: #b9564e;
+  --focus-ring: #168373;
 }
 
 @layer base {

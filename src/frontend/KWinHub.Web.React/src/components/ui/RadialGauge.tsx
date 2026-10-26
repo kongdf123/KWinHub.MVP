@@ -15,7 +15,7 @@ export function RadialGauge({
   label,
   unit = '',
   size = 120,
-  color = '#06b56b',
+  color = '#168373',
   warningThreshold,
   attentionThreshold,
 }: RadialGaugeProps) {
@@ -23,9 +23,9 @@ export function RadialGauge({
   const radius = size / 2 - 12;
   const circumference = Math.PI * radius;
   const strokeColor = attentionThreshold && value >= attentionThreshold
-    ? '#f97316'
+    ? '#b9564e'
     : warningThreshold && value >= warningThreshold
-    ? '#fbbf24'
+    ? '#e9a72c'
     : color;
   const gradId = `gauge-${label.replace(/\s/g, '')}-${color.replace('#', '')}`;
 

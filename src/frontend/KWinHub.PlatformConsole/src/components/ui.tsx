@@ -118,7 +118,7 @@ export function StatusPill({ status }: { status: string }) {
 export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost';
 
 const BUTTON_VARIANTS: Record<ButtonVariant, string> = {
-  primary: 'bg-teal-600 text-white hover:bg-teal-700',
+  primary: 'bg-accent text-white hover:bg-accent-hover',
   secondary: 'border border-ink-300 bg-white text-ink-700 hover:bg-ink-50',
   danger: 'bg-invalid-600 text-white hover:bg-invalid-700',
   ghost: 'text-ink-600 hover:bg-ink-100 hover:text-ink-900',
@@ -140,7 +140,7 @@ export function Button({
 }
 
 const CONTROL_CLASS =
-  'w-full rounded-md border border-ink-300 bg-white px-3 py-2 text-sm text-ink-900 shadow-sm placeholder:text-ink-400 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-100 disabled:bg-ink-50';
+  'w-full rounded-md border border-ink-300 bg-white px-3 py-2 text-sm text-ink-900 shadow-sm placeholder:text-ink-400 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-soft disabled:bg-ink-50';
 
 export function Input({ className = '', ...props }: InputHTMLAttributes<HTMLInputElement>) {
   return <input className={`${CONTROL_CLASS} ${className}`} {...props} />;
@@ -203,7 +203,7 @@ export function EmptyState({ title, description }: { title: string; description?
 export function Spinner({ className = '' }: { className?: string }) {
   return (
     <div className={`flex items-center justify-center py-12 ${className}`}>
-      <Loader2 className="h-6 w-6 animate-spin text-teal-600" />
+      <Loader2 className="h-6 w-6 animate-spin text-accent" />
     </div>
   );
 }

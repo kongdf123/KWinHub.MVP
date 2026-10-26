@@ -17,7 +17,7 @@ const STRINGS: Record<string, LocalizedString> = {
   'brand.feature2': { en: 'Real-time validity checking', 'zh-CN': '实时有效性检查' },
   'brand.feature3': { en: 'Automated trend analysis & alerts', 'zh-CN': '自动趋势分析与提醒' },
   'brand.feature4': { en: 'Configurable reports & exports', 'zh-CN': '可配置的报告与导出' },
-  'brand.copyright': { en: '© 2026 Kunwei Performance Technologies', 'zh-CN': '© 2026 昆威运动表现科技' },
+  'brand.copyright': { en: '© 2026 Kunwei Performance Technologies', 'zh-CN': '© 2026 坤维运动' },
 
   // Shared
   'common.optional': { en: '(optional)', 'zh-CN': '（选填）' },

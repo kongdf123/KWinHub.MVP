@@ -3,6 +3,7 @@ import { useApp } from '@/lib/app-context';
 import { t as tr } from '@/lib/i18n';
 import { DEMO_INTEGRATIONS } from '@/lib/demo-data';
 import { TopBar } from '@/components/layout/TopBar';
+import { WORKSPACE_TABS_BY_VIEW } from '@/lib/navigation';
 import { Modal } from '@/components/ui/Modal';
 import { Zap, Watch, Heart, Database, Dumbbell, CheckCircle, XCircle, AlertTriangle, Plus, Key, RefreshCw, Code, AlertCircle, type LucideIcon } from 'lucide-react';
 import type { Integration } from '@/lib/types';
@@ -16,8 +17,10 @@ const AUTH_TYPE_LABELS: Record<string, { en: string; cn: string }> = {
 };
 
 export function IntegrationsPage() {
-  const { lang, addToast } = useApp();
+  const { lang, addToast, navigate, canAccess } = useApp();
   const [detailIntegration, setDetailIntegration] = useState<Integration | null>(null);
+
+  const workspaceTabs = (WORKSPACE_TABS_BY_VIEW['integrations'] ?? []).filter((tab) => canAccess(tab.view));
 
   const statusConfig = {
     connected: { label: { en: 'Connected', cn: '已连接' }, color: 'text-success-700 bg-success-50 border-success-200', icon: CheckCircle },
@@ -27,8 +30,37 @@ export function IntegrationsPage() {
 
   return (
     <div>
-      <TopBar title={tr('int.title', lang)} subtitle={lang === 'cn' ? '外部平台连接与集成管理' : 'External platform connections and integration management'} />
-      <div className="p-6">
+      <TopBar />
+
+      <div className="px-6 pt-6">
+        <div className="flex items-center justify-between gap-4">
+          <h2 className="text-xl font-semibold text-content-primary">{tr('nav.workspace.data', lang)}</h2>
+          <div className="text-sm text-content-secondary">{/* page count or subtitle here */}</div>
+        </div>
+
+        {workspaceTabs.length > 1 && (
+          <nav aria-label={tr('nav.workspace.data', lang)} className="flex items-center gap-1 mt-4 border-b border-default">
+            {workspaceTabs.map((tab) => {
+              const active = tab.view === 'integrations';
+              return (
+                <button
+                  key={tab.view}
+                  type="button"
+                  onClick={() => navigate(tab.view)}
+                  aria-current={active ? 'page' : undefined}
+                  className={`px-4 py-2.5 -mb-px text-sm font-medium border-b-2 whitespace-nowrap transition-colors duration-150 motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                    active ? 'border-accent text-accent' : 'border-transparent text-content-secondary hover:text-content-primary'
+                  }`}
+                >
+                  {tr(tab.labelKey, lang)}
+                </button>
+              );
+            })}
+          </nav>
+        )}
+      </div>
+
+      <div className="px-6 py-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {DEMO_INTEGRATIONS.map((integration) => {
             const Icon = ICONS[integration.icon] || Zap;

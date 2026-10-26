@@ -6,6 +6,7 @@ import { DEMO_SESSIONS, DEMO_ATHLETES, DEMO_PROTOCOLS, DEMO_DATA_SOURCES, getSpo
 import { TopBar } from '@/components/layout/TopBar';
 import { DataTable } from '@/components/ui/DataTable';
 import { StatusBadge } from '@/components/ui/StatusBadge';
+import { WORKSPACE_TABS_BY_VIEW } from '@/lib/navigation';
 import { Upload, Search, Activity, Zap, Waves, TrendingUp, Dumbbell, Shuffle, ChevronRight, CheckCircle, XCircle, RefreshCw, AlertCircle, Download, MoreVertical, FileText, BarChart3 } from 'lucide-react';
 import type { TestSession, SessionStatus } from '@/lib/types';
 
@@ -33,12 +34,14 @@ const SESSION_STATUS_CONFIG: Record<SessionStatus, { en: string; cn: string; col
 };
 
 export function SessionsPage() {
-  const { navigate, addToast, lang } = useApp();
+  const { navigate, addToast, lang, canAccess } = useApp();
   const [search, setSearch] = useState('');
   const [protocolFilter, setProtocolFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [sourceFilter, setSourceFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
+
+  const workspaceTabs = (WORKSPACE_TABS_BY_VIEW['sessions'] ?? []).filter((tab) => canAccess(tab.view));
 
   const filteredSessions = useMemo(() => {
     return DEMO_SESSIONS.filter((s) => {
@@ -85,23 +88,40 @@ export function SessionsPage() {
 
   return (
     <div>
-      <TopBar
-        title={tr('sessions.title', lang)}
-        subtitle={tr('sessions.subtitle', lang)}
-        actions={
-          <button
-            onClick={() => { addToast(lang === 'cn' ? '导入数据（演示）' : 'Import data (demo)', 'info'); navigate('data'); }}
-            className="flex items-center gap-2 px-3 py-2 bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium rounded-lg transition-colors"
-          >
-            <Upload className="w-4 h-4" />
-            {tr('common.importData', lang)}
-          </button>
-        }
-      />
-      <div className="p-6 space-y-4">
+      <TopBar />
+
+      <div className="px-6 pt-6">
+        <div className="flex items-center justify-between gap-4">
+          <h2 className="text-xl font-semibold text-content-primary">{tr('nav.workspace.testing', lang)}</h2>
+          <div className="text-sm text-content-secondary">{filteredSessions.length}</div>
+        </div>
+
+        {workspaceTabs.length > 1 && (
+          <nav aria-label={tr('nav.workspace.testing', lang)} className="flex items-center gap-1 mt-4 border-b border-default">
+            {workspaceTabs.map((tab) => {
+              const active = tab.view === 'sessions';
+              return (
+                <button
+                  key={tab.view}
+                  type="button"
+                  onClick={() => navigate(tab.view)}
+                  aria-current={active ? 'page' : undefined}
+                  className={`px-4 py-2.5 -mb-px text-sm font-medium border-b-2 whitespace-nowrap transition-colors duration-150 motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                    active ? 'border-accent text-accent' : 'border-transparent text-content-secondary hover:text-content-primary'
+                  }`}
+                >
+                  {tr(tab.labelKey, lang)}
+                </button>
+              );
+            })}
+          </nav>
+        )}
+      </div>
+
+      <div className="px-6 py-6 space-y-4">
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-muted" />
             <input
               type="text"
               value={search}
@@ -134,6 +154,14 @@ export function SessionsPage() {
             <option value="30">{tr('common.last30days', lang)}</option>
             <option value="90">{tr('common.last90days', lang)}</option>
           </select>
+          <div className="flex-1" />
+          <button
+            onClick={() => { addToast(lang === 'cn' ? '导入数据（演示）' : 'Import data (demo)', 'info'); navigate('data-sources'); }}
+            className="flex items-center gap-2 px-3 py-2 bg-accent hover:bg-accent-hover text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            <Upload className="w-4 h-4" />
+            {tr('common.importData', lang)}
+          </button>
         </div>
 
         <div className="bg-white rounded-xl border border-ink-200 overflow-hidden">

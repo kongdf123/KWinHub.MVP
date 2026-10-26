@@ -105,7 +105,7 @@ export function Layout({
           aria-current={active ? 'page' : undefined}
           className={`${base} h-9 justify-center ${
             active
-              ? 'bg-accent-soft text-accent'
+              ? 'bg-surface-sidebar-active text-content-sidebar-active'
               : 'text-content-sidebar hover:bg-surface-sidebar-hover hover:text-content-sidebar'
           }`}
         >
@@ -119,9 +119,9 @@ export function Layout({
         key={item.path}
         href={`#${item.path}`}
         aria-current={active ? 'page' : undefined}
-        className={`${base} h-9 px-3 border-l-2 ${
+        className={`${base} h-9 px-3 border-l-[3px] ${
           active
-            ? 'bg-accent-soft text-accent border-accent'
+            ? 'bg-surface-sidebar-active text-content-sidebar-active border-accent-highlight'
             : 'border-transparent text-content-sidebar hover:bg-surface-sidebar-hover hover:text-content-sidebar'
         }`}
       >

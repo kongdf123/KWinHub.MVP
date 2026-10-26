@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useApp } from '@/lib/app-context';
 import { t as tr } from '@/lib/i18n';
 import { TopBar } from '@/components/layout/TopBar';
+import { WORKSPACE_TABS_BY_VIEW } from '@/lib/navigation';
 import { TrendChart } from '@/components/ui/TrendChart';
 import { BarChart } from '@/components/ui/BarChart';
 import { MetricCard } from '@/components/ui/MetricCard';
@@ -36,9 +37,11 @@ const WIDGET_TYPES: { type: DashboardWidget['type']; labelEn: string; labelCn: s
 const allMetrics = DEMO_PROTOCOLS.flatMap((p) => p.metrics).filter((m, i, arr) => arr.findIndex((x) => x.key === m.key) === i);
 
 export function DashboardsPage() {
-  const { lang, addToast } = useApp();
+  const { lang, addToast, navigate, canAccess } = useApp();
   const [widgets, setWidgets] = useState<DashboardWidget[]>(DEFAULT_WIDGETS);
   const [showEditor, setShowEditor] = useState(false);
+
+  const workspaceTabs = (WORKSPACE_TABS_BY_VIEW['dashboards'] ?? []).filter((tab) => canAccess(tab.view));
 
   const trendData = DEMO_SESSIONS.slice().reverse().map((s) => ({
     label: new Date(s.date).toLocaleDateString(lang === 'cn' ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric' }),
@@ -116,24 +119,37 @@ export function DashboardsPage() {
 
   return (
     <div>
-      <TopBar
-        title={tr('nav.dashboards', lang)}
-        subtitle={lang === 'cn' ? '可配置团队表现仪表盘' : 'Configurable team performance dashboards'}
-        actions={
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowEditor(!showEditor)}
-              className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${showEditor ? 'bg-teal-600 text-white' : 'text-ink-700 bg-white border border-ink-200 hover:bg-ink-50'}`}
-            >
-              <Settings2 className="w-4 h-4" /> {lang === 'cn' ? '编辑仪表盘' : 'Edit Dashboard'}
-            </button>
-            <button onClick={() => addToast(lang === 'cn' ? '导出仪表盘（演示）' : 'Export dashboard (demo)', 'info')} className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-ink-700 bg-white border border-ink-200 hover:bg-ink-50 rounded-lg transition-colors">
-              <Download className="w-4 h-4" /> {tr('common.export', lang)}
-            </button>
-          </div>
-        }
-      />
-      <div className="p-6 space-y-6">
+      <TopBar />
+
+      <div className="px-6 pt-6">
+        <div className="flex items-center justify-between gap-4">
+          <h2 className="text-xl font-semibold text-content-primary">{tr('nav.workspace.analysis', lang)}</h2>
+          <div className="text-sm text-content-secondary">{/* page count or subtitle here */}</div>
+        </div>
+
+        {workspaceTabs.length > 1 && (
+          <nav aria-label={tr('nav.workspace.analysis', lang)} className="flex items-center gap-1 mt-4 border-b border-default">
+            {workspaceTabs.map((tab) => {
+              const active = tab.view === 'dashboards';
+              return (
+                <button
+                  key={tab.view}
+                  type="button"
+                  onClick={() => navigate(tab.view)}
+                  aria-current={active ? 'page' : undefined}
+                  className={`px-4 py-2.5 -mb-px text-sm font-medium border-b-2 whitespace-nowrap transition-colors duration-150 motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                    active ? 'border-accent text-accent' : 'border-transparent text-content-secondary hover:text-content-primary'
+                  }`}
+                >
+                  {tr(tab.labelKey, lang)}
+                </button>
+              );
+            })}
+          </nav>
+        )}
+      </div>
+
+      <div className="px-6 py-6 space-y-6">
         {/* Widget Editor Panel */}
         {showEditor && (
           <div className="bg-white rounded-xl border border-ink-200 p-5">

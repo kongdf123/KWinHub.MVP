@@ -7,7 +7,7 @@ interface SparklineProps {
   strokeWidth?: number;
 }
 
-export function Sparkline({ data, width = 80, height = 24, color = '#06b56b', fill = true, strokeWidth = 1.5 }: SparklineProps) {
+export function Sparkline({ data, width = 80, height = 24, color = '#168373', fill = true, strokeWidth = 1.5 }: SparklineProps) {
   if (data.length < 2) return <div style={{ width, height }} />;
   const min = Math.min(...data);
   const max = Math.max(...data);

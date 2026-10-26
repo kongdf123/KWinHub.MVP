@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useApp } from '@/lib/app-context';
 import { t as tr } from '@/lib/i18n';
 import { TopBar } from '@/components/layout/TopBar';
+import { WORKSPACE_TABS_BY_VIEW } from '@/lib/navigation';
 import { BarChart } from '@/components/ui/BarChart';
 import { DEMO_SESSIONS, DEMO_ATHLETES, DEMO_PROTOCOLS, DEMO_GROUPS, getAthlete } from '@/lib/demo-data';
 import { getMetricLabel, getMetricUnit } from '@/lib/metrics';
@@ -16,10 +17,12 @@ const COMPARISON_MODES = [
 ];
 
 export function ComparisonsPage() {
-  const { lang, addToast } = useApp();
+  const { lang, addToast, navigate, canAccess } = useApp();
   const [mode, setMode] = useState('vsBaseline');
   const [metricKey, setMetricKey] = useState('jump_height');
   const [protocolId, setProtocolId] = useState('all');
+
+  const workspaceTabs = (WORKSPACE_TABS_BY_VIEW['comparisons'] ?? []).filter((tab) => canAccess(tab.view));
 
   const allMetrics = DEMO_PROTOCOLS.flatMap((p) => p.metrics).filter((m, i, arr) => arr.findIndex((x) => x.key === m.key) === i);
 
@@ -64,16 +67,37 @@ export function ComparisonsPage() {
 
   return (
     <div>
-      <TopBar
-        title={tr('comparisons.title', lang)}
-        subtitle={tr('comparisons.subtitle', lang)}
-        actions={
-          <button onClick={() => addToast(lang === 'cn' ? '导出（演示）' : 'Export (demo)', 'info')} className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-ink-700 bg-white border border-ink-200 hover:bg-ink-50 rounded-lg transition-colors">
-            <Download className="w-4 h-4" /> {tr('common.export', lang)}
-          </button>
-        }
-      />
-      <div className="p-6 space-y-6">
+      <TopBar />
+
+      <div className="px-6 pt-6">
+        <div className="flex items-center justify-between gap-4">
+          <h2 className="text-xl font-semibold text-content-primary">{tr('nav.workspace.analysis', lang)}</h2>
+          <div className="text-sm text-content-secondary">{/* page count or subtitle here */}</div>
+        </div>
+
+        {workspaceTabs.length > 1 && (
+          <nav aria-label={tr('nav.workspace.analysis', lang)} className="flex items-center gap-1 mt-4 border-b border-default">
+            {workspaceTabs.map((tab) => {
+              const active = tab.view === 'comparisons';
+              return (
+                <button
+                  key={tab.view}
+                  type="button"
+                  onClick={() => navigate(tab.view)}
+                  aria-current={active ? 'page' : undefined}
+                  className={`px-4 py-2.5 -mb-px text-sm font-medium border-b-2 whitespace-nowrap transition-colors duration-150 motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                    active ? 'border-accent text-accent' : 'border-transparent text-content-secondary hover:text-content-primary'
+                  }`}
+                >
+                  {tr(tab.labelKey, lang)}
+                </button>
+              );
+            })}
+          </nav>
+        )}
+      </div>
+
+      <div className="px-6 py-6 space-y-6">
         <div className="flex flex-wrap items-center gap-3">
           <select value={mode} onChange={(e) => setMode(e.target.value)} className="text-sm bg-white border border-ink-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400 transition-all">
             {COMPARISON_MODES.map((m) => (
