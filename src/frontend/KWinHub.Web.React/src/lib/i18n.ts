@@ -1,23 +1,23 @@
 import type { Lang } from './types';
 
 export const STRINGS: Record<string, { en: string; cn: string }> = {
-  // Nav — top level
+  // Nav — primary destinations (flat sidebar)
   'nav.home': { en: 'Overview', cn: '概览' },
+  'nav.people': { en: 'People', cn: '人员' },
   'nav.athletes': { en: 'Athletes', cn: '运动员' },
   'nav.teams': { en: 'Teams', cn: '队伍' },
+  'nav.workspace.testing': { en: 'Testing', cn: '测试' },
+  'nav.workspace.analysis': { en: 'Analysis', cn: '分析' },
+  'nav.workspace.data': { en: 'Data & Integrations', cn: '数据与集成' },
+  'nav.preferences': { en: 'Preferences', cn: '偏好设置' },
 
-  // Nav — PEOPLE group
-  'nav.group.people': { en: 'PEOPLE', cn: '人员' },
-
-  // Nav — TESTING group
-  'nav.group.testing': { en: 'TESTING', cn: '测试' },
+  // Nav — Testing workspace
   'nav.sessions': { en: 'Sessions', cn: '测试记录' },
   'nav.protocols': { en: 'Protocols', cn: '方案' },
   'nav.devices': { en: 'Devices', cn: '设备' },
   'nav.syncCenter': { en: 'Sync Center', cn: '同步中心' },
 
-  // Nav — ANALYSIS & REPORTS group
-  'nav.group.analysis': { en: 'ANALYSIS & REPORTS', cn: '分析与报告' },
+  // Nav — Analysis workspace
   'nav.results': { en: 'Results', cn: '结果' },
   'nav.performance': { en: 'Performance', cn: '表现' },
   'nav.trends': { en: 'Trends', cn: '趋势' },
@@ -26,15 +26,13 @@ export const STRINGS: Record<string, { en: string; cn: string }> = {
   'nav.dashboards': { en: 'Dashboards', cn: '仪表盘' },
   'nav.reports': { en: 'Reports', cn: '报告' },
 
-  // Nav — DATA & INTEGRATIONS group
-  'nav.group.data': { en: 'DATA & INTEGRATIONS', cn: '数据与集成' },
+  // Nav — Data & Integrations workspace
   'nav.datasets': { en: 'Datasets', cn: '数据集' },
   'nav.rawData': { en: 'Raw Data', cn: '原始数据' },
   'nav.dataSources': { en: 'Data Sources', cn: '数据源' },
   'nav.integrations': { en: 'Integrations', cn: '集成' },
 
-  // Nav — ADMINISTRATION group
-  'nav.group.admin': { en: 'ADMINISTRATION', cn: '管理' },
+  // Nav — Settings workspace
   'nav.organization': { en: 'Organization', cn: '组织' },
   'nav.users': { en: 'Users', cn: '用户' },
   'nav.roles': { en: 'Roles & Permissions', cn: '角色权限' },

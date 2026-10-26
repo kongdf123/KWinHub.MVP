@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useApp } from '@/lib/app-context';
 import { t as tr } from '@/lib/i18n';
+import { WORKSPACE_TABS_BY_VIEW } from '@/lib/navigation';
 import { DEMO_TEAMS, DEMO_ATHLETES, DEMO_SESSIONS, getProtocol } from '@/lib/demo-data';
 import { Search, Bell, ChevronDown, User, Settings, LogOut, HelpCircle, Languages } from 'lucide-react';
 import { ThemeSwitcher } from './ThemeSwitcher';
@@ -21,7 +22,7 @@ type SearchResult = {
 };
 
 export function TopBar({ title, subtitle, actions }: TopBarProps) {
-  const { selectedTeamId, setSelectedTeamId, lang, setLang, navigate, logout, addToast } = useApp();
+  const { selectedTeamId, setSelectedTeamId, lang, setLang, navigate, logout, addToast, currentView, canAccess } = useApp();
   const [teamMenuOpen, setTeamMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -87,8 +88,13 @@ export function TopBar({ title, subtitle, actions }: TopBarProps) {
         { msg: 'Pre-season testing window closes in 3 days', time: '1 day ago', action: () => navigate('sessions') },
       ];
 
+  // Contextual workspace tab group for the current primary destination.
+  // Only top-level list views belong to a workspace; detail pages render their own tabs.
+  const workspaceTabs = (WORKSPACE_TABS_BY_VIEW[currentView] ?? []).filter((tab) => canAccess(tab.view));
+
   return (
-    <header className="sticky top-0 z-30 bg-surface-header border-b border-default px-6 py-3 flex items-center justify-between gap-4">
+    <header className="sticky top-0 z-30 bg-surface-header border-b border-default px-6 pt-3">
+      <div className="flex items-center justify-between gap-4 pb-3">
       <div className="min-w-0 flex-1">
         <h2 className="text-lg font-semibold text-content-primary truncate">{title}</h2>
         {subtitle && <p className="text-sm text-content-secondary truncate">{subtitle}</p>}
@@ -221,6 +227,33 @@ export function TopBar({ title, subtitle, actions }: TopBarProps) {
           )}
         </div>
       </div>
+      </div>
+
+      {workspaceTabs.length > 1 && (
+        <nav
+          aria-label={lang === 'cn' ? '工作区导航' : 'Workspace navigation'}
+          className="flex items-center gap-1 overflow-x-auto scrollbar-thin"
+        >
+          {workspaceTabs.map((tab) => {
+            const active = tab.view === currentView;
+            return (
+              <button
+                key={tab.view}
+                type="button"
+                onClick={() => navigate(tab.view)}
+                aria-current={active ? 'page' : undefined}
+                className={`px-4 py-2.5 -mb-px text-sm font-medium border-b-2 whitespace-nowrap transition-colors duration-150 motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                  active
+                    ? 'border-accent text-accent'
+                    : 'border-transparent text-content-secondary hover:text-content-primary'
+                }`}
+              >
+                {tr(tab.labelKey, lang)}
+              </button>
+            );
+          })}
+        </nav>
+      )}
     </header>
   );
 }

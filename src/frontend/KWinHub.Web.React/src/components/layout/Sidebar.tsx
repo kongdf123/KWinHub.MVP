@@ -1,119 +1,29 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useApp } from '@/lib/app-context';
 import { t as tr } from '@/lib/i18n';
 import { DEMO_ORG } from '@/lib/demo-data';
-import {
-  Activity, LayoutDashboard, Users, ClipboardList, BarChart3,
-  TrendingUp, GitCompare, Waves, FileText, Database, Server,
-  HardDrive, Plug, RefreshCw, ChevronDown,
-  Building2, UserCog, ShieldCheck, UsersRound, Cpu, Settings,
-  LogOut, PanelLeftClose, PanelLeftOpen, type LucideIcon,
-} from 'lucide-react';
-
-interface NavItem {
-  view: string;
-  label: string;
-  icon: LucideIcon;
-  matchViews?: string[];
-}
-
-interface NavGroup {
-  id: string;
-  labelKey: string;
-  items: NavItem[];
-}
+import { PRIMARY_NAV, type PrimaryNavItem } from '@/lib/navigation';
+import { Activity, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 
 export function Sidebar({ onLogout }: { onLogout?: () => void }) {
   const { currentView, navigate, lang, canAccess } = useApp();
-  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   const [compact, setCompact] = useState(false);
 
-  const toggleGroup = useCallback((id: string) => {
-    setCollapsedGroups((prev) => ({ ...prev, [id]: !prev[id] }));
-  }, []);
-
-  const topItem: NavItem = {
-    view: 'home',
-    label: tr('nav.home', lang),
-    icon: LayoutDashboard,
-  };
-
-  const allItems: NavItem[] = [
-    { view: 'athletes', label: tr('nav.athletes', lang), icon: Users, matchViews: ['athletes', 'athlete-profile'] },
-    { view: 'teams', label: tr('nav.teams', lang), icon: UsersRound, matchViews: ['teams'] },
-    { view: 'sessions', label: tr('nav.sessions', lang), icon: ClipboardList, matchViews: ['sessions', 'session-detail'] },
-    { view: 'protocols', label: tr('nav.protocols', lang), icon: FileText, matchViews: ['protocols', 'protocol-detail'] },
-    { view: 'devices', label: tr('nav.devices', lang), icon: Cpu, matchViews: ['devices'] },
-    { view: 'sync-center', label: tr('nav.syncCenter', lang), icon: RefreshCw, matchViews: ['sync-center'] },
-    { view: 'results', label: tr('nav.results', lang), icon: BarChart3, matchViews: ['results', 'result-detail'] },
-    { view: 'performance', label: tr('nav.performance', lang), icon: TrendingUp, matchViews: ['performance'] },
-    { view: 'trends', label: tr('nav.trends', lang), icon: TrendingUp, matchViews: ['trends'] },
-    { view: 'comparisons', label: tr('nav.comparisons', lang), icon: GitCompare, matchViews: ['comparisons'] },
-    { view: 'biomechanics', label: tr('nav.biomechanics', lang), icon: Waves, matchViews: ['biomechanics'] },
-    { view: 'dashboards', label: tr('nav.dashboards', lang), icon: LayoutDashboard, matchViews: ['dashboards'] },
-    { view: 'reports', label: tr('nav.reports', lang), icon: FileText, matchViews: ['reports'] },
-    { view: 'datasets', label: tr('nav.datasets', lang), icon: Database, matchViews: ['datasets', 'dataset-detail'] },
-    { view: 'raw-data', label: tr('nav.rawData', lang), icon: HardDrive, matchViews: ['raw-data'] },
-    { view: 'data-sources', label: tr('nav.dataSources', lang), icon: Server, matchViews: ['data-sources', 'data-source-detail'] },
-    { view: 'integrations', label: tr('nav.integrations', lang), icon: Plug, matchViews: ['integrations'] },
-    { view: 'organization', label: tr('nav.organization', lang), icon: Building2, matchViews: ['organization'] },
-    { view: 'users', label: tr('nav.users', lang), icon: UserCog, matchViews: ['users'] },
-    { view: 'roles', label: tr('nav.roles', lang), icon: ShieldCheck, matchViews: ['roles'] },
-    { view: 'settings', label: tr('nav.settings', lang), icon: Settings, matchViews: ['settings'] },
-  ];
-
-  const byView = new Map(allItems.map((i) => [i.view, i]));
-  const pick = (views: string[]): NavItem[] =>
-    views.map((v) => byView.get(v)).filter((i): i is NavItem => !!i && canAccess(i.view));
-
-  const groups = useMemo<NavGroup[]>(
-    () =>
-      [
-        { id: 'people', labelKey: 'nav.group.people', items: pick(['athletes', 'teams']) },
-        { id: 'testing', labelKey: 'nav.group.testing', items: pick(['sessions', 'protocols', 'devices', 'sync-center']) },
-        {
-          id: 'analysis',
-          labelKey: 'nav.group.analysis',
-          items: pick(['results', 'performance', 'trends', 'comparisons', 'biomechanics', 'dashboards', 'reports']),
-        },
-        {
-          id: 'data',
-          labelKey: 'nav.group.data',
-          items: pick(['datasets', 'raw-data', 'data-sources', 'integrations']),
-        },
-        { id: 'admin', labelKey: 'nav.group.admin', items: pick(['organization', 'users', 'roles', 'settings']) },
-      ].filter((g) => g.items.length > 0),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [lang, canAccess],
-  );
+  // Flat primary navigation: each destination navigates to its first accessible
+  // sub-view; destinations with no accessible sub-view are hidden for the role.
+  const navItems = PRIMARY_NAV.map((item) => ({
+    item,
+    target: item.tabs.find((tab) => canAccess(tab.view))?.view,
+  })).filter((entry): entry is { item: PrimaryNavItem; target: string } => !!entry.target);
 
   const isItemActive = useCallback(
-    (item: NavItem) => {
-      const matchViews = item.matchViews || [item.view];
-      return matchViews.includes(currentView);
-    },
+    (item: PrimaryNavItem) => item.matchViews.includes(currentView),
     [currentView],
   );
 
-  const activeGroupId = useMemo(() => {
-    for (const g of groups) {
-      if (g.items.some(isItemActive)) return g.id;
-    }
-    return null;
-  }, [groups, isItemActive]);
-
-  // Auto-expand the group that contains the active page without disturbing the
-  // user's other collapse choices. Uses a functional state update so it never
-  // reads a stale `collapsedGroups` closure, and depends only on `activeGroupId`.
-  useEffect(() => {
-    if (!activeGroupId) return;
-    setCollapsedGroups((prev) =>
-      prev[activeGroupId] ? { ...prev, [activeGroupId]: false } : prev,
-    );
-  }, [activeGroupId]);
-
-  const renderNavItem = (item: NavItem) => {
+  const renderNavItem = (item: PrimaryNavItem, target: string) => {
     const Icon = item.icon;
+    const label = tr(item.labelKey, lang);
     const active = isItemActive(item);
     const base =
       'relative w-full flex items-center gap-3 rounded-lg font-medium transition-colors duration-150 motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface-sidebar';
@@ -121,11 +31,11 @@ export function Sidebar({ onLogout }: { onLogout?: () => void }) {
     if (compact) {
       return (
         <button
-          key={item.view}
+          key={item.id}
           type="button"
-          onClick={() => navigate(item.view)}
-          aria-label={item.label}
-          title={item.label}
+          onClick={() => navigate(target)}
+          aria-label={label}
+          title={label}
           aria-current={active ? 'page' : undefined}
           className={`${base} h-9 w-full justify-center ${
             active
@@ -140,9 +50,9 @@ export function Sidebar({ onLogout }: { onLogout?: () => void }) {
 
     return (
       <button
-        key={item.view}
+        key={item.id}
         type="button"
-        onClick={() => navigate(item.view)}
+        onClick={() => navigate(target)}
         aria-current={active ? 'page' : undefined}
         className={`${base} h-9 px-3 border-l-2 ${
           active
@@ -151,42 +61,8 @@ export function Sidebar({ onLogout }: { onLogout?: () => void }) {
         }`}
       >
         <Icon className="w-[18px] h-[18px] shrink-0" strokeWidth={1.75} />
-        <span className="truncate text-[13px]">{item.label}</span>
+        <span className="truncate text-[13px]">{label}</span>
       </button>
-    );
-  };
-
-  const renderGroup = (group: NavGroup) => {
-    const collapsed = collapsedGroups[group.id];
-    const groupActive = group.id === activeGroupId;
-
-    if (compact) {
-      return (
-        <div key={group.id} className="space-y-1">
-          {group.items.map(renderNavItem)}
-        </div>
-      );
-    }
-
-    return (
-      <div key={group.id}>
-        <button
-          type="button"
-          onClick={() => toggleGroup(group.id)}
-          aria-expanded={!collapsed}
-          className={`w-full flex items-center gap-2 px-3 pt-4 pb-1.5 text-[11px] font-semibold uppercase tracking-wider transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded ${
-            groupActive ? 'text-accent' : 'text-content-sidebar-muted hover:text-content-sidebar'
-          }`}
-        >
-          <ChevronDown className={`w-3 h-3 transition-transform duration-150 motion-reduce:transition-none shrink-0 ${collapsed ? '-rotate-90' : ''}`} />
-          <span className="truncate">{tr(group.labelKey, lang)}</span>
-        </button>
-        {!collapsed && (
-          <div className="space-y-1">
-            {group.items.map(renderNavItem)}
-          </div>
-        )}
-      </div>
     );
   };
 
@@ -213,14 +89,11 @@ export function Sidebar({ onLogout }: { onLogout?: () => void }) {
         )}
       </div>
 
-      {/* Independently scrollable navigation */}
+      {/* Flat primary navigation — direct links, no expandable groups */}
       <nav className="flex-1 px-1.5 py-3 overflow-y-auto scrollbar-thin">
-        {canAccess(topItem.view) && (
-          <div className="mb-2">
-            {renderNavItem(topItem)}
-          </div>
-        )}
-        {groups.map(renderGroup)}
+        <div className="space-y-1">
+          {navItems.map(({ item, target }) => renderNavItem(item, target))}
+        </div>
       </nav>
 
       {/* Compact footer — no live-telemetry claims for static demo data */}

@@ -32,11 +32,8 @@ const en = {
   'nav.metrics': 'Metrics',
   'nav.devices': 'Devices',
   'nav.algorithms': 'Algorithms',
-  'nav.auditLogs': 'Audit log',
-  'nav.group.overview': 'Overview',
-  'nav.group.tenants': 'Tenants & Users',
-  'nav.group.catalogs': 'Catalogs',
-  'nav.group.security': 'Security & Audit',
+  'nav.catalogs': 'Scientific Catalogs',
+  'nav.security': 'Security',
 
   // Common
   'common.loading': 'Loading…',
@@ -297,11 +294,8 @@ const zhCN: Dictionary = {
   'nav.metrics': '指标',
   'nav.devices': '设备',
   'nav.algorithms': '算法',
-  'nav.auditLogs': '审计日志',
-  'nav.group.overview': '概览',
-  'nav.group.tenants': '租户与用户',
-  'nav.group.catalogs': '资源目录',
-  'nav.group.security': '安全与审计',
+  'nav.catalogs': '科学目录',
+  'nav.security': '安全',
 
   // Common
   'common.loading': '加载中…',

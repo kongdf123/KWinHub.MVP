@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useApp } from '@/lib/app-context';
 import { t as tr } from '@/lib/i18n';
 import { DEMO_SESSIONS, DEMO_ATHLETES, getSport, getProtocol, getDataSource, getResultForSession, DEMO_RAW_MEASUREMENTS, DEMO_PROCESSED_MEASUREMENTS } from '@/lib/demo-data';
@@ -54,8 +54,13 @@ const TABS: { key: Tab; labelKey: string; icon: LucideIcon }[] = [
   { key: 'reports', labelKey: 'sessionDetail.tab.reports', icon: FileText },
 ];
 
+// Advanced diagnostics are restricted to roles with raw-data access
+// (org-admin, support) per the app permission model. This is a visibility
+// gate only — the API must enforce the same authorization server-side.
+const ADVANCED_TABS = new Set<Tab>(['rawData', 'processing', 'dataQuality']);
+
 export function SessionDetailPage() {
-  const { viewParams, navigate, addToast, lang } = useApp();
+  const { viewParams, navigate, addToast, lang, canAccess } = useApp();
   const sessionId = viewParams.sessionId || 's-1';
   const session = DEMO_SESSIONS.find((s) => s.id === sessionId) || DEMO_SESSIONS[0];
   const athlete = DEMO_ATHLETES.find((a) => a.id === session.athleteId);
@@ -66,6 +71,18 @@ export function SessionDetailPage() {
   const SportIcon = sport ? SPORT_ICONS[sport.id] || Activity : Activity;
   const [tab, setTab] = useState<Tab>('overview');
   const [selectedTrial, setSelectedTrial] = useState(0);
+
+  const canViewAdvanced = canAccess('raw-data');
+  const visibleTabs = useMemo(
+    () => TABS.filter((item) => !ADVANCED_TABS.has(item.key) || canViewAdvanced),
+    [canViewAdvanced],
+  );
+
+  // If the active role loses advanced access while an advanced tab is selected,
+  // fall back to the overview tab.
+  useEffect(() => {
+    if (!canViewAdvanced && ADVANCED_TABS.has(tab)) setTab('overview');
+  }, [canViewAdvanced, tab]);
 
   const trial = session.trials[selectedTrial];
   const date = new Date(session.date);
@@ -493,7 +510,7 @@ export function SessionDetailPage() {
 
         {/* Tabs */}
         <div className="flex items-center gap-1 border-b border-ink-200 overflow-x-auto">
-          {TABS.map((t) => {
+          {visibleTabs.map((t) => {
             const Icon = t.icon;
             return (
               <button

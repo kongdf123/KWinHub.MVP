@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   Binary,
   Building2,
@@ -26,36 +26,23 @@ type NavItem = {
   icon: LucideIcon;
 };
 
-type NavGroup = {
-  labelKey: TranslationKey;
-  items: NavItem[];
-};
+// Flat primary navigation — one item per product area. Areas with sub-sections
+// (e.g. Scientific Catalogs) expose them as route-aware tabs in the main layout.
+const NAV_ITEMS: NavItem[] = [
+  { path: '/', labelKey: 'nav.dashboard', icon: LayoutDashboard },
+  { path: '/organizations', labelKey: 'nav.organizations', icon: Building2 },
+  { path: '/users', labelKey: 'nav.users', icon: Users },
+  { path: '/catalogs/protocols', labelKey: 'nav.catalogs', icon: ClipboardList },
+  { path: '/audit-logs', labelKey: 'nav.security', icon: ScrollText },
+];
 
-const NAV_GROUPS: NavGroup[] = [
-  {
-    labelKey: 'nav.group.overview',
-    items: [{ path: '/', labelKey: 'nav.dashboard', icon: LayoutDashboard }],
-  },
-  {
-    labelKey: 'nav.group.tenants',
-    items: [
-      { path: '/organizations', labelKey: 'nav.organizations', icon: Building2 },
-      { path: '/users', labelKey: 'nav.users', icon: Users },
-    ],
-  },
-  {
-    labelKey: 'nav.group.catalogs',
-    items: [
-      { path: '/catalogs/protocols', labelKey: 'nav.protocols', icon: ClipboardList },
-      { path: '/catalogs/metrics', labelKey: 'nav.metrics', icon: Ruler },
-      { path: '/catalogs/devices', labelKey: 'nav.devices', icon: Cpu },
-      { path: '/catalogs/algorithms', labelKey: 'nav.algorithms', icon: Binary },
-    ],
-  },
-  {
-    labelKey: 'nav.group.security',
-    items: [{ path: '/audit-logs', labelKey: 'nav.auditLogs', icon: ScrollText }],
-  },
+// Section tabs for the Scientific Catalogs area. Each tab is a real route so
+// refresh, deep links, and browser Back/Forward keep working.
+const CATALOG_TABS: NavItem[] = [
+  { path: '/catalogs/protocols', labelKey: 'nav.protocols', icon: ClipboardList },
+  { path: '/catalogs/metrics', labelKey: 'nav.metrics', icon: Ruler },
+  { path: '/catalogs/devices', labelKey: 'nav.devices', icon: Cpu },
+  { path: '/catalogs/algorithms', labelKey: 'nav.algorithms', icon: Binary },
 ];
 
 function isActive(itemPath: string, currentPath: string): boolean {
@@ -63,8 +50,12 @@ function isActive(itemPath: string, currentPath: string): boolean {
   return currentPath === itemPath || currentPath.startsWith(`${itemPath}/`);
 }
 
-function isGroupActive(group: NavGroup, currentPath: string): boolean {
-  return group.items.some((item) => isActive(item.path, currentPath));
+// A primary item is active when its own route matches, or when the current
+// route belongs to one of its sections (e.g. any /catalogs/* route activates
+// the Scientific Catalogs item).
+function isNavItemActive(item: NavItem, currentPath: string): boolean {
+  if (item.labelKey === 'nav.catalogs') return currentPath.startsWith('/catalogs');
+  return isActive(item.path, currentPath);
 }
 
 const SIDEBAR_EXPANDED = 'w-60';
@@ -85,27 +76,7 @@ export function Layout({
 }) {
   const { t, locale } = useI18n();
   const route = useHashRoute();
-  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   const [compact, setCompact] = useState(false);
-
-  const toggleGroup = (key: string) =>
-    setCollapsedGroups((prev) => ({ ...prev, [key]: !prev[key] }));
-
-  // Auto-expand the group that contains the active route without disturbing
-  // the user's other collapse choices. The active group is derived via useMemo
-  // and the effect uses a functional state update, so it never reads a stale
-  // `collapsedGroups` closure — only `activeGroupKey` is a dependency.
-  const activeGroupKey = useMemo(() => {
-    const g = NAV_GROUPS.find((group) => isGroupActive(group, route.path));
-    return g ? g.labelKey : null;
-  }, [route.path]);
-
-  useEffect(() => {
-    if (!activeGroupKey) return;
-    setCollapsedGroups((prev) =>
-      prev[activeGroupKey] ? { ...prev, [activeGroupKey]: false } : prev,
-    );
-  }, [activeGroupKey]);
 
   const collapseLabel = compact
     ? locale === 'zh-CN'
@@ -115,10 +86,11 @@ export function Layout({
       ? '收起侧边栏'
       : 'Collapse sidebar';
   const signOutLabel = t('layout.signOut');
+  const showCatalogTabs = route.path.startsWith('/catalogs');
 
   const renderItem = (item: NavItem) => {
     const Icon = item.icon;
-    const active = isActive(item.path, route.path);
+    const active = isNavItemActive(item, route.path);
     const label = t(item.labelKey);
     const base =
       'relative w-full flex items-center gap-3 rounded-md font-medium transition-colors duration-150 motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 focus-visible:ring-offset-surface-sidebar';
@@ -159,45 +131,6 @@ export function Layout({
     );
   };
 
-  const renderGroup = (group: NavGroup) => {
-    const groupActive = group.labelKey === activeGroupKey;
-    const isCollapsed = collapsedGroups[group.labelKey];
-    const groupId = `nav-group-${group.labelKey}`;
-
-    if (compact) {
-      return (
-        <div key={group.labelKey} className="space-y-1">
-          {group.items.map(renderItem)}
-        </div>
-      );
-    }
-
-    return (
-      <div key={group.labelKey} className="space-y-1">
-        <button
-          type="button"
-          onClick={() => toggleGroup(group.labelKey)}
-          aria-expanded={!isCollapsed}
-          aria-controls={groupId}
-          className={`w-full flex items-center gap-2 px-3 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wider transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded ${
-            groupActive ? 'text-accent' : 'text-content-sidebar-muted hover:text-content-sidebar'
-          }`}
-        >
-          <ChevronDown
-            size={12}
-            className={`shrink-0 transition-transform duration-150 motion-reduce:transition-none ${isCollapsed ? '-rotate-90' : ''}`}
-          />
-          <span className="truncate">{t(group.labelKey)}</span>
-        </button>
-        {!isCollapsed && (
-          <div id={groupId} className="space-y-1">
-            {group.items.map(renderItem)}
-          </div>
-        )}
-      </div>
-    );
-  };
-
   return (
     <div className="min-h-screen bg-surface-app">
       <aside
@@ -231,7 +164,9 @@ export function Layout({
 
         {/* Independently scrollable navigation */}
         <nav className="flex-1 overflow-y-auto px-2.5 py-2 scrollbar-thin">
-          {NAV_GROUPS.map(renderGroup)}
+          <div className="space-y-1">
+            {NAV_ITEMS.map(renderItem)}
+          </div>
         </nav>
 
         {/* Account footer — avatar + email, then sign-out and collapse toggle */}
@@ -281,26 +216,56 @@ export function Layout({
 
       {/* Main content — offset derived from the same sidebar state */}
       <div className={compact ? CONTENT_OFFSET_COMPACT : CONTENT_OFFSET_EXPANDED}>
-        <header className="sticky top-0 z-10 flex h-14 items-center justify-between gap-3 border-b border-default bg-surface-header px-4 sm:px-6">
-          <div className="flex min-w-0 items-center gap-2 text-sm text-content-secondary">
-            <span className="shrink-0 whitespace-nowrap text-content-secondary">
-              {t('layout.console')}
-            </span>
-            <ChevronDown size={14} className="shrink-0 -rotate-90 text-content-secondary" />
-            <span className="truncate font-semibold text-content-primary">{title}</span>
-          </div>
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            <ThemeSwitcher />
-            <LanguageSwitcher />
-            <span className="rounded-full bg-surface-hover px-2.5 py-1 text-xs font-medium text-content-primary">
-              {t('layout.adminRole')}
-            </span>
-          </div>
-        </header>
+        <div className="flex h-screen flex-col">
+          <header className="shrink-0 border-b border-default bg-surface-header px-4 sm:px-6">
+            <div className="flex h-14 items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-2 text-sm text-content-secondary">
+                <span className="shrink-0 whitespace-nowrap text-content-secondary">
+                  {t('layout.console')}
+                </span>
+                <ChevronDown size={14} className="shrink-0 -rotate-90 text-content-secondary" />
+                <span className="truncate font-semibold text-content-primary">{title}</span>
+              </div>
+              <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                <ThemeSwitcher />
+                <LanguageSwitcher />
+                <span className="rounded-full bg-surface-hover px-2.5 py-1 text-xs font-medium text-content-primary">
+                  {t('layout.adminRole')}
+                </span>
+              </div>
+            </div>
 
-        <main className="scrollbar-thin h-[calc(100vh-3.5rem)] overflow-y-auto bg-surface-app p-4 sm:p-6">
-          {children}
-        </main>
+            {/* Section tabs for the Scientific Catalogs area — real routes */}
+            {showCatalogTabs && (
+              <nav
+                aria-label={t('nav.catalogs')}
+                className="flex items-center gap-1 overflow-x-auto scrollbar-thin"
+              >
+                {CATALOG_TABS.map((tab) => {
+                  const active = isActive(tab.path, route.path);
+                  return (
+                    <a
+                      key={tab.path}
+                      href={`#${tab.path}`}
+                      aria-current={active ? 'page' : undefined}
+                      className={`px-4 py-2.5 -mb-px text-sm font-medium border-b-2 whitespace-nowrap transition-colors duration-150 motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                        active
+                          ? 'border-accent text-accent'
+                          : 'border-transparent text-content-secondary hover:text-content-primary'
+                      }`}
+                    >
+                      {t(tab.labelKey)}
+                    </a>
+                  );
+                })}
+              </nav>
+            )}
+          </header>
+
+          <main className="scrollbar-thin flex-1 overflow-y-auto bg-surface-app p-4 sm:p-6">
+            {children}
+          </main>
+        </div>
       </div>
     </div>
   );
