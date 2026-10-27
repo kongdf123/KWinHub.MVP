@@ -287,3 +287,85 @@ Suggested reference starting point: https://support.vald.com/hc/en-au/categories
 - External review inputs (not in repository, retained locally by authors): `KWinHub_Scientific_Calculation_Engine_V1_Technical_Design.md`, `Explain KWinHub APIs.txt`, `海外竞品与方案对比.txt`.
 
 **Final recommendation:** approve the overall *Hub-authoritative calculation + offline-first acquisition* boundary before building more dashboards. Then implement G0–G2 as one verified end-to-end scientific result flow. Treat G3 as the architectural proof that the same platform supports a genuinely different measurement product. All endpoints, schema expansions, phases and deliverables in this document remain proposed until reviewed and implemented.
+
+I've prepared an updated KWinHub Integration Architecture Review & Development Roadmap — V2, incorporating our discussions about centralized scientific calculations, the VALD Hub research, and the integration requirements of KWinPerformance and KWinSprint.
+KWinHub Integration Architecture Review & Development Roadmap — V2
+
+Review Draft · October 27, 2026 · 15 sections
+
+
+Download the revised Markdown document
+
+1. The most important architectural change
+The previous direction primarily treated KWinHub as a centralized SaaS data platform.
+
+The updated proposal positions KWinHub as a unified sports science SaaS platform with an authoritative Scientific Calculation Engine.
+Responsibility	KWinHub	Client applications
+Athlete and organization management	Primary	Local cache
+Device communication	—	Primary
+Measurement acquisition	Define contracts	Primary
+Raw measurement storage	Central archive	Local offline archive
+Scientific metric calculations	Primary	Optional provisional results
+Algorithm versions and updates	Primary	Consume APIs
+Historical recalculation	Primary	Display results
+Reports and longitudinal analytics	Primary	Product-specific UI
+
+This aligns with your goal of reusing scientific algorithms across future Kunwei products.
+2. Revised development roadmap
+G0
+
+Scientific inventory and architecture baseline
+
+Verify existing code, inventory calculations, and select CMJ and sprint reference tests.
+
+
+G1
+
+Core SaaS foundation
+
+Identity, tenant isolation, athlete mapping, measurement contracts, raw-data ingestion and storage.
+
+
+G2
+
+Scientific Engine + KWinPerformance
+
+Implement the first authoritative calculation workflow, from iPad raw measurements to published Hub results.
+
+
+G3
+
+KWinSprint integration
+
+Integrate starting-block measurements, multi-device synchronization and server-side sprint calculations.
+
+
+G4
+
+Scientific governance and SaaS readiness
+
+Historical recalculation, immutable results, algorithm approvals, monitoring and reliability.
+
+
+G5
+
+Future product expansion
+
+Cross-test metrics, comparisons, normative data and standardized third-party/client integration.
+
+
+
+These phases are dependency-based development gates, not fixed delivery dates.
+3. What I recommend reviewing first
+The document contains ten proposed decisions. Three are particularly important:
+- Calculation authority: Should all official scientific metrics come from KWinHub, while clients remain responsible for offline acquisition? My recommendation is yes.
+- Offline experience: Should clients provide immediate provisional calculated metrics when disconnected, or only display live raw signals until synchronization? I recommend starting with cloud-authoritative results, then assessing offline numeric requirements.
+- Migration strategy: Should we first reproduce existing calculations exactly before modifying or improving them? I strongly recommend this, using real recorded test data and numerical regression tests.
+4. What changed from our earlier roadmap
+The new document adds scientific algorithm migration as a first-class workstream, makes raw measurement ingestion essential rather than optional, distinguishes measurement synchronization from calculation processing, and introduces algorithm versioning and immutable results.
+
+It also preserves an important principle from the original architecture: KWinPerformance and KWinSprint do not need to adopt an identical internal database or device-processing implementation. They need to implement compatible KWinHub integration contracts.
+My recommended implementation priority
+I would begin with G0 → G1 → G2, focusing on one complete KWinPerformance test workflow before expanding the platform UI. Then integrate KWinSprint as the second product to validate the architecture's reusability.
+
+The revised document is ready for your review. It is a proposed design rather than a confirmed description of the latest repository implementation, and I have not changed the GitHub source code.
