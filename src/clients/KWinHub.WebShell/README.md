@@ -40,7 +40,7 @@ KWinHub.WebShell/
 ├── scripts/
 │   ├── build-frontends.mjs      builds both SPAs, stages frontend/
 │   ├── make-icon.ps1            regenerates src-tauri/icons from scripts/icon-source.png
-│   └── build-with-msvc.ps1      (fallback) MSVC env + npm run build
+│   └── build-with-msvc.ps1      sets MSVC env (vswhere auto-detect) + builds frontends + tauri build
 ├── frontend/                    GENERATED staging dir (git-ignored)
 └── src-tauri/
     ├── tauri.conf.json          app config; NSIS + WebView2 downloadBootstrapper
@@ -54,13 +54,32 @@ Prerequisites on a normal Windows machine:
 
 1. Node.js LTS, Rust (rustup, `stable-x86_64-pc-windows-msvc` default),
    Visual Studio Build Tools ("Desktop development with C++"), WebView2 Runtime.
-2. Then:
+2. Then — **two build entry points** depending on how MSVC is installed:
 
 ```powershell
+# A) If link.exe / rc.exe are already on PATH (global MSVC env set up):
 cd src/clients/KWinHub.WebShell
 npm install
-npm run build          # = build:frontends + cargo release build + NSIS bundling
+npm run build
+
+# B) If MSVC is installed but env vars are not globally set (this machine):
+.\scripts\build-with-msvc.ps1
 ```
+
+Entry point B is fully portable. It auto-detects Visual Studio / Build Tools
+via `vswhere`, locates the Windows SDK via the registry (Microsoft's canonical
+`KitsRoot10` value in `HKLM\...\Windows Kits\Installed Roots`) with standard
+env-var paths and all-drives scan as fallbacks, sets up `PATH` / `INCLUDE` /
+`LIB` for MSVC + the SDK, then runs `build:frontends` + `tauri build` in one
+step. It works for Community, Professional, Enterprise, and Build Tools editions
+installed on any drive, with the SDK installed on any drive.
+
+> **PowerShell execution policy:** if `npm` or `.ps1` scripts fail with
+> `PSSecurityException / UnauthorizedAccess`, run the following **once** in an
+> elevated PowerShell to allow local scripts:
+> ```powershell
+> Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+> ```
 
 ### Verified build environment
 
@@ -90,13 +109,18 @@ different version, fall back to these.
 Quick verification commands (run in PowerShell):
 
 ```powershell
-node --version                  # v22.x
-npm --version                   # 11.x
-rustc --version                 # 1.97.0
-cargo --version                 # 1.97.0
+node --version                  # v22.x (Node 20+ OK)
+npm.cmd --version               # 11.x   (use .cmd if execution policy blocks .ps1)
+rustc --version                 # 1.97.0+
+cargo --version                 # 1.97.0+
 rustup show active-toolchain    # stable-x86_64-pc-windows-msvc
+rustc --print host-tuple        # x86_64-pc-windows-msvc
 cd src/clients/KWinHub.WebShell
-npm list @tauri-apps/cli        # 2.12.4
+npm.cmd list @tauri-apps/cli    # 2.12.4
+
+# MSVC sanity check (run before building):
+& "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+rustc --print sysroot           # ...\toolchains\stable-x86_64-pc-windows-msvc
 ```
 
 Outputs:
@@ -110,34 +134,57 @@ Other scripts:
 - `npm run dev` — build frontends, then `tauri dev`
 - `npm run tauri -- <args>` — raw tauri CLI
 
-### This repo's build machine quirks (CJK Windows username)
+### Building with a CJK / non-ASCII Windows username
 
-If the Windows username contains non-ASCII characters (e.g. `孔东方`), MinGW's `ld`
-fails with `Permission denied` / `No such file or directory` when writing output
-files, and VS Installer components fail with `0x80070005` / exit 5002. Workaround
-used here — build with the GNU toolchain from ASCII-only paths:
+If the Windows username contains non-ASCII characters (e.g. `孔东方`), be aware
+of two toolchain quirks before attempting a build:
+
+1. **MinGW / GNU tools (`ld.exe`, `dlltool.exe`) do not handle Unicode paths.**
+   They fail with `Permission denied` / `No such file or directory` when any
+   input or output path contains CJK or other non-ASCII characters. This is a
+   well-known MinGW limitation, not a Rust or Tauri bug.
+
+2. **Rust's GNU self-contained toolchain ships without `windres.exe`** — the
+   MinGW resource compiler that Tauri's `tauri-winres` crate needs to compile
+   `.rc` resource files. So even if all paths were ASCII, a pure GNU toolchain
+   build still fails with:
+   ```
+   panicked at tauri-winres: called `Result::unwrap()` on an `Err` value:
+   NotAttempted("windres")
+   ```
+   The GNU toolchain copy under `~/.rustup/toolchains/stable-x86_64-pc-windows-gnu/`
+   (and its `self-contained` subdirectory) contains `ld.exe`, `dlltool.exe`,
+   `as.exe`, `gcc.exe`, etc. but no `windres.exe`. Installing MSYS2 / standalone
+   MinGW would supply `windres.exe`, but that is extra infrastructure most
+   Windows dev machines do not have.
+
+**Recommended solution: use the MSVC toolchain.** Visual Studio's native
+`link.exe`, `rc.exe`, and the whole MSVC toolset handle Unicode paths correctly.
+No path rewiring, junctions, or GNU copies are required. Your `USERPROFILE`
+(`C:\Users\孔东方`) and `TEMP`/`TMP` are fully supported as-is.
+
+Run:
 
 ```powershell
-# one-time: copy toolchain to ASCII path and register it
-robocopy "$env:USERPROFILE\.rustup\toolchains\stable-x86_64-pc-windows-gnu" `
-         D:\KWB\toolchains\stable-x86_64-pc-windows-gnu /E
-rustup toolchain link kwh-gnu D:\KWB\toolchains\stable-x86_64-pc-windows-gnu
-rustup override set kwh-gnu --path <this repo>\src\clients\KWinHub.WebShell
-# one-time: junction with ASCII name pointing at this project (sandboxed agent
-# processes may only write inside the workspace; a junction keeps paths ASCII
-# while writes land in the workspace)
-New-Item -ItemType Junction -Path C:\KWB -Value <this repo>\src\clients\KWinHub.WebShell
-
-# every build: ASCII target + temp through the junction; self-contained dir on
-# PATH so rustc finds dlltool.exe / x86_64-w64-mingw32-gcc.exe for windows-gnu
-$env:PATH = "D:\KWB\toolchains\stable-x86_64-pc-windows-gnu\lib\rustlib\x86_64-pc-windows-gnu\bin\self-contained;$env:USERPROFILE\.cargo\bin;$env:PATH"
-$env:CARGO_TARGET_DIR = "C:\KWB\ct"
-$env:TEMP = "C:\KWB\tmp2"; $env:TMP = "C:\KWB\tmp2"
-npm run build
+cd src/clients/KWinHub.WebShell
+.\scripts\build-with-msvc.ps1
 ```
 
-Do **not** pre-create the target dir; let cargo create it (sandbox overlay quirk:
-creating a subdirectory inside a manually created dir outside the workspace is denied).
+The script is **fully portable** across Windows dev machines. It finds Visual
+Studio / Build Tools via `vswhere` (always present on systems that have it),
+the Windows SDK via the `KitsRoot10` registry value with well-known env-var
+paths and all-drives scan as fallbacks, then sets up `PATH` / `INCLUDE` / `LIB`.
+No hardcoded drive letters, no user-account-specific paths, no junction setup,
+no GNU toolchain copies needed.
+
+### GNU workaround (kept for reference)
+
+For environments where Visual Studio is not available or must use the GNU
+toolchain (e.g. CI runners with MSYS2 that provide `windres.exe`), the original
+ASCII-path workaround applies: copy the GNU toolchain to an ASCII-only directory,
+link it with rustup, create an ASCII junction to the project, and redirect
+`CARGO_TARGET_DIR`, `TEMP`, `TMP` all to ASCII paths. This repo no longer uses
+the GNU path — MSVC is both simpler and more reliable here.
 
 ## Runtime configuration (env vars, baked at frontend build time)
 
