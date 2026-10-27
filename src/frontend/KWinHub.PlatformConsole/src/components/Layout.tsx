@@ -27,7 +27,7 @@ type NavItem = {
 };
 
 // Flat primary navigation — one item per product area. Areas with sub-sections
-// (e.g. Scientific Catalogs) expose them as route-aware tabs in the main layout.
+// (e.g. Foundations) expose them as route-aware tabs in the main layout.
 const NAV_ITEMS: NavItem[] = [
   { path: '/', labelKey: 'nav.dashboard', icon: LayoutDashboard },
   { path: '/organizations', labelKey: 'nav.organizations', icon: Building2 },
@@ -36,7 +36,7 @@ const NAV_ITEMS: NavItem[] = [
   { path: '/audit-logs', labelKey: 'nav.security', icon: ScrollText },
 ];
 
-// Section tabs for the Scientific Catalogs area. Each tab is a real route so
+// Section tabs for the Foundations area. Each tab is a real route so
 // refresh, deep links, and browser Back/Forward keep working.
 const CATALOG_TABS: NavItem[] = [
   { path: '/catalogs/protocols', labelKey: 'nav.protocols', icon: ClipboardList },
@@ -52,7 +52,7 @@ function isActive(itemPath: string, currentPath: string): boolean {
 
 // A primary item is active when its own route matches, or when the current
 // route belongs to one of its sections (e.g. any /catalogs/* route activates
-// the Scientific Catalogs item).
+// the Foundations item).
 function isNavItemActive(item: NavItem, currentPath: string): boolean {
   if (item.labelKey === 'nav.catalogs') return currentPath.startsWith('/catalogs');
   return isActive(item.path, currentPath);
@@ -235,7 +235,7 @@ export function Layout({
               </div>
             </div>
 
-            {/* Section tabs for the Scientific Catalogs area — real routes */}
+            {/* Section tabs for the Foundations area — real routes */}
             {showCatalogTabs && (
               <nav
                 aria-label={t('nav.catalogs')}

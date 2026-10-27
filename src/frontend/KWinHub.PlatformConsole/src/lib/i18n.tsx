@@ -32,7 +32,7 @@ const en = {
   'nav.metrics': 'Metrics',
   'nav.devices': 'Devices',
   'nav.algorithms': 'Algorithms',
-  'nav.catalogs': 'Scientific Catalogs',
+  'nav.catalogs': 'Foundations',
   'nav.security': 'Security',
 
   // Common
@@ -294,7 +294,7 @@ const zhCN: Dictionary = {
   'nav.metrics': '指标',
   'nav.devices': '设备',
   'nav.algorithms': '算法',
-  'nav.catalogs': '科学目录',
+  'nav.catalogs': '基础设置',
   'nav.security': '安全',
 
   // Common
