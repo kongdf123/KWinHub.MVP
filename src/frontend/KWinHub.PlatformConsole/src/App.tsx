@@ -14,6 +14,7 @@ import { MetricCatalogPage } from './pages/MetricCatalogPage';
 import { DeviceCatalogPage } from './pages/DeviceCatalogPage';
 import { AlgorithmVersionsPage } from './pages/AlgorithmVersionsPage';
 import { AuditLogPage } from './pages/AuditLogPage';
+import { WorkflowExplorerPage } from './pages/WorkflowExplorerPage';
 
 type AuthState = 'checking' | 'authenticated' | 'anonymous';
 
@@ -43,6 +44,7 @@ function resolveRoute(path: string, t: (key: TranslationKey) => string): { title
     return { titleKey: 'algorithms.title', page: <AlgorithmVersionsPage /> };
   }
   if (path === '/audit-logs') return { titleKey: 'audit.title', page: <AuditLogPage /> };
+  if (path === '/workflows') return { titleKey: 'workflows.title', page: <WorkflowExplorerPage /> };
 
   return {
     titleKey: 'common.notFound',

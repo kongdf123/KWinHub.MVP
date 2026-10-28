@@ -38,6 +38,9 @@ export const STRINGS: Record<string, { en: string; cn: string }> = {
   'nav.roles': { en: 'Roles & Permissions', cn: '角色权限' },
   'nav.settings': { en: 'Settings', cn: '设置' },
 
+  // Nav — Workflow Explorer
+  'nav.workflows': { en: 'Workflows', cn: '工作流' },
+
   // Legacy nav (kept for compatibility)
   'nav.data': { en: 'Data Center', cn: '数据中心' },
   'nav.dashboard': { en: 'Dashboard', cn: '仪表盘' },

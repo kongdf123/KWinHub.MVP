@@ -1,5 +1,5 @@
 import {
-  LayoutDashboard, Users, ClipboardList, BarChart3, FileText, Plug, Settings,
+  LayoutDashboard, Users, ClipboardList, BarChart3, FileText, Plug, Settings, GitBranch,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -97,6 +97,13 @@ export const PRIMARY_NAV: PrimaryNavItem[] = [
       { view: 'settings', labelKey: 'nav.preferences' },
     ],
     matchViews: ['settings', 'organization', 'users', 'roles'],
+  },
+  {
+    id: 'workflows',
+    labelKey: 'nav.workflows',
+    icon: GitBranch,
+    tabs: [{ view: 'workflows', labelKey: 'nav.workflows' }],
+    matchViews: ['workflows'],
   },
 ];
 

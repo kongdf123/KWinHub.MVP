@@ -34,6 +34,7 @@ const en = {
   'nav.algorithms': 'Algorithms',
   'nav.catalogs': 'Foundations',
   'nav.security': 'Security',
+  'nav.workflows': 'Workflows',
 
   // Common
   'common.loading': 'Loading…',
@@ -290,6 +291,9 @@ const en = {
   'audit.exportNone': 'No records to export',
   'audit.search': 'Search actor, action, or summary…',
 
+  // Workflow Explorer
+  'workflows.title': 'Workflows',
+
   // Dashboard extras
   'dashboard.needsAttention': 'Needs attention',
   'dashboard.suspendedOrgs': 'suspended organizations',
@@ -326,6 +330,7 @@ const zhCN: Dictionary = {
   'nav.algorithms': '算法',
   'nav.catalogs': '基础设置',
   'nav.security': '安全',
+  'nav.workflows': '工作流',
 
   // Common
   'common.loading': '加载中…',
@@ -579,6 +584,9 @@ const zhCN: Dictionary = {
   'audit.export': '导出 CSV',
   'audit.exportNone': '没有可导出的记录',
   'audit.search': '搜索操作人、操作或摘要…',
+
+  // Workflow Explorer
+  'workflows.title': '工作流',
 
   // Dashboard extras
   'dashboard.needsAttention': '需要关注',

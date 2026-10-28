@@ -31,6 +31,7 @@ import { RolesPage } from '@/pages/admin/RolesPage';
 import { TeamsPage } from '@/pages/admin/TeamsPage';
 import { DevicesPage } from '@/pages/admin/DevicesPage';
 import { SettingsPage } from '@/pages/admin/SettingsPage';
+import { WorkflowExplorerPage } from '@/pages/WorkflowExplorerPage';
 import { isLoggedIn, clearToken } from '@/lib/api/http';
 import { LocaleProvider } from '@/lib/i18n-context';
 
@@ -67,6 +68,7 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
       case 'teams': return <TeamsPage />;
       case 'devices': return <DevicesPage />;
       case 'settings': return <SettingsPage />;
+      case 'workflows': return <WorkflowExplorerPage />;
       default: return <HomePage />;
     }
   };

@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import {
   Building2,
   ClipboardList,
+  GitBranch,
   LayoutDashboard,
   LogOut,
   PanelLeftClose,
@@ -30,6 +31,7 @@ const NAV_ITEMS: NavItem[] = [
   { path: '/users', labelKey: 'nav.users', icon: Users },
   { path: '/catalogs/protocols', labelKey: 'nav.catalogs', icon: ClipboardList },
   { path: '/audit-logs', labelKey: 'nav.security', icon: ScrollText },
+  { path: '/workflows', labelKey: 'nav.workflows', icon: GitBranch },
 ];
 
 function isActive(itemPath: string, currentPath: string): boolean {
