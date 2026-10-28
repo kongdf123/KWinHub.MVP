@@ -12,10 +12,10 @@
       (function () {
         try {
           var stored = localStorage.getItem('kwinhub.web-react.theme');
-          var theme = stored === 'light' ? 'light' : 'classic';
+          var theme = stored === 'classic' ? 'classic' : 'light';
           document.documentElement.setAttribute('data-theme', theme);
         } catch (e) {
-          document.documentElement.setAttribute('data-theme', 'classic');
+          document.documentElement.setAttribute('data-theme', 'light');
         }
       })();
     </script>

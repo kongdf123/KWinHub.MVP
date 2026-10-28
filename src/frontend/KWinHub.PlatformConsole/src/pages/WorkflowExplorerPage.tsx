@@ -16,7 +16,7 @@ import {
 } from '../features/workflows/status-helpers';
 
 export function WorkflowExplorerPage() {
-  const { locale } = useI18n();
+  const { t, locale } = useI18n();
   const L = locale === 'zh-CN' ? 'zhCN' : 'en';
   const [workflowId, setWorkflowId] = useState(PLATFORM_WORKFLOWS[0].id);
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
@@ -54,13 +54,25 @@ export function WorkflowExplorerPage() {
   return (
     <div>
       <PageHeader
-        title={locale === 'zh-CN' ? '工作流探索器' : 'Workflow Explorer'}
-        subtitle={
-          locale === 'zh-CN'
-            ? '探索产品工作流、用户故事和原型状态'
-            : 'Explore product workflows, user stories, and prototype status'
-        }
+        title={t('workflows.title')}
+        subtitle={t('workflows.subtitle')}
       />
+
+      <Card className="mb-4 border-amber-300 bg-amber-50 p-4">
+        <div className="flex items-start gap-3">
+          <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-400 text-white">
+            <span className="text-xs font-bold">!</span>
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-amber-900">
+              {t('workflows.prototypeBanner')}
+            </h3>
+            <p className="mt-1 text-sm leading-relaxed text-amber-800">
+              {t('workflows.prototypeDesc')}
+            </p>
+          </div>
+        </div>
+      </Card>
 
       <Card className="mb-4 p-4">
         <div className="flex flex-wrap gap-2">

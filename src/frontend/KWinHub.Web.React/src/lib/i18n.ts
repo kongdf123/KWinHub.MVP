@@ -39,7 +39,9 @@ export const STRINGS: Record<string, { en: string; cn: string }> = {
   'nav.settings': { en: 'Settings', cn: '设置' },
 
   // Nav — Workflow Explorer
-  'nav.workflows': { en: 'Workflows', cn: '工作流' },
+  'nav.demoExplorer': { en: 'Demo Explorer', cn: '演示探索器' },
+  'nav.prototypeTools': { en: 'Prototype Tools', cn: '原型工具' },
+  'nav.prototypeToolsHint': { en: 'Internal demo only', cn: '仅供内部演示' },
 
   // Legacy nav (kept for compatibility)
   'nav.data': { en: 'Data Center', cn: '数据中心' },

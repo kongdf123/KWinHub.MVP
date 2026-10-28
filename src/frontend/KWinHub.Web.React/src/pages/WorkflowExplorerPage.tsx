@@ -57,11 +57,31 @@ export function WorkflowExplorerPage() {
 
       <div className="px-6 pt-6">
         <h2 className="text-xl font-semibold text-content-primary">
-          {locale === 'zh-CN' ? '工作流探索器' : 'Workflow Explorer'}
+          {locale === 'zh-CN' ? '演示探索器' : 'Demo Explorer'}
         </h2>
         <p className="mt-1 text-sm text-content-secondary">
-          {locale === 'zh-CN' ? '探索产品工作流、用户故事和原型状态' : 'Explore product workflows, user stories, and prototype status'}
+          {locale === 'zh-CN' ? '交互式工作流引导' : 'Interactive workflow walkthroughs'}
         </p>
+      </div>
+
+      <div className="px-6 py-4">
+        <div className="rounded-lg border border-amber-300 bg-amber-50 p-4">
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-400 text-white">
+              <span className="text-xs font-bold">!</span>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-amber-900">
+                {locale === 'zh-CN' ? '仅用于原型演示' : 'Prototype Demonstration Only'}
+              </h3>
+              <p className="mt-1 text-sm leading-relaxed text-amber-800">
+                {locale === 'zh-CN'
+                  ? '本页面用于帮助内部团队理解 KWinHub 的业务流程、用户故事和功能规划，不属于正式产品功能模块。部分流程及数据为模拟演示，实际交付范围以批准的产品需求为准。'
+                  : 'This page illustrates proposed user journeys and links to relevant prototype screens. It is an internal demonstration and requirements-review tool, not a planned customer-facing product module. Some steps use simulated data or behaviors.'}
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="px-6 py-6 space-y-4">

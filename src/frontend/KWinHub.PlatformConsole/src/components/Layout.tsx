@@ -23,15 +23,20 @@ type NavItem = {
   icon: LucideIcon;
 };
 
-// Flat primary navigation — one item per product area. Areas with sub-sections
-// (e.g. Foundations) expose them as route-aware tabs in the page content.
+// Primary product navigation — business modules that the platform administrator
+// uses day-to-day. These are committed product areas.
 const NAV_ITEMS: NavItem[] = [
   { path: '/', labelKey: 'nav.dashboard', icon: LayoutDashboard },
   { path: '/organizations', labelKey: 'nav.organizations', icon: Building2 },
   { path: '/users', labelKey: 'nav.users', icon: Users },
   { path: '/catalogs/protocols', labelKey: 'nav.catalogs', icon: ClipboardList },
   { path: '/audit-logs', labelKey: 'nav.security', icon: ScrollText },
-  { path: '/workflows', labelKey: 'nav.workflows', icon: GitBranch },
+];
+
+// Prototype-only tools — visually separated from product navigation. These are
+// internal demonstration / requirements-review utilities, not committed features.
+const PROTOTYPE_NAV_ITEMS: NavItem[] = [
+  { path: '/workflows', labelKey: 'nav.demoExplorer', icon: GitBranch },
 ];
 
 function isActive(itemPath: string, currentPath: string): boolean {
@@ -51,6 +56,13 @@ const SIDEBAR_EXPANDED = 'w-60';
 const SIDEBAR_COMPACT = 'w-[68px]';
 const CONTENT_OFFSET_EXPANDED = 'pl-60';
 const CONTENT_OFFSET_COMPACT = 'pl-[68px]';
+
+// The Demo Explorer is a prototype-only utility. It is shown by default in
+// development/demo environments, but can be hidden (e.g. for production builds)
+// via VITE_ENABLE_DEMO_EXPLORER=false. This flag controls navigation visibility,
+// not authorization — security is enforced by the backend.
+const IS_DEMO_EXPLORER_ENABLED =
+  (import.meta.env.VITE_ENABLE_DEMO_EXPLORER ?? 'true') !== 'false';
 
 export function Layout({
   email,
@@ -146,6 +158,22 @@ export function Layout({
           <div className="space-y-1">
             {NAV_ITEMS.map(renderItem)}
           </div>
+
+          {IS_DEMO_EXPLORER_ENABLED && PROTOTYPE_NAV_ITEMS.length > 0 && (
+            <div className="mt-4 space-y-1 border-t border-sidebar pt-3">
+              {!compact && (
+                <div className="px-3 pb-1.5">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-content-sidebar-muted">
+                    {t('nav.prototypeTools')}
+                  </p>
+                  <p className="text-[10px] text-content-sidebar-muted/70">
+                    {t('nav.prototypeToolsHint')}
+                  </p>
+                </div>
+              )}
+              {PROTOTYPE_NAV_ITEMS.map(renderItem)}
+            </div>
+          )}
         </nav>
 
         {/* Account footer — avatar + email, then sign-out and collapse toggle */}

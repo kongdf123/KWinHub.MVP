@@ -22,6 +22,12 @@ export interface PrimaryNavItem {
   icon: LucideIcon;
   tabs: WorkspaceTab[];
   matchViews: string[];
+  /**
+   * When true, the item belongs to the "Prototype Tools" sidebar section.
+   * Prototype tools are internal demonstration / requirements-review utilities
+   * and are visually separated from committed product navigation.
+   */
+  prototypeTool?: boolean;
 }
 
 export const PRIMARY_NAV: PrimaryNavItem[] = [
@@ -100,10 +106,11 @@ export const PRIMARY_NAV: PrimaryNavItem[] = [
   },
   {
     id: 'workflows',
-    labelKey: 'nav.workflows',
+    labelKey: 'nav.demoExplorer',
     icon: GitBranch,
-    tabs: [{ view: 'workflows', labelKey: 'nav.workflows' }],
+    tabs: [{ view: 'workflows', labelKey: 'nav.demoExplorer' }],
     matchViews: ['workflows'],
+    prototypeTool: true,
   },
 ];
 

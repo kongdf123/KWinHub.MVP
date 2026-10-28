@@ -34,7 +34,9 @@ const en = {
   'nav.algorithms': 'Algorithms',
   'nav.catalogs': 'Foundations',
   'nav.security': 'Security',
-  'nav.workflows': 'Workflows',
+  'nav.demoExplorer': 'Demo Explorer',
+  'nav.prototypeTools': 'Prototype Tools',
+  'nav.prototypeToolsHint': 'Internal demo only',
 
   // Common
   'common.loading': 'Loading…',
@@ -291,8 +293,12 @@ const en = {
   'audit.exportNone': 'No records to export',
   'audit.search': 'Search actor, action, or summary…',
 
-  // Workflow Explorer
-  'workflows.title': 'Workflows',
+  // Demo Explorer (prototype-only)
+  'workflows.title': 'Demo Explorer',
+  'workflows.subtitle': 'Interactive workflow walkthroughs',
+  'workflows.prototypeBanner': 'Prototype Demonstration Only',
+  'workflows.prototypeDesc': 'This page illustrates proposed user journeys and links to relevant prototype screens. It is an internal demonstration and requirements-review tool, not a planned customer-facing product module. Some steps use simulated data or behaviors.',
+  'workflows.prototypeDescZh': '仅用于原型演示：本页面用于帮助内部团队理解 KWinHub 的业务流程、用户故事和功能规划，不属于正式产品功能模块。部分流程及数据为模拟演示，实际交付范围以批准的产品需求为准。',
 
   // Dashboard extras
   'dashboard.needsAttention': 'Needs attention',
@@ -330,7 +336,9 @@ const zhCN: Dictionary = {
   'nav.algorithms': '算法',
   'nav.catalogs': '基础设置',
   'nav.security': '安全',
-  'nav.workflows': '工作流',
+  'nav.demoExplorer': '演示探索器',
+  'nav.prototypeTools': '原型工具',
+  'nav.prototypeToolsHint': '仅供内部演示',
 
   // Common
   'common.loading': '加载中…',
@@ -585,8 +593,12 @@ const zhCN: Dictionary = {
   'audit.exportNone': '没有可导出的记录',
   'audit.search': '搜索操作人、操作或摘要…',
 
-  // Workflow Explorer
-  'workflows.title': '工作流',
+  // Demo Explorer (prototype-only)
+  'workflows.title': '演示探索器',
+  'workflows.subtitle': '交互式工作流引导',
+  'workflows.prototypeBanner': '仅用于原型演示',
+  'workflows.prototypeDesc': '本页面用于帮助内部团队理解 KWinHub 的业务流程、用户故事和功能规划，不属于正式产品功能模块。部分流程及数据为模拟演示，实际交付范围以批准的产品需求为准。',
+  'workflows.prototypeDescZh': '仅用于原型演示：本页面用于帮助内部团队理解 KWinHub 的业务流程、用户故事和功能规划，不属于正式产品功能模块。部分流程及数据为模拟演示，实际交付范围以批准的产品需求为准。',
 
   // Dashboard extras
   'dashboard.needsAttention': '需要关注',

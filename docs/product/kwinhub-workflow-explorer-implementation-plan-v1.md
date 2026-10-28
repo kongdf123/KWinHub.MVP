@@ -1,4 +1,4 @@
-# KWinHub Workflow Explorer — Frontend Implementation Plan V1
+# KWinHub /analysis/results — Frontend Implementation Plan V1
 
 **Status:** Proposed; pending internal review  
 **Date:** 2026-10-28  
@@ -191,7 +191,56 @@ src/features/workflows/
 
 Prefer `@xyflow/react` (React Flow) for selectable nodes/edges and pan/zoom if it fits the existing dependency policy. Mermaid may be retained for written documentation, but static diagrams alone cannot provide the required interactive navigation. Avoid complex graph editing, user-defined nodes, or runtime workflow execution.
 
-## 10. Minimal interaction and accessibility requirements
+## 10. Prototype-Only Navigation & Visibility Requirements
+
+### Purpose
+
+The Demo Explorer is an internal prototype demonstration and requirements-validation utility. It is **not a production business module, workflow engine, or permanent customer-facing navigation destination**. The explorer is a tool for explaining the product, not a feature of the product. That distinction must be explicit in the sidebar, page header, implementation specification, and environment configuration.
+
+### Navigation requirements
+
+1. Use the navigation label **"Demo Explorer"**, rather than simply "Workflows".
+2. Place it in a separate sidebar section labeled **"Prototype Tools"** or **"Internal Demo"**.
+3. Visually separate this section from ordinary product navigation (e.g. a border divider and a muted section label with a hint such as "Internal demo only").
+4. Display a persistent **"Prototype Demonstration Only"** explanation on the explorer page, directly below the title.
+5. Support English and Chinese explanatory text.
+6. Preserve existing primary navigation and business workflows.
+7. Allow direct navigation from explorer steps to existing prototype screens, without treating those screens as completed features.
+
+### Environment visibility
+
+- Development/demo environments: show the Demo Explorer.
+- Staging environments: enable only when explicitly configured for internal demonstrations.
+- Production environments: hide the explorer by default.
+- If included in a production build, enforce authorized internal-only access rather than relying solely on hiding the navigation item.
+
+Configuration:
+
+```
+VITE_ENABLE_DEMO_EXPLORER=true
+```
+
+This frontend flag controls navigation visibility, not security authorization. Security must be enforced by the backend.
+
+### Status and communication
+
+The explorer must differentiate:
+
+- **Requirement status:** Agreed, Proposed, Assumption, Open Question, Out of Scope.
+- **Implementation status:** Not Started, Prototype, Integrated, Verified.
+
+No diagram, walkthrough, simulated interaction, or demo screen may imply a feature is commercially available or approved for production.
+
+### Acceptance criteria
+
+- Internal stakeholders can immediately recognize the explorer as a prototype-only utility.
+- The sidebar does not position it alongside permanent product modules without visual separation.
+- The page explains its purpose and limitations without requiring additional documentation.
+- It can be disabled independently in both frontend applications via `VITE_ENABLE_DEMO_EXPLORER=false`.
+- Disabling the explorer does not affect normal application navigation or functionality.
+- Both applications apply consistent terminology and disclosure rules.
+
+## 11. Minimal interaction and accessibility requirements
 
 - Switch between available workflows and personas.
 - Select a diagram node to update the detail panel.
@@ -202,7 +251,7 @@ Prefer `@xyflow/react` (React Flow) for selectable nodes/edges and pan/zoom if i
 - Support keyboard navigation and visible focus indication; provide a readable ordered-list alternative on narrow screens or when graph interaction is difficult.
 - Match each application's current i18n and theming conventions; do not introduce hard-coded English-only UI where locale is already supported.
 
-## 11. Incremental implementation backlog
+## 12. Incremental implementation backlog
 
 | Priority | Work item | Completion evidence |
 |---|---|---|
@@ -217,9 +266,9 @@ Prefer `@xyflow/react` (React Flow) for selectable nodes/edges and pan/zoom if i
 | P1 | Visual, responsive, a11y QA | Keyboard and narrow viewport checks documented |
 | P2 | Optional sync with tests/CI evidence | Evidence-backed updates only, no inferred completeness |
 
-## 12. Acceptance criteria
+## 13. Acceptance criteria
 
-1. Each frontend has one clearly discoverable Workflow Explorer entry.
+1. Each frontend has one clearly discoverable **Demo Explorer** entry, visually separated from committed product navigation under a "Prototype Tools" section.
 2. The PlatformConsole explorer demonstrates at least one complete platform-governance narrative.
 3. The Web.React explorer demonstrates one complete athlete-to-report narrative and at least one recovery branch.
 4. Every displayed step has an actor, description, valid specification reference, requirement status, and implementation status.
@@ -229,8 +278,9 @@ Prefer `@xyflow/react` (React Flow) for selectable nodes/edges and pan/zoom if i
 8. Existing catalog, session, athlete, results, and report screens still render as before.
 9. Tests validate identifiers, graph connectivity/edges, and app-specific navigation mappings.
 10. A stakeholder can follow each initial demo without a verbal introduction from an engineer.
+11. The explorer page displays a persistent, bilingual "Prototype Demonstration Only" explanation and can be hidden independently via `VITE_ENABLE_DEMO_EXPLORER=false` in each application.
 
-## 13. Review and validation checklist
+## 14. Review and validation checklist
 
 Before implementation, confirm with product/design owners:
 
@@ -242,11 +292,11 @@ Before implementation, confirm with product/design owners:
 
 Do not block construction of a basic, clearly labeled prototype while non-critical questions are unresolved; expose them as open questions rather than silently deciding them.
 
-## 14. Suggested coding-agent instructions
+## 15. Suggested coding-agent instructions
 
 > Implement this plan in small frontend-only changes. Read the five source documents named in Section 2. First produce an accurate source-to-workflow mapping and inventory of existing routes/views. Then create typed, validated workflow definitions and a minimal interactive explorer for each application. Keep the established navigation patterns, preserve current screens, and use seeded scenarios. Never present a mock feature as verified. Add tests and report any unimplemented or unverified route, mismatch, or specification conflict. Do not alter backend, database, API, or device integration code as part of this task.
 
-## 15. Suggested PR sequence
+## 16. Suggested PR sequence
 
 - **PR 1:** Workflow-source mapping, data types, fixtures, validation tests.
 - **PR 2:** PlatformConsole explorer and navigation.

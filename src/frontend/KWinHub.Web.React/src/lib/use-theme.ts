@@ -14,7 +14,7 @@ function readStoredTheme(): Theme {
   } catch {
     // localStorage can be unavailable — fall through to the default.
   }
-  return 'classic';
+  return 'light';
 }
 
 function applyTheme(theme: Theme) {

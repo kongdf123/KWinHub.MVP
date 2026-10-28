@@ -5,6 +5,13 @@ import { DEMO_ORG } from '@/lib/demo-data';
 import { PRIMARY_NAV, type PrimaryNavItem } from '@/lib/navigation';
 import { Activity, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 
+// The Demo Explorer is a prototype-only utility. It is shown by default in
+// development/demo environments, but can be hidden (e.g. for production builds)
+// via VITE_ENABLE_DEMO_EXPLORER=false. This flag controls navigation visibility,
+// not authorization — security is enforced by the backend.
+const IS_DEMO_EXPLORER_ENABLED =
+  (import.meta.env.VITE_ENABLE_DEMO_EXPLORER ?? 'true') !== 'false';
+
 export function Sidebar({ onLogout }: { onLogout?: () => void }) {
   const { currentView, navigate, lang, canAccess } = useApp();
   const [compact, setCompact] = useState(false);
@@ -15,6 +22,10 @@ export function Sidebar({ onLogout }: { onLogout?: () => void }) {
     item,
     target: item.tabs.find((tab) => canAccess(tab.view))?.view,
   })).filter((entry): entry is { item: PrimaryNavItem; target: string } => !!entry.target);
+
+  // Split into committed product navigation and prototype-only tools.
+  const primaryItems = navItems.filter(({ item }) => !item.prototypeTool);
+  const prototypeItems = navItems.filter(({ item }) => item.prototypeTool && IS_DEMO_EXPLORER_ENABLED);
 
   const isItemActive = useCallback(
     (item: PrimaryNavItem) => item.matchViews.includes(currentView),
@@ -92,8 +103,24 @@ export function Sidebar({ onLogout }: { onLogout?: () => void }) {
       {/* Flat primary navigation — direct links, no expandable groups */}
       <nav className="flex-1 px-1.5 py-3 overflow-y-auto scrollbar-thin">
         <div className="space-y-1">
-          {navItems.map(({ item, target }) => renderNavItem(item, target))}
+          {primaryItems.map(({ item, target }) => renderNavItem(item, target))}
         </div>
+
+        {prototypeItems.length > 0 && (
+          <div className="mt-4 space-y-1 border-t border-sidebar pt-3">
+            {!compact && (
+              <div className="px-3 pb-1.5">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-content-sidebar-muted">
+                  {tr('nav.prototypeTools', lang)}
+                </p>
+                <p className="text-[10px] text-content-sidebar-muted/70">
+                  {tr('nav.prototypeToolsHint', lang)}
+                </p>
+              </div>
+            )}
+            {prototypeItems.map(({ item, target }) => renderNavItem(item, target))}
+          </div>
+        )}
       </nav>
 
       {/* Compact footer — no live-telemetry claims for static demo data */}
