@@ -121,10 +121,10 @@ function Console() {
     );
   }
 
-  const { titleKey, page } = resolveRoute(route.path, t);
+  const { page } = resolveRoute(route.path, t);
 
   return (
-    <Layout title={t(titleKey)} email={session?.email ?? ''} onSignOut={handleSignOut}>
+    <Layout email={session?.email ?? ''} onSignOut={handleSignOut}>
       {page}
     </Layout>
   );

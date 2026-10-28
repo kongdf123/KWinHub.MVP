@@ -2,7 +2,6 @@ import { useState, type ReactNode } from 'react';
 import {
   Binary,
   Building2,
-  ChevronDown,
   ClipboardList,
   Cpu,
   LayoutDashboard,
@@ -59,17 +58,15 @@ function isNavItemActive(item: NavItem, currentPath: string): boolean {
 }
 
 const SIDEBAR_EXPANDED = 'w-60';
-const SIDEBAR_COMPACT = 'w-[72px]';
+const SIDEBAR_COMPACT = 'w-[68px]';
 const CONTENT_OFFSET_EXPANDED = 'pl-60';
-const CONTENT_OFFSET_COMPACT = 'pl-[72px]';
+const CONTENT_OFFSET_COMPACT = 'pl-[68px]';
 
 export function Layout({
-  title,
   email,
   onSignOut,
   children,
 }: {
-  title: string;
   email: string;
   onSignOut: () => void;
   children: ReactNode;
@@ -138,26 +135,19 @@ export function Layout({
           compact ? SIDEBAR_COMPACT : SIDEBAR_EXPANDED
         }`}
       >
-        {/* Brand block — logo, identity, and admin badge in one compact area */}
-        <div className="px-3 pt-4 pb-3 shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent text-surface-sidebar">
-              <ShieldCheck size={18} />
-            </div>
-            {!compact && (
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-semibold text-content-sidebar">
-                  {t('layout.brand')}
-                </div>
-                <div className="truncate text-[11px] text-content-sidebar-muted">
-                  {t('layout.console')}
-                </div>
-              </div>
-            )}
+        {/* Brand header — aligned with the app top bar (h-16) */}
+        <div className="h-16 px-3 flex items-center gap-2.5 shrink-0">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent text-surface-sidebar">
+            <ShieldCheck size={18} />
           </div>
           {!compact && (
-            <div className="mt-2 inline-flex rounded bg-accent-soft px-2 py-0.5 text-[10px] font-semibold tracking-widest text-accent">
-              {t('layout.badge')}
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm font-semibold text-content-sidebar">
+                {t('layout.brand')}
+              </div>
+              <div className="truncate text-[11px] text-content-sidebar-muted">
+                {t('layout.console')}
+              </div>
             </div>
           )}
         </div>
@@ -217,19 +207,14 @@ export function Layout({
       {/* Main content — offset derived from the same sidebar state */}
       <div className={compact ? CONTENT_OFFSET_COMPACT : CONTENT_OFFSET_EXPANDED}>
         <div className="flex h-screen flex-col">
-          <header className="shrink-0 border-b border-default bg-surface-header px-4 sm:px-6">
-            <div className="flex h-14 items-center justify-between gap-3">
-              <div className="flex min-w-0 items-center gap-2 text-sm text-content-secondary">
-                <span className="shrink-0 whitespace-nowrap text-content-secondary">
-                  {t('layout.console')}
-                </span>
-                <ChevronDown size={14} className="shrink-0 -rotate-90 text-content-secondary" />
-                <span className="truncate font-semibold text-content-primary">{title}</span>
-              </div>
-              <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-                <ThemeSwitcher />
+          <header className="sticky top-0 z-30 shrink-0 border-b border-default bg-surface-header">
+            <div className="flex h-16 items-center justify-between gap-4 px-6">
+              <div className="min-w-0 flex-1" />
+
+              <div className="flex shrink-0 items-center gap-3">
                 <LanguageSwitcher />
-                <span className="rounded-full bg-surface-hover px-2.5 py-1 text-xs font-medium text-content-primary">
+                <ThemeSwitcher />
+                <span className="rounded-lg bg-surface-hover px-3 py-2 text-sm font-medium text-content-primary">
                   {t('layout.adminRole')}
                 </span>
               </div>
@@ -239,21 +224,23 @@ export function Layout({
             {showCatalogTabs && (
               <nav
                 aria-label={t('nav.catalogs')}
-                className="flex items-center gap-1 overflow-x-auto scrollbar-thin"
+                className="flex items-center gap-1 overflow-x-auto border-t border-default px-6 scrollbar-thin"
               >
                 {CATALOG_TABS.map((tab) => {
                   const active = isActive(tab.path, route.path);
+                  const Icon = tab.icon;
                   return (
                     <a
                       key={tab.path}
                       href={`#${tab.path}`}
                       aria-current={active ? 'page' : undefined}
-                      className={`px-4 py-2.5 -mb-px text-sm font-medium border-b-2 whitespace-nowrap transition-colors duration-150 motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                      className={`flex items-center gap-2 px-4 py-2.5 -mb-px text-sm font-medium border-b-2 whitespace-nowrap transition-colors duration-150 motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                         active
                           ? 'border-accent text-accent'
                           : 'border-transparent text-content-secondary hover:text-content-primary'
                       }`}
                     >
+                      {Icon ? <Icon size={15} /> : null}
                       {t(tab.labelKey)}
                     </a>
                   );
