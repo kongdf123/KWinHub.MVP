@@ -94,7 +94,7 @@ export function Sidebar({ onLogout }: { onLogout?: () => void }) {
         </div>
         {!compact && (
           <div className="min-w-0 flex-1">
-            <h1 className="text-sm font-semibold text-content-sidebar truncate">Kunwei Hub</h1>
+            <h1 className="text-sm font-semibold text-content-sidebar truncate">KWinHub</h1>
             <p className="text-xs text-content-sidebar-muted truncate">{orgName}</p>
           </div>
         )}
