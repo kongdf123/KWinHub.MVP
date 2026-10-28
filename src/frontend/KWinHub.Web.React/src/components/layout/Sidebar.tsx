@@ -85,7 +85,7 @@ export function Sidebar({ onLogout }: { onLogout?: () => void }) {
 
   return (
     <aside
-      className={`${compact ? 'w-[68px]' : 'w-60'} bg-surface-sidebar text-content-sidebar flex flex-col h-screen sticky top-0 shrink-0 transition-[width] duration-200 motion-reduce:transition-none`}
+      className={`${compact ? 'w-[68px]' : 'w-60'} bg-surface-sidebar text-content-sidebar flex flex-col h-screen sticky top-0 shrink-0 border-r border-sidebar transition-[width] duration-200 motion-reduce:transition-none`}
     >
       {/* Brand header — aligned with the app top bar (h-16) */}
       <div className="h-16 px-3 flex items-center gap-2.5 shrink-0">
