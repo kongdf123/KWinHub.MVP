@@ -2,6 +2,7 @@ using KWinHub.Domain.Catalogs;
 using KWinHub.Domain.Organizations;
 using KWinHub.Domain.Protocols;
 using KWinHub.Domain.Subjects;
+using KWinHub.Domain.Subscriptions;
 using KWinHub.Domain.Users;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -159,6 +160,78 @@ public static class DatabaseSeeder
 
             await db.AlgorithmVersions.AddRangeAsync(new[] { publishedAlgorithm, draftAlgorithm }, ct);
             await db.SaveChangesAsync(ct);
+        }
+
+        // Feature definitions (stable catalog)
+        if (!await db.FeatureDefinitions.AnyAsync(ct))
+        {
+            var features = new[]
+            {
+                new FeatureDefinition(SubscriptionCatalog.FeatureTestingSprint, "Testing", "Sprint Testing", defaultEnabled: false),
+                new FeatureDefinition(SubscriptionCatalog.FeatureTestingForceplate, "Testing", "Force Plate Testing", defaultEnabled: true),
+                new FeatureDefinition(SubscriptionCatalog.FeatureAnalyticsAdvanced, "Analytics", "Advanced Analytics", defaultEnabled: false),
+                new FeatureDefinition(SubscriptionCatalog.FeatureIntegrationsApi, "Integrations", "API Integrations", defaultEnabled: false),
+                new FeatureDefinition(SubscriptionCatalog.FeatureReportsExport, "Reports", "Report Export", defaultEnabled: true),
+                new FeatureDefinition(SubscriptionCatalog.FeatureSubscriptionView, "Subscription", "View Subscription", defaultEnabled: true),
+                new FeatureDefinition(SubscriptionCatalog.FeatureSubscriptionManage, "Subscription", "Manage Subscription", defaultEnabled: false),
+            };
+            await db.FeatureDefinitions.AddRangeAsync(features, ct);
+            await db.SaveChangesAsync(ct);
+        }
+
+        // Starter published plan + demo organization subscription
+        if (!await db.SubscriptionPlans.AnyAsync(ct))
+        {
+            var starterPlan = new SubscriptionPlan(
+                code: "starter",
+                name: "Starter",
+                version: 1,
+                description: "Entry-level plan for small teams.");
+            starterPlan.AddFeature(SubscriptionCatalog.FeatureTestingForceplate, enabled: true);
+            starterPlan.AddFeature(SubscriptionCatalog.FeatureReportsExport, enabled: true);
+            starterPlan.AddFeature(SubscriptionCatalog.FeatureSubscriptionView, enabled: true);
+            starterPlan.AddFeature(SubscriptionCatalog.FeatureTestingSprint, enabled: false);
+            starterPlan.AddFeature(SubscriptionCatalog.FeatureAnalyticsAdvanced, enabled: false);
+            starterPlan.AddFeature(SubscriptionCatalog.FeatureIntegrationsApi, enabled: false);
+            starterPlan.AddQuota(SubscriptionCatalog.QuotaMembersActive, 25);
+            starterPlan.AddQuota(SubscriptionCatalog.QuotaDevicesRegistered, 10);
+            starterPlan.AddQuota(SubscriptionCatalog.QuotaSessionsMonthly, 1000);
+            starterPlan.AddQuota(SubscriptionCatalog.QuotaStorageBytes, 5_000_000_000L);
+            starterPlan.Publish();
+
+            var proPlan = new SubscriptionPlan(
+                code: "performance-pro",
+                name: "Performance Pro",
+                version: 1,
+                description: "Professional plan with advanced analytics and integrations.");
+            proPlan.AddFeature(SubscriptionCatalog.FeatureTestingForceplate, enabled: true);
+            proPlan.AddFeature(SubscriptionCatalog.FeatureTestingSprint, enabled: true);
+            proPlan.AddFeature(SubscriptionCatalog.FeatureAnalyticsAdvanced, enabled: true);
+            proPlan.AddFeature(SubscriptionCatalog.FeatureIntegrationsApi, enabled: true);
+            proPlan.AddFeature(SubscriptionCatalog.FeatureReportsExport, enabled: true);
+            proPlan.AddFeature(SubscriptionCatalog.FeatureSubscriptionView, enabled: true);
+            proPlan.AddQuota(SubscriptionCatalog.QuotaMembersActive, 100);
+            proPlan.AddQuota(SubscriptionCatalog.QuotaDevicesRegistered, 50);
+            proPlan.AddQuota(SubscriptionCatalog.QuotaSessionsMonthly, 5000);
+            proPlan.AddQuota(SubscriptionCatalog.QuotaStorageBytes, 50_000_000_000L);
+            proPlan.Publish();
+
+            await db.SubscriptionPlans.AddRangeAsync(new[] { starterPlan, proPlan }, ct);
+            await db.SaveChangesAsync(ct);
+
+            if (!await db.OrganizationSubscriptions.AnyAsync(s => s.OrganizationId == DemoOrganizationId, ct))
+            {
+                var now = DateTimeOffset.UtcNow;
+                var subscription = new OrganizationSubscription(
+                    organizationId: DemoOrganizationId,
+                    planId: proPlan.Id,
+                    status: SubscriptionStatus.Active,
+                    startsAt: new DateTimeOffset(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero),
+                    endsAt: new DateTimeOffset(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero).AddYears(1),
+                    renewalMode: RenewalMode.SalesManaged);
+                await db.OrganizationSubscriptions.AddAsync(subscription, ct);
+                await db.SaveChangesAsync(ct);
+            }
         }
     }
 

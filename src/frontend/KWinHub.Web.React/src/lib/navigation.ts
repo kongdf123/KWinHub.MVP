@@ -100,9 +100,10 @@ export const PRIMARY_NAV: PrimaryNavItem[] = [
       { view: 'organization', labelKey: 'nav.organization' },
       { view: 'users', labelKey: 'nav.users' },
       { view: 'roles', labelKey: 'nav.roles' },
+      { view: 'subscription', labelKey: 'nav.subscription' },
       { view: 'settings', labelKey: 'nav.preferences' },
     ],
-    matchViews: ['settings', 'organization', 'users', 'roles'],
+    matchViews: ['settings', 'organization', 'users', 'roles', 'subscription'],
   },
   {
     id: 'workflows',

@@ -2,6 +2,7 @@ using KWinHub.Api.Services;
 using KWinHub.Application.Abstractions;
 using KWinHub.Application.Sessions;
 using KWinHub.Contracts.Sessions;
+using KWinHub.Domain.Subscriptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -73,20 +74,40 @@ public class SessionsController : ControllerBase
     [HttpPost]
     [ProducesResponseType(typeof(SessionResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(SessionResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status422UnprocessableEntity)]
     public async Task<ActionResult<SessionResponse>> Create(
         [FromBody] CreateSessionRequest request,
         CancellationToken cancellationToken)
     {
-        var session = await _sessionService.GetOrCreateByExternalIdAsync(
-            _currentUser.OrganizationId,
-            request,
-            cancellationToken);
-
-        if (session.CreatedAt == session.UpdatedAt || session.Status == "Received")
+        try
         {
-            return CreatedAtAction(nameof(GetById), new { id = session.Id }, session);
-        }
+            var session = await _sessionService.GetOrCreateByExternalIdAsync(
+                _currentUser.OrganizationId,
+                request,
+                cancellationToken);
 
-        return Ok(session);
+            if (session.CreatedAt == session.UpdatedAt || session.Status == "Received")
+            {
+                return CreatedAtAction(nameof(GetById), new { id = session.Id }, session);
+            }
+
+            return Ok(session);
+        }
+        catch (QuotaExceededException ex)
+        {
+            return UnprocessableEntity(new ProblemDetails
+            {
+                Title = "Quota exceeded",
+                Detail = ex.Message,
+                Status = StatusCodes.Status422UnprocessableEntity,
+                Extensions =
+                {
+                    ["code"] = "quota_exceeded",
+                    ["metric"] = ex.MetricKey,
+                    ["consumed"] = ex.Consumed,
+                    ["limit"] = ex.Limit,
+                },
+            });
+        }
     }
 }

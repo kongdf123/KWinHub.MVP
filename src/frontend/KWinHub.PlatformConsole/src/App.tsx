@@ -15,6 +15,8 @@ import { DeviceCatalogPage } from './pages/DeviceCatalogPage';
 import { AlgorithmVersionsPage } from './pages/AlgorithmVersionsPage';
 import { AuditLogPage } from './pages/AuditLogPage';
 import { WorkflowExplorerPage } from './pages/WorkflowExplorerPage';
+import { SubscriptionPlansPage } from './pages/SubscriptionPlansPage';
+import { SubscriptionsPage } from './pages/SubscriptionsPage';
 
 type AuthState = 'checking' | 'authenticated' | 'anonymous';
 
@@ -45,6 +47,10 @@ function resolveRoute(path: string, t: (key: TranslationKey) => string): { title
   }
   if (path === '/audit-logs') return { titleKey: 'audit.title', page: <AuditLogPage /> };
   if (path === '/workflows') return { titleKey: 'workflows.title', page: <WorkflowExplorerPage /> };
+  if (path === '/subscription-plans') {
+    return { titleKey: 'plans.title', page: <SubscriptionPlansPage /> };
+  }
+  if (path === '/subscriptions') return { titleKey: 'subs.title', page: <SubscriptionsPage /> };
 
   return {
     titleKey: 'common.notFound',

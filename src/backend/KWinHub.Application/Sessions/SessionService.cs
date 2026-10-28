@@ -1,8 +1,10 @@
 using KWinHub.Application.Protocols;
 using KWinHub.Application.Results;
+using KWinHub.Application.Subscriptions;
 using KWinHub.Contracts.Sessions;
 using KWinHub.Domain.Results;
 using KWinHub.Domain.Sessions;
+using KWinHub.Domain.Subscriptions;
 
 namespace KWinHub.Application.Sessions;
 
@@ -11,15 +13,18 @@ public class SessionService : ISessionService
     private readonly ISessionRepository _repository;
     private readonly IProtocolRepository _protocolRepository;
     private readonly IResultRepository _resultRepository;
+    private readonly IUsageMeter _usageMeter;
 
     public SessionService(
         ISessionRepository repository,
         IProtocolRepository protocolRepository,
-        IResultRepository resultRepository)
+        IResultRepository resultRepository,
+        IUsageMeter usageMeter)
     {
         _repository = repository;
         _protocolRepository = protocolRepository;
         _resultRepository = resultRepository;
+        _usageMeter = usageMeter;
     }
 
     public async Task<SessionResponse> CreateAsync(
@@ -38,6 +43,19 @@ public class SessionService : ISessionService
             clientVersion: request.ClientVersion,
             externalId: request.ExternalId,
             timezone: request.Timezone);
+
+        // Enforce monthly sessions quota before persisting. Uses the stable
+        // business event id (external id, falling back to the session id) so
+        // retries are idempotent.
+        var businessEventId = string.IsNullOrWhiteSpace(request.ExternalId)
+            ? session.Id.ToString()
+            : request.ExternalId;
+        await _usageMeter.ConsumeAsync(
+            organizationId,
+            SubscriptionCatalog.QuotaSessionsMonthly,
+            businessEventId,
+            delta: 1,
+            cancellationToken);
 
         await _repository.AddAsync(session, cancellationToken);
 

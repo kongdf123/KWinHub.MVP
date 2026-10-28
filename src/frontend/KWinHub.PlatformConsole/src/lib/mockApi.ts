@@ -4,6 +4,7 @@ import type {
   AuditLogResponse,
   AuthProfileResponse,
   DeviceModelResponse,
+  FeatureOverrideResponse,
   GlobalMetricResponse,
   GlobalProtocolResponse,
   LoginResponse,
@@ -11,7 +12,11 @@ import type {
   PlatformOrganizationDetailResponse,
   PlatformOrganizationMemberResponse,
   PlatformOrganizationResponse,
+  PlatformSubscriptionResponse,
+  PlanResponse,
   PlatformUserResponse,
+  QuotaOverrideResponse,
+  SubscriptionAuditEventResponse,
 } from './api';
 
 // In-memory mock of the KWinHub platform API, used for prototype demos while
@@ -726,6 +731,265 @@ let algorithms: AlgorithmVersionResponse[] = [
     createdAt: iso(150),
   },
 ];
+
+// --- Subscription plans & subscriptions -----------------------------------
+
+const ALL_FEATURE_KEYS = [
+  'testing.sprint',
+  'testing.forceplate',
+  'analytics.advanced',
+  'integrations.api',
+  'reports.export',
+  'subscription.view',
+  'subscription.manage',
+];
+
+const ALL_QUOTA_KEYS = [
+  'members.active',
+  'devices.registered',
+  'sessions.monthly',
+  'storage.bytes',
+];
+
+let plans: PlanResponse[] = [
+  {
+    id: 'plan-001',
+    code: 'STARTER',
+    name: 'Starter',
+    version: 1,
+    status: 'Published',
+    description: 'Entry plan for small teams and individual coaches.',
+    features: [
+      { featureKey: 'testing.sprint', enabled: true },
+      { featureKey: 'testing.forceplate', enabled: false },
+      { featureKey: 'analytics.advanced', enabled: false },
+      { featureKey: 'integrations.api', enabled: false },
+      { featureKey: 'reports.export', enabled: true },
+      { featureKey: 'subscription.view', enabled: true },
+      { featureKey: 'subscription.manage', enabled: false },
+    ],
+    quotas: [
+      { quotaKey: 'members.active', limitValue: 10 },
+      { quotaKey: 'devices.registered', limitValue: 5 },
+      { quotaKey: 'sessions.monthly', limitValue: 500 },
+      { quotaKey: 'storage.bytes', limitValue: 10_737_418_240 },
+    ],
+    createdAt: iso(400),
+  },
+  {
+    id: 'plan-002',
+    code: 'PERFORMANCE_PRO',
+    name: 'Performance Pro',
+    version: 1,
+    status: 'Published',
+    description: 'Full-featured plan for performance labs and institutes.',
+    features: [
+      { featureKey: 'testing.sprint', enabled: true },
+      { featureKey: 'testing.forceplate', enabled: true },
+      { featureKey: 'analytics.advanced', enabled: true },
+      { featureKey: 'integrations.api', enabled: true },
+      { featureKey: 'reports.export', enabled: true },
+      { featureKey: 'subscription.view', enabled: true },
+      { featureKey: 'subscription.manage', enabled: false },
+    ],
+    quotas: [
+      { quotaKey: 'members.active', limitValue: 100 },
+      { quotaKey: 'devices.registered', limitValue: 50 },
+      { quotaKey: 'sessions.monthly', limitValue: 10000 },
+      { quotaKey: 'storage.bytes', limitValue: 536_870_912_000 },
+    ],
+    createdAt: iso(380),
+  },
+  {
+    id: 'plan-003',
+    code: 'ELITE',
+    name: 'Elite',
+    version: 1,
+    status: 'Draft',
+    description: 'Unlimited plan for high-volume enterprises (draft).',
+    features: ALL_FEATURE_KEYS.map((k) => ({ featureKey: k, enabled: true })),
+    quotas: ALL_QUOTA_KEYS.map((k) => ({ quotaKey: k, limitValue: null })),
+    createdAt: iso(20),
+  },
+];
+
+let subscriptions: PlatformSubscriptionResponse[] = [
+  {
+    id: 'sub-001',
+    organizationId: 'org-001',
+    planId: 'plan-002',
+    planCode: 'PERFORMANCE_PRO',
+    planName: 'Performance Pro',
+    planVersion: 1,
+    status: 'Active',
+    startsAt: iso(400),
+    endsAt: iso(-365),
+    graceUntil: null,
+    cancelAtPeriodEnd: false,
+    renewalMode: 'SalesManaged',
+    revision: 1,
+  },
+  {
+    id: 'sub-002',
+    organizationId: 'org-002',
+    planId: 'plan-002',
+    planCode: 'PERFORMANCE_PRO',
+    planName: 'Performance Pro',
+    planVersion: 1,
+    status: 'Active',
+    startsAt: iso(365),
+    endsAt: iso(-400),
+    graceUntil: null,
+    cancelAtPeriodEnd: false,
+    renewalMode: 'SalesManaged',
+    revision: 1,
+  },
+  {
+    id: 'sub-003',
+    organizationId: 'org-003',
+    planId: 'plan-001',
+    planCode: 'STARTER',
+    planName: 'Starter',
+    planVersion: 1,
+    status: 'Suspended',
+    startsAt: iso(320),
+    endsAt: iso(-40),
+    graceUntil: iso(-20),
+    cancelAtPeriodEnd: false,
+    renewalMode: 'SalesManaged',
+    revision: 2,
+  },
+  {
+    id: 'sub-004',
+    organizationId: 'org-004',
+    planId: 'plan-002',
+    planCode: 'PERFORMANCE_PRO',
+    planName: 'Performance Pro',
+    planVersion: 1,
+    status: 'Active',
+    startsAt: iso(268),
+    endsAt: iso(-500),
+    graceUntil: null,
+    cancelAtPeriodEnd: false,
+    renewalMode: 'SalesManaged',
+    revision: 1,
+  },
+  {
+    id: 'sub-005',
+    organizationId: 'org-005',
+    planId: 'plan-001',
+    planCode: 'STARTER',
+    planName: 'Starter',
+    planVersion: 1,
+    status: 'Trialing',
+    startsAt: iso(214),
+    endsAt: iso(-180),
+    graceUntil: null,
+    cancelAtPeriodEnd: false,
+    renewalMode: 'SalesManaged',
+    revision: 1,
+  },
+  {
+    id: 'sub-006',
+    organizationId: 'org-006',
+    planId: 'plan-002',
+    planCode: 'PERFORMANCE_PRO',
+    planName: 'Performance Pro',
+    planVersion: 1,
+    status: 'Active',
+    startsAt: iso(160),
+    endsAt: iso(-600),
+    graceUntil: null,
+    cancelAtPeriodEnd: false,
+    renewalMode: 'SalesManaged',
+    revision: 1,
+  },
+  {
+    id: 'sub-007',
+    organizationId: 'org-007',
+    planId: 'plan-001',
+    planCode: 'STARTER',
+    planName: 'Starter',
+    planVersion: 1,
+    status: 'Suspended',
+    startsAt: iso(96),
+    endsAt: iso(-30),
+    graceUntil: null,
+    cancelAtPeriodEnd: false,
+    renewalMode: 'SalesManaged',
+    revision: 1,
+  },
+  {
+    id: 'sub-008',
+    organizationId: 'org-008',
+    planId: 'plan-002',
+    planCode: 'PERFORMANCE_PRO',
+    planName: 'Performance Pro',
+    planVersion: 1,
+    status: 'Active',
+    startsAt: iso(42),
+    endsAt: iso(-700),
+    graceUntil: null,
+    cancelAtPeriodEnd: false,
+    renewalMode: 'SalesManaged',
+    revision: 1,
+  },
+];
+
+let featureOverrides: FeatureOverrideResponse[] = [
+  {
+    id: 'fo-001',
+    organizationId: 'org-003',
+    featureKey: 'analytics.advanced',
+    enabled: true,
+    startsAt: iso(300),
+    endsAt: iso(-60),
+    reason: 'Trial extension for suspended org',
+    createdAt: iso(300),
+  },
+];
+
+let quotaOverrides: QuotaOverrideResponse[] = [
+  {
+    id: 'qo-001',
+    organizationId: 'org-001',
+    quotaKey: 'sessions.monthly',
+    limitValue: 20000,
+    startsAt: iso(100),
+    endsAt: null,
+    reason: 'High-volume research agreement',
+    createdAt: iso(100),
+  },
+];
+
+let subscriptionAudit: SubscriptionAuditEventResponse[] = [
+  {
+    id: 'sa-001',
+    organizationId: 'org-001',
+    actorId: 'usr-001',
+    action: 'Subscription.Assigned',
+    beforeJson: null,
+    afterJson: JSON.stringify({ planCode: 'PERFORMANCE_PRO', status: 'Active' }),
+    reason: 'Initial onboarding',
+    occurredAt: iso(400),
+    requestId: 'req-init-001',
+  },
+  {
+    id: 'sa-002',
+    organizationId: 'org-003',
+    actorId: 'usr-001',
+    action: 'Subscription.StatusChanged',
+    beforeJson: JSON.stringify({ status: 'Active' }),
+    afterJson: JSON.stringify({ status: 'Suspended' }),
+    reason: 'Payment overdue — suspended',
+    occurredAt: iso(40),
+    requestId: 'req-susp-003',
+  },
+];
+
+function orgNameById(id: string): string {
+  return organizations.find((o) => o.id === id)?.name ?? id;
+}
 
 // --- Scientific algorithm meta (demo-only projection) ----------------------
 //
@@ -1469,6 +1733,243 @@ export async function mockRequest<T>(path: string, options: RequestInit = {}): P
       .slice(0, Number.isFinite(take) ? take : 200);
 
     return filtered as unknown as T;
+  }
+
+  // Subscription plans
+  if (segments[0] === 'platform' && segments[1] === 'subscription-plans') {
+    if (segments.length === 2 && method === 'GET') {
+      return byCreatedDesc(plans) as unknown as T;
+    }
+    if (segments.length === 2 && method === 'POST') {
+      const code = String(body.code ?? '').trim();
+      if (!code) throw new ApiError(400, 'Plan code is required');
+      if (plans.some((p) => p.code === code)) throw new ApiError(400, `Plan code '${code}' already exists`);
+      const created: PlanResponse = {
+        id: nextId('plan'),
+        code,
+        name: String(body.name ?? code),
+        version: Number(body.version ?? 1),
+        status: 'Draft',
+        description: (body.description as string | null) ?? null,
+        features: (body.features as PlanResponse['features']) ?? [],
+        quotas: (body.quotas as PlanResponse['quotas']) ?? [],
+        createdAt: new Date().toISOString(),
+      };
+      plans.push(created);
+      addAudit('SubscriptionPlan', created.id, 'SubscriptionPlan.Created', `Created plan ${created.code}`);
+      return created as unknown as T;
+    }
+    if (segments.length === 3 && segments[2] === 'publish' && method === 'POST') {
+      // handled below as /subscription-plans/{id}/publish
+    }
+  }
+  // POST /platform/subscription-plans/{id}/publish
+  if (
+    segments[0] === 'platform' &&
+    segments[1] === 'subscription-plans' &&
+    segments.length === 3 &&
+    segments[2] !== 'publish'
+  ) {
+    // GET single plan not strictly required; fall through
+  }
+  if (
+    segments[0] === 'platform' &&
+    segments[1] === 'subscription-plans' &&
+    segments[3] === 'publish' &&
+    method === 'POST'
+  ) {
+    const plan = plans.find((p) => p.id === segments[2]);
+    if (!plan) throw new ApiError(404, 'Plan not found');
+    plan.status = 'Published';
+    addAudit('SubscriptionPlan', plan.id, 'SubscriptionPlan.Published', `Published plan ${plan.code}`);
+    return plan as unknown as T;
+  }
+
+  // Subscriptions
+  if (segments[0] === 'platform' && segments[1] === 'subscriptions' && segments.length === 2) {
+    if (method === 'GET') {
+      const orgId = params.get('organizationId') ?? '';
+      const filtered = orgId
+        ? subscriptions.filter((s) => s.organizationId === orgId)
+        : subscriptions;
+      return filtered as unknown as T;
+    }
+  }
+
+  // PUT /platform/organizations/{id}/subscription (assign/replace)
+  if (
+    segments[0] === 'platform' &&
+    segments[1] === 'organizations' &&
+    segments[3] === 'subscription' &&
+    method === 'PUT'
+  ) {
+    const orgId = segments[2];
+    const planId = String(body.planId ?? '');
+    const plan = plans.find((p) => p.id === planId);
+    if (!plan) throw new ApiError(400, 'Plan not found');
+    const reason = String(body.reason ?? '').trim();
+    if (!reason) throw new ApiError(400, 'Reason is required');
+
+    const existing = subscriptions.find((s) => s.organizationId === orgId);
+    const beforeJson = existing ? JSON.stringify(existing) : null;
+
+    const nextRevision = existing ? existing.revision + 1 : 1;
+    const sub: PlatformSubscriptionResponse = {
+      id: existing?.id ?? nextId('sub'),
+      organizationId: orgId,
+      planId: plan.id,
+      planCode: plan.code,
+      planName: plan.name,
+      planVersion: plan.version,
+      status: String(body.status ?? 'Active'),
+      startsAt: String(body.startsAt ?? new Date().toISOString()),
+      endsAt: String(body.endsAt ?? new Date(Date.now() + 365 * 86_400_000).toISOString()),
+      graceUntil: (body.graceUntil as string | null) ?? null,
+      cancelAtPeriodEnd: false,
+      renewalMode: 'SalesManaged',
+      revision: nextRevision,
+    };
+
+    if (existing) {
+      Object.assign(existing, sub);
+    } else {
+      subscriptions.push(sub);
+    }
+
+    subscriptionAudit.unshift({
+      id: nextId('sa'),
+      organizationId: orgId,
+      actorId: 'usr-001',
+      action: existing ? 'Subscription.Updated' : 'Subscription.Assigned',
+      beforeJson,
+      afterJson: JSON.stringify(sub),
+      reason,
+      occurredAt: new Date().toISOString(),
+      requestId: `req-${nextId('req')}`,
+    });
+
+    return sub as unknown as T;
+  }
+
+  // PUT /platform/organizations/{id}/entitlements/{featureKey}
+  if (
+    segments[0] === 'platform' &&
+    segments[1] === 'organizations' &&
+    segments[3] === 'entitlements' &&
+    method === 'PUT'
+  ) {
+    const orgId = segments[2];
+    const featureKey = segments[4];
+    const reason = String(body.reason ?? '').trim();
+    if (!reason) throw new ApiError(400, 'Reason is required');
+
+    const override: FeatureOverrideResponse = {
+      id: nextId('fo'),
+      organizationId: orgId,
+      featureKey,
+      enabled: Boolean(body.enabled),
+      startsAt: String(body.startsAt ?? new Date().toISOString()),
+      endsAt: (body.endsAt as string | null) ?? null,
+      reason,
+      createdAt: new Date().toISOString(),
+    };
+    const idx = featureOverrides.findIndex((o) => o.organizationId === orgId && o.featureKey === featureKey);
+    if (idx >= 0) featureOverrides[idx] = override;
+    else featureOverrides.push(override);
+
+    subscriptionAudit.unshift({
+      id: nextId('sa'),
+      organizationId: orgId,
+      actorId: 'usr-001',
+      action: 'FeatureOverride.Set',
+      beforeJson: null,
+      afterJson: JSON.stringify(override),
+      reason,
+      occurredAt: new Date().toISOString(),
+      requestId: `req-${nextId('req')}`,
+    });
+
+    return override as unknown as T;
+  }
+
+  // PUT /platform/organizations/{id}/quotas/{quotaKey}
+  if (
+    segments[0] === 'platform' &&
+    segments[1] === 'organizations' &&
+    segments[3] === 'quotas' &&
+    method === 'PUT'
+  ) {
+    const orgId = segments[2];
+    const quotaKey = segments[4];
+    const reason = String(body.reason ?? '').trim();
+    if (!reason) throw new ApiError(400, 'Reason is required');
+
+    const limitRaw = body.limitValue;
+    const limitValue = limitRaw === null || limitRaw === undefined || limitRaw === ''
+      ? null
+      : Number(limitRaw);
+
+    const override: QuotaOverrideResponse = {
+      id: nextId('qo'),
+      organizationId: orgId,
+      quotaKey,
+      limitValue,
+      startsAt: String(body.startsAt ?? new Date().toISOString()),
+      endsAt: (body.endsAt as string | null) ?? null,
+      reason,
+      createdAt: new Date().toISOString(),
+    };
+    const idx = quotaOverrides.findIndex((o) => o.organizationId === orgId && o.quotaKey === quotaKey);
+    if (idx >= 0) quotaOverrides[idx] = override;
+    else quotaOverrides.push(override);
+
+    subscriptionAudit.unshift({
+      id: nextId('sa'),
+      organizationId: orgId,
+      actorId: 'usr-001',
+      action: 'QuotaOverride.Set',
+      beforeJson: null,
+      afterJson: JSON.stringify(override),
+      reason,
+      occurredAt: new Date().toISOString(),
+      requestId: `req-${nextId('req')}`,
+    });
+
+    return override as unknown as T;
+  }
+
+  // GET /platform/organizations/{id}/subscription-audit
+  if (
+    segments[0] === 'platform' &&
+    segments[1] === 'organizations' &&
+    segments[3] === 'subscription-audit' &&
+    method === 'GET'
+  ) {
+    const orgId = segments[2];
+    const filtered = subscriptionAudit.filter((e) => e.organizationId === orgId);
+    return filtered as unknown as T;
+  }
+
+  // GET /platform/organizations/{id}/entitlements (override list for org detail)
+  if (
+    segments[0] === 'platform' &&
+    segments[1] === 'organizations' &&
+    segments[3] === 'entitlements' &&
+    method === 'GET'
+  ) {
+    const orgId = segments[2];
+    return featureOverrides.filter((o) => o.organizationId === orgId) as unknown as T;
+  }
+
+  // GET /platform/organizations/{id}/quotas (override list for org detail)
+  if (
+    segments[0] === 'platform' &&
+    segments[1] === 'organizations' &&
+    segments[3] === 'quotas' &&
+    method === 'GET'
+  ) {
+    const orgId = segments[2];
+    return quotaOverrides.filter((o) => o.organizationId === orgId) as unknown as T;
   }
 
   throw new ApiError(404, `No mock handler for ${method} ${pathname}`);

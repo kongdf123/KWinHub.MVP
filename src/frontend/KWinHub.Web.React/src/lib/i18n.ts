@@ -36,6 +36,7 @@ export const STRINGS: Record<string, { en: string; cn: string }> = {
   'nav.organization': { en: 'Organization', cn: '组织' },
   'nav.users': { en: 'Users', cn: '用户' },
   'nav.roles': { en: 'Roles & Permissions', cn: '角色权限' },
+  'nav.subscription': { en: 'Subscription', cn: '订阅' },
   'nav.settings': { en: 'Settings', cn: '设置' },
 
   // Nav — Workflow Explorer
@@ -393,6 +394,37 @@ export const STRINGS: Record<string, { en: string; cn: string }> = {
   'sessionDetail.algorithmVersion': { en: 'Algorithm Version', cn: '算法版本' },
   'sessionDetail.viewRawData': { en: 'View Raw Data', cn: '查看原始数据' },
   'sessionDetail.viewAnalysis': { en: 'View Analysis', cn: '查看分析' },
+
+  // Subscription Center
+  'subscription.title': { en: 'Subscription', cn: '订阅' },
+  'subscription.subtitle': { en: 'Plan, usage, and feature entitlements', cn: '方案、用量与功能权限' },
+  'subscription.tab.overview': { en: 'Overview', cn: '概览' },
+  'subscription.tab.usage': { en: 'Usage', cn: '用量' },
+  'subscription.tab.features': { en: 'Features', cn: '功能' },
+  'subscription.plan': { en: 'Plan', cn: '方案' },
+  'subscription.status': { en: 'Status', cn: '状态' },
+  'subscription.renewalMode': { en: 'Renewal', cn: '续费方式' },
+  'subscription.startsAt': { en: 'Starts', cn: '开始时间' },
+  'subscription.currentPeriod': { en: 'Current Period', cn: '当前周期' },
+  'subscription.graceUntil': { en: 'Grace Until', cn: '宽限至' },
+  'subscription.cancelAtPeriodEnd': { en: 'Cancels at period end', cn: '周期结束后取消' },
+  'subscription.revision': { en: 'Revision', cn: '版本' },
+  'subscription.salesManaged': { en: 'Sales-managed', cn: '销售管理' },
+  'subscription.autoRenew': { en: 'Auto-renew', cn: '自动续费' },
+  'subscription.noSubscription': { en: 'No active subscription', cn: '暂无有效订阅' },
+  'subscription.noSubscriptionDetail': { en: 'Contact your account manager to set up a plan.', cn: '请联系客户经理开通方案。' },
+  'usage.consumed': { en: 'Consumed', cn: '已使用' },
+  'usage.limit': { en: 'Limit', cn: '限额' },
+  'usage.period': { en: 'Period', cn: '周期' },
+  'usage.unlimited': { en: 'Unlimited', cn: '不限量' },
+  'usage.noData': { en: 'No usage data available', cn: '暂无用量数据' },
+  'entitlements.enabled': { en: 'Enabled', cn: '已启用' },
+  'entitlements.disabled': { en: 'Disabled', cn: '未启用' },
+  'entitlements.source': { en: 'Source', cn: '来源' },
+  'entitlements.effectiveUntil': { en: 'Effective until', cn: '有效期至' },
+  'entitlements.noData': { en: 'No feature entitlements', cn: '暂无功能权限' },
+  'common.loading': { en: 'Loading...', cn: '加载中...' },
+  'common.error': { en: 'Failed to load', cn: '加载失败' },
 };
 
 export function t(key: string, lang: Lang): string {

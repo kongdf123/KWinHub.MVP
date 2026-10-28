@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AppProvider, useApp } from '@/lib/app-context';
 import { ToastContainer } from '@/components/ui/Toast';
 import { Sidebar } from '@/components/layout/Sidebar';
@@ -32,13 +32,18 @@ import { TeamsPage } from '@/pages/admin/TeamsPage';
 import { DevicesPage } from '@/pages/admin/DevicesPage';
 import { SettingsPage } from '@/pages/admin/SettingsPage';
 import { WorkflowExplorerPage } from '@/pages/WorkflowExplorerPage';
+import { SubscriptionPage } from '@/features/subscriptions/SubscriptionPage';
 import { isLoggedIn, clearToken } from '@/lib/api/http';
 import { LocaleProvider } from '@/lib/i18n-context';
 
 type AuthView = 'login' | 'register' | 'verify';
 
 function AppContent({ onLogout }: { onLogout: () => void }) {
-  const { currentView, toasts, dismissToast } = useApp();
+  const { currentView, toasts, dismissToast, loadAccess } = useApp();
+
+  useEffect(() => {
+    void loadAccess();
+  }, [loadAccess]);
 
   const renderView = () => {
     switch (currentView) {
@@ -69,6 +74,7 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
       case 'devices': return <DevicesPage />;
       case 'settings': return <SettingsPage />;
       case 'workflows': return <WorkflowExplorerPage />;
+      case 'subscription': return <SubscriptionPage />;
       default: return <HomePage />;
     }
   };

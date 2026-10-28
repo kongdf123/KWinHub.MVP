@@ -49,6 +49,43 @@ export function isLoggedIn(): boolean {
   return !!getToken();
 }
 
+/**
+ * Decodes the payload of a JWT stored in localStorage and returns it as a
+ * plain object. Returns null when no token is present or decoding fails.
+ * This is purely client-side; signature verification happens server-side.
+ */
+export function decodeJwt<T = Record<string, unknown>>(): T | null {
+  const token = getToken();
+  if (!token) return null;
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return null;
+    // JWT uses base64url, not standard base64.
+    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const json = decodeURIComponent(
+      atob(normalized)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join(''),
+    );
+    return JSON.parse(json) as T;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Returns the organization id for the current user from the JWT `org_id`
+ * claim. Falls back to the `VITE_DEV_ORG_ID` env var when the claim is absent
+ * (e.g. local dev tokens) and to the demo org id as a last resort.
+ */
+export function getCurrentOrgId(): string | null {
+  const claims = decodeJwt<{ org_id?: string }>();
+  if (claims?.org_id) return claims.org_id;
+  const dev = import.meta.env.VITE_DEV_ORG_ID;
+  return dev || null;
+}
+
 export const http = {
   get: <T>(path: string) => request<T>(path),
   post: <T>(path: string, body?: unknown) => request<T>(path, { method: 'POST', body: body ? JSON.stringify(body) : undefined }),

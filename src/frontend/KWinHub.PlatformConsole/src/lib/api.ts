@@ -71,8 +71,8 @@ export const api = {
   get: <T>(path: string) => request<T>(path),
   post: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: 'POST', body: body === undefined ? undefined : JSON.stringify(body) }),
-  put: <T>(path: string, body?: unknown) =>
-    request<T>(path, { method: 'PUT', body: body === undefined ? undefined : JSON.stringify(body) }),
+  put: <T>(path: string, body?: unknown, headers?: Record<string, string>) =>
+    request<T>(path, { method: 'PUT', body: body === undefined ? undefined : JSON.stringify(body), headers }),
   del: (path: string) => request<void>(path, { method: 'DELETE' }),
   changeStatus: <T>(path: string, action: string) =>
     request<T>(path, { method: 'POST', body: JSON.stringify({ action }) }),
@@ -231,4 +231,110 @@ export interface AlgorithmVersionResponse {
   notes: string | null;
   status: string;
   createdAt: string;
+}
+
+// --- Subscription Center (platform) ---------------------------------------
+
+export interface PlanFeatureResponse {
+  featureKey: string;
+  enabled: boolean;
+}
+
+export interface PlanQuotaResponse {
+  quotaKey: string;
+  limitValue: number | null;
+}
+
+export interface PlanResponse {
+  id: string;
+  code: string;
+  name: string;
+  version: number;
+  status: string;
+  description: string | null;
+  features: PlanFeatureResponse[];
+  quotas: PlanQuotaResponse[];
+  createdAt: string;
+}
+
+export interface CreatePlanRequest {
+  code: string;
+  name: string;
+  version: number;
+  description?: string | null;
+  features: PlanFeatureResponse[];
+  quotas: PlanQuotaResponse[];
+}
+
+export interface PlatformSubscriptionResponse {
+  id: string;
+  organizationId: string;
+  planId: string;
+  planCode: string;
+  planName: string;
+  planVersion: number;
+  status: string;
+  startsAt: string;
+  endsAt: string;
+  graceUntil: string | null;
+  cancelAtPeriodEnd: boolean;
+  renewalMode: string;
+  revision: number;
+}
+
+export interface AssignSubscriptionRequest {
+  planId: string;
+  status: string;
+  startsAt: string;
+  endsAt: string;
+  graceUntil?: string | null;
+  reason: string;
+}
+
+export interface FeatureOverrideResponse {
+  id: string;
+  organizationId: string;
+  featureKey: string;
+  enabled: boolean;
+  startsAt: string;
+  endsAt: string | null;
+  reason: string;
+  createdAt: string;
+}
+
+export interface SetFeatureOverrideRequest {
+  enabled: boolean;
+  startsAt: string;
+  endsAt?: string | null;
+  reason: string;
+}
+
+export interface QuotaOverrideResponse {
+  id: string;
+  organizationId: string;
+  quotaKey: string;
+  limitValue: number | null;
+  startsAt: string;
+  endsAt: string | null;
+  reason: string;
+  createdAt: string;
+}
+
+export interface SetQuotaOverrideRequest {
+  limitValue: number | null;
+  startsAt: string;
+  endsAt?: string | null;
+  reason: string;
+}
+
+export interface SubscriptionAuditEventResponse {
+  id: string;
+  organizationId: string;
+  actorId: string | null;
+  action: string;
+  beforeJson: string | null;
+  afterJson: string | null;
+  reason: string;
+  occurredAt: string;
+  requestId: string | null;
 }

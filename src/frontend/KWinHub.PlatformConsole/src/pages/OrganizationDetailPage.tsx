@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
-import { api, type PlatformOrganizationDetailResponse } from '../lib/api';
+import {
+  api,
+  type FeatureOverrideResponse,
+  type PlatformOrganizationDetailResponse,
+  type QuotaOverrideResponse,
+  type SubscriptionAuditEventResponse,
+} from '../lib/api';
 import { useI18n } from '../lib/i18n';
 import { navigate } from '../lib/router';
 import {
@@ -8,14 +14,35 @@ import {
   Card,
   EmptyState,
   ErrorBanner,
+  Input,
   Modal,
+  Select,
   Spinner,
   StatusPill,
   Table,
+  Textarea,
   formatDate,
+  formatDateTime,
 } from '../components/ui';
 
-type Tab = 'overview' | 'members';
+type Tab = 'overview' | 'members' | 'entitlements';
+
+const FEATURE_KEYS = [
+  'testing.sprint',
+  'testing.forceplate',
+  'analytics.advanced',
+  'integrations.api',
+  'reports.export',
+  'subscription.view',
+  'subscription.manage',
+];
+
+const QUOTA_KEYS = [
+  'members.active',
+  'devices.registered',
+  'sessions.monthly',
+  'storage.bytes',
+];
 
 export function OrganizationDetailPage({ id }: { id: string }) {
   const { t } = useI18n();
@@ -29,6 +56,19 @@ export function OrganizationDetailPage({ id }: { id: string }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionBusy, setActionBusy] = useState(false);
+
+  const [featureOverrides, setFeatureOverrides] = useState<FeatureOverrideResponse[]>([]);
+  const [quotaOverrides, setQuotaOverrides] = useState<QuotaOverrideResponse[]>([]);
+  const [auditEvents, setAuditEvents] = useState<SubscriptionAuditEventResponse[]>([]);
+  const [overrideModal, setOverrideModal] = useState<{
+    kind: 'feature' | 'quota';
+    key: string;
+  } | null>(null);
+  const [overrideForm, setOverrideForm] = useState({
+    enabled: true,
+    limitValue: '',
+    reason: '',
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -68,6 +108,65 @@ export function OrganizationDetailPage({ id }: { id: string }) {
     } finally {
       setActionBusy(false);
     }
+  }
+
+  useEffect(() => {
+    if (tab !== 'entitlements') return;
+    let cancelled = false;
+    Promise.all([
+      api.get<FeatureOverrideResponse[]>(`/platform/organizations/${id}/entitlements`).catch(() => []),
+      api.get<QuotaOverrideResponse[]>(`/platform/organizations/${id}/quotas`).catch(() => []),
+      api.get<SubscriptionAuditEventResponse[]>(`/platform/organizations/${id}/subscription-audit`).catch(() => []),
+    ]).then(([fo, qo, audit]) => {
+      if (cancelled) return;
+      setFeatureOverrides(fo);
+      setQuotaOverrides(qo);
+      setAuditEvents(audit);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [tab, id, reloadKey]);
+
+  async function submitOverride() {
+    if (!overrideModal || !overrideForm.reason.trim()) return;
+    setActionBusy(true);
+    setActionError(null);
+    try {
+      const now = new Date().toISOString();
+      if (overrideModal.kind === 'feature') {
+        await api.put(`/platform/organizations/${id}/entitlements/${overrideModal.key}`, {
+          enabled: overrideForm.enabled,
+          startsAt: now,
+          endsAt: null,
+          reason: overrideForm.reason.trim(),
+        });
+      } else {
+        const limitValue = overrideForm.limitValue === '' ? null : Number(overrideForm.limitValue);
+        await api.put(`/platform/organizations/${id}/quotas/${overrideModal.key}`, {
+          limitValue,
+          startsAt: now,
+          endsAt: null,
+          reason: overrideForm.reason.trim(),
+        });
+      }
+      setOverrideModal(null);
+      setReloadKey((k) => k + 1);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : t('common.error'));
+    } finally {
+      setActionBusy(false);
+    }
+  }
+
+  function openOverrideModal(kind: 'feature' | 'quota', key: string, current: boolean | number | null) {
+    setOverrideModal({ kind, key });
+    setOverrideForm({
+      enabled: kind === 'feature' ? Boolean(current) : true,
+      limitValue: kind === 'quota' && current !== null ? String(current) : '',
+      reason: '',
+    });
+    setActionError(null);
   }
 
   const infoFields = organization
@@ -164,6 +263,15 @@ export function OrganizationDetailPage({ id }: { id: string }) {
                 {t('orgDetail.tab.members')}
                 <span className="ml-1.5 text-xs text-ink-400">{organization.members.length}</span>
               </button>
+              <button
+                type="button"
+                onClick={() => setTab('entitlements')}
+                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                  tab === 'entitlements' ? 'bg-teal-50 text-teal-700' : 'text-ink-500 hover:text-ink-900'
+                }`}
+              >
+                {t('orgDetail.tab.entitlements')}
+              </button>
             </div>
           </Card>
 
@@ -181,7 +289,7 @@ export function OrganizationDetailPage({ id }: { id: string }) {
                 ))}
               </dl>
             </Card>
-          ) : (
+          ) : tab === 'members' ? (
             <Card className="mt-5">
               <div className="flex items-center justify-between border-b border-ink-200 px-5 py-4">
                 <h2 className="text-sm font-semibold text-ink-900">{t('orgDetail.membersTitle')}</h2>
@@ -215,6 +323,102 @@ export function OrganizationDetailPage({ id }: { id: string }) {
                 </Table>
               )}
             </Card>
+          ) : (
+            <div className="mt-5 space-y-5">
+              <Card>
+                <div className="flex items-center justify-between border-b border-ink-200 px-5 py-4">
+                  <h2 className="text-sm font-semibold text-ink-900">{t('orgDetail.entitlementsTitle')}</h2>
+                </div>
+                <Table headers={[t('plans.featureKey'), t('plans.status'), t('orgDetail.effectiveUntil'), '']}>
+                  {FEATURE_KEYS.map((key) => {
+                    const ov = featureOverrides.find((o) => o.featureKey === key);
+                    return (
+                      <tr key={key}>
+                        <td className="px-4 py-3 font-mono text-xs text-ink-900">{key}</td>
+                        <td className="px-4 py-3">
+                          {ov ? (
+                            <StatusPill status={ov.enabled ? 'Granted' : 'Denied'} />
+                          ) : (
+                            <span className="text-xs text-ink-400">{t('orgDetail.noOverrides')}</span>
+                          )}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-ink-500">
+                          {ov ? formatDateTime(ov.endsAt) : '—'}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <Button
+                            variant="secondary"
+                            onClick={() =>
+                              openOverrideModal('feature', key, ov?.enabled ?? true)
+                            }
+                          >
+                            {t('orgDetail.setOverride')}
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </Table>
+              </Card>
+
+              <Card>
+                <div className="flex items-center justify-between border-b border-ink-200 px-5 py-4">
+                  <h2 className="text-sm font-semibold text-ink-900">{t('orgDetail.quotasTitle')}</h2>
+                </div>
+                <Table headers={[t('plans.quotaKey'), t('plans.limit'), t('orgDetail.effectiveUntil'), '']}>
+                  {QUOTA_KEYS.map((key) => {
+                    const ov = quotaOverrides.find((o) => o.quotaKey === key);
+                    return (
+                      <tr key={key}>
+                        <td className="px-4 py-3 font-mono text-xs text-ink-900">{key}</td>
+                        <td className="px-4 py-3 text-ink-900">
+                          {ov
+                            ? ov.limitValue === null
+                              ? t('plans.unlimited')
+                              : ov.limitValue.toLocaleString()
+                            : '—'}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-ink-500">
+                          {ov ? formatDateTime(ov.endsAt) : '—'}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <Button
+                            variant="secondary"
+                            onClick={() => openOverrideModal('quota', key, ov?.limitValue ?? null)}
+                          >
+                            {t('orgDetail.setOverride')}
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </Table>
+              </Card>
+
+              <Card>
+                <div className="flex items-center justify-between border-b border-ink-200 px-5 py-4">
+                  <h2 className="text-sm font-semibold text-ink-900">{t('orgDetail.auditTitle')}</h2>
+                </div>
+                {auditEvents.length === 0 ? (
+                  <EmptyState title={t('orgDetail.noOverrides')} />
+                ) : (
+                  <Table
+                    headers={[t('orgDetail.action'), t('orgDetail.occurredAt'), t('subs.reason'), t('orgDetail.requestId')]}
+                  >
+                    {auditEvents.map((evt) => (
+                      <tr key={evt.id}>
+                        <td className="px-4 py-3 font-medium text-ink-900">{evt.action}</td>
+                        <td className="whitespace-nowrap px-4 py-3 text-ink-500">
+                          {formatDateTime(evt.occurredAt)}
+                        </td>
+                        <td className="px-4 py-3 text-ink-600">{evt.reason}</td>
+                        <td className="px-4 py-3 font-mono text-xs text-ink-400">{evt.requestId ?? '—'}</td>
+                      </tr>
+                    ))}
+                  </Table>
+                )}
+              </Card>
+            </div>
           )}
         </>
       )}
@@ -238,6 +442,62 @@ export function OrganizationDetailPage({ id }: { id: string }) {
         {organization ? (
           <p className="mt-2 text-sm font-semibold text-ink-900">{organization.name}</p>
         ) : null}
+        {actionError ? <p className="mt-3 text-sm text-invalid-600">{actionError}</p> : null}
+      </Modal>
+
+      <Modal
+        open={overrideModal !== null}
+        title={overrideModal ? `${t('orgDetail.setOverride')}: ${overrideModal.key}` : ''}
+        onClose={() => setOverrideModal(null)}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setOverrideModal(null)} disabled={actionBusy}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              disabled={actionBusy || !overrideForm.reason.trim()}
+              onClick={submitOverride}
+            >
+              {t('common.save')}
+            </Button>
+          </>
+        }
+      >
+        {overrideModal?.kind === 'feature' ? (
+          <div className="space-y-4">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-ink-700">{t('plans.enabled')}</label>
+              <Select
+                value={overrideForm.enabled ? 'true' : 'false'}
+                onChange={(e) => setOverrideForm((f) => ({ ...f, enabled: e.target.value === 'true' }))}
+              >
+                <option value="true">{t('orgDetail.overrideGrant')}</option>
+                <option value="false">{t('orgDetail.overrideDeny')}</option>
+              </Select>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-ink-700">{t('plans.limit')}</label>
+              <Input
+                type="number"
+                placeholder={t('plans.unlimited')}
+                value={overrideForm.limitValue}
+                onChange={(e) => setOverrideForm((f) => ({ ...f, limitValue: e.target.value }))}
+              />
+              <p className="mt-1 text-xs text-ink-400">{t('orgDetail.noOverrides')}</p>
+            </div>
+          </div>
+        )}
+        <div className="mt-4">
+          <label className="mb-1 block text-sm font-medium text-ink-700">{t('subs.reason')}</label>
+          <Textarea
+            value={overrideForm.reason}
+            onChange={(e) => setOverrideForm((f) => ({ ...f, reason: e.target.value }))}
+            placeholder={t('subs.reasonPlaceholder')}
+          />
+        </div>
         {actionError ? <p className="mt-3 text-sm text-invalid-600">{actionError}</p> : null}
       </Modal>
     </div>
