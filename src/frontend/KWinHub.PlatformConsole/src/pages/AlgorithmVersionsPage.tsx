@@ -156,7 +156,9 @@ export function AlgorithmVersionsPage() {
   const filtered = query
     ? items.filter(
         (item) =>
-          item.name.toLowerCase().includes(query) || item.version.toLowerCase().includes(query)
+          (item.code ?? '').toLowerCase().includes(query) ||
+          item.name.toLowerCase().includes(query) ||
+          item.version.toLowerCase().includes(query)
       )
     : items;
 
@@ -202,6 +204,7 @@ export function AlgorithmVersionsPage() {
         ) : (
           <Table
             headers={[
+              t('catalog.code'),
               t('catalog.name'),
               t('catalog.version'),
               t('catalog.supportedMetrics'),
@@ -212,6 +215,9 @@ export function AlgorithmVersionsPage() {
           >
             {filtered.map((item) => (
               <tr key={item.id}>
+                <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-ink-700">
+                  {item.code ?? '—'}
+                </td>
                 <td className="px-4 py-3 font-medium text-ink-900">{item.name}</td>
                 <td className="px-4 py-3 text-ink-600">{item.version}</td>
                 <td className="max-w-xs truncate px-4 py-3 font-mono text-xs text-ink-600">

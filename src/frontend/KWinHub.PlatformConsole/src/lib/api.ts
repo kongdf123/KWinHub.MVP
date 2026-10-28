@@ -224,6 +224,7 @@ export interface DeviceModelResponse {
 
 export interface AlgorithmVersionResponse {
   id: string;
+  code: string | null;
   name: string;
   version: string;
   supportedMetricCodes: string | null;

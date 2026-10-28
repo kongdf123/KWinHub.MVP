@@ -5,6 +5,7 @@ import type {
   Heartbeat, Result, ResultMetric, SessionStatus, DataQuality, ReportDefinition, DashboardWidget,
 } from './types';
 import { getMetric } from './metrics';
+import { mulberry32 } from './scientific';
 
 // --- Organization ---------------------------------------------------------
 export const DEMO_ORG: Organization = {
@@ -365,6 +366,7 @@ export const DEMO_DATASETS: Dataset[] = [
 function generateForceTimeData(seed: number): number[] {
   const data: number[] = [];
   const samples = 200;
+  const rand = mulberry32(seed * 2654435761);
   for (let i = 0; i < samples; i++) {
     const t = i / samples;
     let v = 0;
@@ -373,7 +375,7 @@ function generateForceTimeData(seed: number): number[] {
     else if (t < 0.55) v = 580 + 1600 * Math.pow((t - 0.45) / 0.1, 0.5);
     else if (t < 0.7) v = 2180 - 1400 * Math.pow((t - 0.55) / 0.15, 1.5);
     else v = 780 + Math.sin(t * 20) * 15;
-    data.push(Math.max(0, v + (Math.random() - 0.5) * 30 + seed));
+    data.push(Math.max(0, v + (rand() - 0.5) * 30 + seed));
   }
   return data;
 }
