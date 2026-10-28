@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Plus } from 'lucide-react';
 import { api, type DeviceModelResponse } from '../lib/api';
 import { useI18n } from '../lib/i18n';
+import { CatalogTabs } from '../components/CatalogTabs';
 import {
   Button,
   Card,
@@ -173,6 +174,8 @@ export function DeviceCatalogPage() {
           </Button>
         }
       />
+
+      <CatalogTabs />
 
       {actionError && !deleteTarget ? (
         <div className="mb-4">

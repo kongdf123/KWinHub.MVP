@@ -12,11 +12,8 @@ import type { TestSession, SessionStatus } from '@/lib/types';
 import {
   getSessionScientificInfo,
   getSourceApplication,
-  useScientificDemo,
-  deriveScenarioFixtureStatus,
   type ScientificFixtureSummaryStatus,
 } from '@/features/science';
-import { SCENARIOS } from '@/lib/scientific/scenarios';
 
 const SPORT_ICONS: Record<string, typeof Activity> = {
   'sport-cmj': Activity,
@@ -52,13 +49,11 @@ const SCI_STATUS_CONFIG: Record<ScientificFixtureSummaryStatus, { en: string; cn
 
 export function SessionsPage() {
   const { navigate, addToast, lang, canAccess } = useApp();
-  const { scenario, selectScenario } = useScientificDemo();
   const [search, setSearch] = useState('');
   const [protocolFilter, setProtocolFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [sourceFilter, setSourceFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
-  const [scenarioFilter, setScenarioFilter] = useState('all');
 
   const workspaceTabs = (WORKSPACE_TABS_BY_VIEW['sessions'] ?? []).filter((tab) => canAccess(tab.view));
 
@@ -77,10 +72,9 @@ export function SessionsPage() {
         cutoff.setDate(cutoff.getDate() - days);
         return sessionDate >= cutoff;
       })();
-      const matchesScenario = scenarioFilter === 'all' || getSessionScientificInfo(s.athleteId, s.protocolId)?.scenario.id === scenarioFilter;
-      return matchesSearch && matchesProtocol && matchesStatus && matchesSource && matchesDate && matchesScenario;
+      return matchesSearch && matchesProtocol && matchesStatus && matchesSource && matchesDate;
     }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [search, protocolFilter, statusFilter, sourceFilter, dateFilter, scenarioFilter]);
+  }, [search, protocolFilter, statusFilter, sourceFilter, dateFilter]);
 
   const getPrimaryResult = (session: TestSession): string => {
     const protocol = getProtocol(session.protocolId);
@@ -182,55 +176,6 @@ export function SessionsPage() {
             <Upload className="w-4 h-4" />
             {tr('common.importData', lang)}
           </button>
-        </div>
-
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-ink-900">{tr('sessions.featuredScenarios', lang)}</h3>
-            <div className="flex items-center gap-3">
-              {scenarioFilter !== 'all' && (
-                <button
-                  onClick={() => setScenarioFilter('all')}
-                  className="text-xs font-medium text-ink-500 hover:text-teal-600 transition-colors"
-                >
-                  {lang === 'cn' ? '显示全部' : 'Show all'}
-                </button>
-              )}
-              {scenario && (
-                <span className="text-xs text-ink-500">
-                  {lang === 'cn' ? '当前场景: ' : 'Active: '}
-                  <span className="font-medium text-teal-700">{lang === 'cn' ? scenario.labelCn : scenario.label}</span>
-                </span>
-              )}
-            </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            {SCENARIOS.map((sc) => {
-              const isActive = scenario?.id === sc.id;
-              const scStatus = deriveScenarioFixtureStatus(sc);
-              const cfg = SCI_STATUS_CONFIG[scStatus];
-              const athlete = DEMO_ATHLETES.find((a) => a.id === sc.athleteId);
-              return (
-                <button
-                  key={sc.id}
-                  onClick={() => { selectScenario(sc.id); setScenarioFilter(sc.id); }}
-                  className={`text-left p-3 rounded-xl border transition-all ${isActive ? 'border-teal-500 bg-teal-50/50 ring-1 ring-teal-200' : 'border-ink-200 bg-white hover:border-teal-300 hover:bg-ink-50'}`}
-                >
-                  <div className="flex items-start justify-between gap-2 mb-1.5">
-                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide ${cfg.bg} ${cfg.color}`}>
-                      {lang === 'cn' ? cfg.cn : cfg.en}
-                    </span>
-                    {isActive && <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse mt-1" />}
-                  </div>
-                  <p className="text-sm font-semibold text-ink-900 leading-snug mb-0.5">{lang === 'cn' ? sc.labelCn : sc.label}</p>
-                  <p className="text-xs text-ink-500 leading-relaxed line-clamp-2">{lang === 'cn' ? sc.descriptionCn : sc.description}</p>
-                  <p className="text-[11px] text-ink-400 mt-1.5">
-                    {athlete ? `${athlete.lastName} ${athlete.firstName}` : sc.athleteId} · {sc.trials.length} {lang === 'cn' ? '试次' : 'trials'}
-                  </p>
-                </button>
-              );
-            })}
-          </div>
         </div>
 
         <div className="bg-white rounded-xl border border-ink-200 overflow-hidden">

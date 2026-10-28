@@ -3,6 +3,7 @@ import { Plus } from 'lucide-react';
 import { api, type GlobalMetricResponse } from '../lib/api';
 import { useI18n } from '../lib/i18n';
 import { METRIC_SCIENTIFIC_META, type MetricScientificMeta } from '../lib/mockApi';
+import { CatalogTabs } from '../components/CatalogTabs';
 import {
   Button,
   Card,
@@ -197,6 +198,8 @@ export function MetricCatalogPage() {
           </Button>
         }
       />
+
+      <CatalogTabs />
 
       {actionError && !deleteTarget ? (
         <div className="mb-4">

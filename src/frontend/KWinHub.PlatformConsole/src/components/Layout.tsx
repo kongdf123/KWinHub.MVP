@@ -1,14 +1,11 @@
 import { useState, type ReactNode } from 'react';
 import {
-  Binary,
   Building2,
   ClipboardList,
-  Cpu,
   LayoutDashboard,
   LogOut,
   PanelLeftClose,
   PanelLeftOpen,
-  Ruler,
   ScrollText,
   ShieldCheck,
   UserRound,
@@ -26,22 +23,13 @@ type NavItem = {
 };
 
 // Flat primary navigation — one item per product area. Areas with sub-sections
-// (e.g. Foundations) expose them as route-aware tabs in the main layout.
+// (e.g. Foundations) expose them as route-aware tabs in the page content.
 const NAV_ITEMS: NavItem[] = [
   { path: '/', labelKey: 'nav.dashboard', icon: LayoutDashboard },
   { path: '/organizations', labelKey: 'nav.organizations', icon: Building2 },
   { path: '/users', labelKey: 'nav.users', icon: Users },
   { path: '/catalogs/protocols', labelKey: 'nav.catalogs', icon: ClipboardList },
   { path: '/audit-logs', labelKey: 'nav.security', icon: ScrollText },
-];
-
-// Section tabs for the Foundations area. Each tab is a real route so
-// refresh, deep links, and browser Back/Forward keep working.
-const CATALOG_TABS: NavItem[] = [
-  { path: '/catalogs/protocols', labelKey: 'nav.protocols', icon: ClipboardList },
-  { path: '/catalogs/metrics', labelKey: 'nav.metrics', icon: Ruler },
-  { path: '/catalogs/devices', labelKey: 'nav.devices', icon: Cpu },
-  { path: '/catalogs/algorithms', labelKey: 'nav.algorithms', icon: Binary },
 ];
 
 function isActive(itemPath: string, currentPath: string): boolean {
@@ -83,7 +71,6 @@ export function Layout({
       ? '收起侧边栏'
       : 'Collapse sidebar';
   const signOutLabel = t('layout.signOut');
-  const showCatalogTabs = route.path.startsWith('/catalogs');
 
   const renderItem = (item: NavItem) => {
     const Icon = item.icon;
@@ -219,34 +206,6 @@ export function Layout({
                 </span>
               </div>
             </div>
-
-            {/* Section tabs for the Foundations area — real routes */}
-            {showCatalogTabs && (
-              <nav
-                aria-label={t('nav.catalogs')}
-                className="flex items-center gap-1 overflow-x-auto border-t border-default px-6 scrollbar-thin"
-              >
-                {CATALOG_TABS.map((tab) => {
-                  const active = isActive(tab.path, route.path);
-                  const Icon = tab.icon;
-                  return (
-                    <a
-                      key={tab.path}
-                      href={`#${tab.path}`}
-                      aria-current={active ? 'page' : undefined}
-                      className={`flex items-center gap-2 px-4 py-2.5 -mb-px text-sm font-medium border-b-2 whitespace-nowrap transition-colors duration-150 motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
-                        active
-                          ? 'border-accent text-accent'
-                          : 'border-transparent text-content-secondary hover:text-content-primary'
-                      }`}
-                    >
-                      {Icon ? <Icon size={15} /> : null}
-                      {t(tab.labelKey)}
-                    </a>
-                  );
-                })}
-              </nav>
-            )}
           </header>
 
           <main className="scrollbar-thin flex-1 overflow-y-auto bg-surface-app p-4 sm:p-6">

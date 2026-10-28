@@ -3,6 +3,7 @@ import { Plus } from 'lucide-react';
 import { api, type AlgorithmVersionResponse } from '../lib/api';
 import { ALGORITHM_SCIENTIFIC_META, type AlgorithmScientificMeta } from '../lib/mockApi';
 import { useI18n } from '../lib/i18n';
+import { CatalogTabs } from '../components/CatalogTabs';
 import {
   Button,
   Card,
@@ -241,6 +242,8 @@ export function AlgorithmVersionsPage() {
           </Button>
         }
       />
+
+      <CatalogTabs />
 
       {actionError && !deleteTarget ? (
         <div className="mb-4">
