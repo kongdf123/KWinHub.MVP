@@ -155,6 +155,11 @@ export const STRINGS: Record<string, { en: string; cn: string }> = {
   'sessions.completedAt': { en: 'Completed', cn: '完成时间' },
   'sessions.receivedFrom': { en: 'Received from', cn: '接收来源' },
   'sessions.noMatch': { en: 'No sessions match your filters', cn: '没有符合条件的记录' },
+  'sessions.scientificStatus': { en: 'Scientific', cn: '科学状态' },
+  'sessions.featuredScenarios': { en: 'Featured Demo Scenarios', cn: '精选演示场景' },
+  'sessions.sourceApp': { en: 'Source App', cn: '来源应用' },
+  'sessions.trialSummary': { en: '{published}/{total} published', cn: '已发布 {published}/{total}' },
+  'sessions.allScenarios': { en: 'All scenarios', cn: '全部场景' },
 
   // Protocols Library
   'protocols.title': { en: 'Protocol Library', cn: '方案库' },

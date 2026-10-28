@@ -7,8 +7,16 @@ import { TopBar } from '@/components/layout/TopBar';
 import { DataTable } from '@/components/ui/DataTable';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { WORKSPACE_TABS_BY_VIEW } from '@/lib/navigation';
-import { Upload, Search, Activity, Zap, Waves, TrendingUp, Dumbbell, Shuffle, ChevronRight, CheckCircle, XCircle, RefreshCw, AlertCircle, Download, MoreVertical, FileText, BarChart3 } from 'lucide-react';
+import { Upload, Search, Activity, Zap, Waves, TrendingUp, Dumbbell, Shuffle, ChevronRight, CheckCircle, XCircle, RefreshCw, Download, MoreVertical, FileText, BarChart3 } from 'lucide-react';
 import type { TestSession, SessionStatus } from '@/lib/types';
+import {
+  getSessionScientificInfo,
+  getSourceApplication,
+  useScientificDemo,
+  deriveScenarioFixtureStatus,
+  type ScientificFixtureSummaryStatus,
+} from '@/features/science';
+import { SCENARIOS } from '@/lib/scientific/scenarios';
 
 const SPORT_ICONS: Record<string, typeof Activity> = {
   'sport-cmj': Activity,
@@ -33,13 +41,24 @@ const SESSION_STATUS_CONFIG: Record<SessionStatus, { en: string; cn: string; col
   PROCESSING_FAILED: { en: 'Processing Failed', cn: '处理失败', color: 'text-invalid-600', icon: XCircle },
 };
 
+const SCI_STATUS_CONFIG: Record<ScientificFixtureSummaryStatus, { en: string; cn: string; color: string; bg: string }> = {
+  local: { en: 'Local', cn: '本地', color: 'text-ink-600', bg: 'bg-ink-100' },
+  uploading: { en: 'Uploading', cn: '上传中', color: 'text-teal-700', bg: 'bg-teal-50' },
+  validating: { en: 'Validating', cn: '校验中', color: 'text-teal-700', bg: 'bg-teal-50' },
+  processing: { en: 'Calculating', cn: '计算中', color: 'text-teal-700', bg: 'bg-teal-50' },
+  published: { en: 'Published', cn: '已发布', color: 'text-success-700', bg: 'bg-success-50' },
+  failed: { en: 'Failed', cn: '失败', color: 'text-invalid-700', bg: 'bg-invalid-50' },
+};
+
 export function SessionsPage() {
   const { navigate, addToast, lang, canAccess } = useApp();
+  const { scenario, selectScenario } = useScientificDemo();
   const [search, setSearch] = useState('');
   const [protocolFilter, setProtocolFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [sourceFilter, setSourceFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
+  const [scenarioFilter, setScenarioFilter] = useState('all');
 
   const workspaceTabs = (WORKSPACE_TABS_BY_VIEW['sessions'] ?? []).filter((tab) => canAccess(tab.view));
 
@@ -58,9 +77,10 @@ export function SessionsPage() {
         cutoff.setDate(cutoff.getDate() - days);
         return sessionDate >= cutoff;
       })();
-      return matchesSearch && matchesProtocol && matchesStatus && matchesSource && matchesDate;
+      const matchesScenario = scenarioFilter === 'all' || getSessionScientificInfo(s.athleteId, s.protocolId)?.scenario.id === scenarioFilter;
+      return matchesSearch && matchesProtocol && matchesStatus && matchesSource && matchesDate && matchesScenario;
     }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [search, protocolFilter, statusFilter, sourceFilter, dateFilter]);
+  }, [search, protocolFilter, statusFilter, sourceFilter, dateFilter, scenarioFilter]);
 
   const getPrimaryResult = (session: TestSession): string => {
     const protocol = getProtocol(session.protocolId);
@@ -164,6 +184,55 @@ export function SessionsPage() {
           </button>
         </div>
 
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-ink-900">{tr('sessions.featuredScenarios', lang)}</h3>
+            <div className="flex items-center gap-3">
+              {scenarioFilter !== 'all' && (
+                <button
+                  onClick={() => setScenarioFilter('all')}
+                  className="text-xs font-medium text-ink-500 hover:text-teal-600 transition-colors"
+                >
+                  {lang === 'cn' ? '显示全部' : 'Show all'}
+                </button>
+              )}
+              {scenario && (
+                <span className="text-xs text-ink-500">
+                  {lang === 'cn' ? '当前场景: ' : 'Active: '}
+                  <span className="font-medium text-teal-700">{lang === 'cn' ? scenario.labelCn : scenario.label}</span>
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {SCENARIOS.map((sc) => {
+              const isActive = scenario?.id === sc.id;
+              const scStatus = deriveScenarioFixtureStatus(sc);
+              const cfg = SCI_STATUS_CONFIG[scStatus];
+              const athlete = DEMO_ATHLETES.find((a) => a.id === sc.athleteId);
+              return (
+                <button
+                  key={sc.id}
+                  onClick={() => { selectScenario(sc.id); setScenarioFilter(sc.id); }}
+                  className={`text-left p-3 rounded-xl border transition-all ${isActive ? 'border-teal-500 bg-teal-50/50 ring-1 ring-teal-200' : 'border-ink-200 bg-white hover:border-teal-300 hover:bg-ink-50'}`}
+                >
+                  <div className="flex items-start justify-between gap-2 mb-1.5">
+                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide ${cfg.bg} ${cfg.color}`}>
+                      {lang === 'cn' ? cfg.cn : cfg.en}
+                    </span>
+                    {isActive && <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse mt-1" />}
+                  </div>
+                  <p className="text-sm font-semibold text-ink-900 leading-snug mb-0.5">{lang === 'cn' ? sc.labelCn : sc.label}</p>
+                  <p className="text-xs text-ink-500 leading-relaxed line-clamp-2">{lang === 'cn' ? sc.descriptionCn : sc.description}</p>
+                  <p className="text-[11px] text-ink-400 mt-1.5">
+                    {athlete ? `${athlete.lastName} ${athlete.firstName}` : sc.athleteId} · {sc.trials.length} {lang === 'cn' ? '试次' : 'trials'}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         <div className="bg-white rounded-xl border border-ink-200 overflow-hidden">
           <DataTable
             columns={[
@@ -205,10 +274,11 @@ export function SessionsPage() {
                 header: tr('sessions.source', lang),
                 render: (s) => {
                   const ds = getDataSource(s.dataSourceId);
+                  const app = getSourceApplication(s.sportId);
                   return (
                     <div>
                       <p className="text-sm text-ink-700">{ds ? (lang === 'cn' ? ds.nameCn : ds.name) : s.source}</p>
-                      <p className="text-xs text-ink-400">{s.deviceSerial}</p>
+                      <p className={`text-xs font-medium ${app ? app.color : 'text-ink-400'}`}>{app ? (lang === 'cn' ? app.cn : app.en) : s.deviceSerial}</p>
                     </div>
                   );
                 },
@@ -232,21 +302,22 @@ export function SessionsPage() {
                 },
               },
               {
-                key: 'quality',
-                header: tr('sessions.quality', lang),
+                key: 'scientific',
+                header: tr('sessions.scientificStatus', lang),
                 render: (s) => {
-                  const q = s.dataQuality;
-                  const config = {
-                    complete: { color: 'text-success-600', bg: 'bg-success-50', icon: CheckCircle, label: { en: 'Good', cn: '良好' } },
-                    warning: { color: 'text-warning-600', bg: 'bg-warning-50', icon: AlertCircle, label: { en: 'Warning', cn: '警告' } },
-                    invalid: { color: 'text-invalid-600', bg: 'bg-invalid-50', icon: XCircle, label: { en: 'Invalid', cn: '无效' } },
-                    processing_error: { color: 'text-invalid-600', bg: 'bg-invalid-50', icon: XCircle, label: { en: 'Error', cn: '错误' } },
-                  }[q.status];
-                  const Icon = config.icon;
+                  const info = getSessionScientificInfo(s.athleteId, s.protocolId);
+                  if (!info) {
+                    return <span className="text-xs text-ink-300">—</span>;
+                  }
+                  const cfg = SCI_STATUS_CONFIG[info.summaryStatus];
+                  const isActive = info.isActive;
                   return (
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${config.bg} ${config.color}`}>
-                      <Icon className="w-3 h-3" />
-                      {lang === 'cn' ? config.label.cn : config.label.en}
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium ${cfg.bg} ${cfg.color} ${isActive ? 'ring-1 ring-teal-400' : ''}`}
+                      title={`${info.publishedTrials}/${info.trialCount} trials published${info.failedTrials > 0 ? `, ${info.failedTrials} failed` : ''}${isActive ? ' (active scenario)' : ''}`}
+                    >
+                      {isActive && <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse" />}
+                      {lang === 'cn' ? cfg.cn : cfg.en}
                     </span>
                   );
                 },
