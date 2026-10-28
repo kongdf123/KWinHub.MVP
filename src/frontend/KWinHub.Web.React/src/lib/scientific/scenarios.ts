@@ -347,3 +347,10 @@ export const SCENARIO_UPLOAD_VALIDATION_FAILURE: ScientificScenario = {
     publication: '—',
   },
 };
+
+export const SCENARIOS: ScientificScenario[] = [
+  SCENARIO_CMJ_SUCCESS,
+  SCENARIO_SPRINT_MULTIDEVICE,
+  SCENARIO_RECALC_DIFF,
+  SCENARIO_UPLOAD_VALIDATION_FAILURE,
+];

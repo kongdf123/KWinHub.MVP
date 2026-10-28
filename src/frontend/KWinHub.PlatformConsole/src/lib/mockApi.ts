@@ -727,6 +727,255 @@ let algorithms: AlgorithmVersionResponse[] = [
   },
 ];
 
+// --- Scientific algorithm meta (demo-only projection) ----------------------
+//
+// Demo-only enrichment joined to AlgorithmVersionResponse by `code`. It is NOT
+// part of the backend API contract and must never be returned as API fields.
+// Pages look up meta by code to render scientific release detail without
+// inventing production API support.
+
+export interface AlgorithmChannelRequirement {
+  name: string;
+  description: string;
+  required: boolean;
+}
+
+export interface AlgorithmParameter {
+  name: string;
+  description: string;
+  defaultValue: string;
+}
+
+export interface AlgorithmScientificMeta {
+  domain: 'CMJ' | 'Sprint' | 'Force' | 'Other';
+  requiredChannels: AlgorithmChannelRequirement[];
+  parameters: AlgorithmParameter[];
+  supportedProtocols: string[];
+  releaseNotes: string;
+  outputMetricCount: number;
+}
+
+export const ALGORITHM_SCIENTIFIC_META: Record<string, AlgorithmScientificMeta> = {
+  CMJ_BILATERAL: {
+    domain: 'CMJ',
+    requiredChannels: [
+      { name: 'force.vertical.left', description: 'Left force plate vertical ground reaction force (N).', required: true },
+      { name: 'force.vertical.right', description: 'Right force plate vertical ground reaction force (N).', required: true },
+      { name: 'time', description: 'Shared monotonic time axis (ms), 1000 Hz recommended.', required: true },
+    ],
+    parameters: [
+      { name: 'takeoffForceThreshold', description: 'Vertical force below body weight that marks takeoff onset.', defaultValue: '100 N' },
+      { name: 'landingForceThreshold', description: 'Vertical force above body weight that marks landing.', defaultValue: '100 N' },
+      { name: 'bodyMassSource', description: 'How body mass is obtained for impulse–momentum calculations.', defaultValue: 'auto (weighing phase)' },
+    ],
+    supportedProtocols: ['CMJ_BILATERAL'],
+    releaseNotes:
+      'Event detection via force-threshold method (v2.1); v2.2 adds force-rate derivative for noisy plates; v3.0 introduces asymmetric impulse decomposition and requires bilateral channels.',
+    outputMetricCount: 6,
+  },
+  SPRINT_30M_MULTIDEVICE: {
+    domain: 'Sprint',
+    requiredChannels: [
+      { name: 'radar.velocity', description: 'Horizontal velocity trace from radar gun (m/s), 100 Hz.', required: true },
+      { name: 'block.force.front', description: 'Front starting-block vertical force (N).', required: true },
+      { name: 'block.force.rear', description: 'Rear starting-block vertical force (N).', required: true },
+      { name: 'time', description: 'Shared monotonic time axis (ms).', required: true },
+    ],
+    parameters: [
+      { name: 'blockThreshold', description: 'Rear-block force threshold for reaction-time onset.', defaultValue: '20 N' },
+      { name: 'velocitySmoothing', description: 'Savitzky–Golay window for radar velocity trace.', defaultValue: '9 samples' },
+      { name: 'distanceCutoff', description: 'Sprint distance included in analysis.', defaultValue: '30 m' },
+    ],
+    supportedProtocols: ['SPRINT_30M'],
+    releaseNotes:
+      'Merges radar velocity with front/rear starting-block force plates per trial. Reaction time derived from rear-block force onset; peak velocity from smoothed radar trace.',
+    outputMetricCount: 5,
+  },
+};
+
+export function getAlgorithms(): AlgorithmVersionResponse[] {
+  return [...algorithms];
+}
+
+export function getProtocols(): GlobalProtocolResponse[] {
+  return [...protocols];
+}
+
+export function getMetrics(): GlobalMetricResponse[] {
+  return [...metrics];
+}
+
+// --- Scientific metric meta (demo-only projection) ------------------------
+//
+// Demo-only enrichment joined to GlobalMetricResponse by `code`. It is NOT
+// part of the backend API contract. Pages look up meta by code to render
+// method-specific, versioned scientific definitions without inventing
+// production API support.
+
+export interface MetricDefinitionVersion {
+  version: string;
+  effectiveFrom: string;
+  changeSummary: string;
+}
+
+export interface MetricScientificMeta {
+  domain: 'CMJ' | 'Sprint' | 'Other';
+  physicalQuantity: string;
+  method: string;
+  methodLabel: string;
+  definitionVersion: string;
+  formula: string;
+  dependentMetrics: string[];
+  versionHistory: MetricDefinitionVersion[];
+  notes: string;
+}
+
+export const METRIC_SCIENTIFIC_META: Record<string, MetricScientificMeta> = {
+  CMJ_JUMP_HEIGHT_FLIGHT_TIME: {
+    domain: 'CMJ',
+    physicalQuantity: 'Jump Height',
+    method: 'flight_time',
+    methodLabel: 'Flight Time',
+    definitionVersion: '1.0',
+    formula: 'h = g · t_flight² / 8',
+    dependentMetrics: [],
+    versionHistory: [
+      { version: '1.0', effectiveFrom: '2025-01-01', changeSummary: 'Initial definition using flight-time method.' },
+    ],
+    notes: 'Jump height derived from flight time using the impulse-momentum relationship. Assumes takeoff and landing heights are equal. This is a DISTINCT method from impulse-momentum and should not be conflated with it.',
+  },
+  CMJ_JUMP_HEIGHT_IMPULSE_MOMENTUM: {
+    domain: 'CMJ',
+    physicalQuantity: 'Jump Height',
+    method: 'impulse_momentum',
+    methodLabel: 'Impulse-Momentum',
+    definitionVersion: '1.0',
+    formula: 'h = (∫F_net·dt / m_body)² / (2g)',
+    dependentMetrics: ['CMJ_PEAK_FORCE'],
+    versionHistory: [
+      { version: '1.0', effectiveFrom: '2025-01-01', changeSummary: 'Initial definition using net vertical impulse method.' },
+    ],
+    notes: 'Jump height derived from net vertical impulse during the eccentric + concentric phase. Requires body mass and force-time integration. This is a DISTINCT method from flight-time and produces systematically different values.',
+  },
+  CMJ_PEAK_FORCE: {
+    domain: 'CMJ',
+    physicalQuantity: 'Peak Vertical Force',
+    method: 'peak_detection',
+    methodLabel: 'Peak Detection',
+    definitionVersion: '1.0',
+    formula: 'F_peak = max(F_vertical(t)) over concentric phase',
+    dependentMetrics: [],
+    versionHistory: [
+      { version: '1.0', effectiveFrom: '2025-01-01', changeSummary: 'Initial definition.' },
+    ],
+    notes: 'Maximum vertical ground reaction force measured during the concentric push-off phase.',
+  },
+  CMJ_RSI_MOD: {
+    domain: 'CMJ',
+    physicalQuantity: 'Reactive Strength Index (Modified)',
+    method: 'modified',
+    methodLabel: 'Modified RSI',
+    definitionVersion: '1.0',
+    formula: 'RSI_mod = h_jump / (t_eccentric + t_concentric)',
+    dependentMetrics: ['CMJ_JUMP_HEIGHT_FLIGHT_TIME'],
+    versionHistory: [
+      { version: '1.0', effectiveFrom: '2025-01-01', changeSummary: 'Initial definition.' },
+    ],
+    notes: 'Jump height divided by eccentric + concentric phase time. Uses flight-time jump height as the numerator.',
+  },
+  CMJ_ASYMMETRY_INDEX: {
+    domain: 'CMJ',
+    physicalQuantity: 'Asymmetry Index',
+    method: 'bilateral_comparison',
+    methodLabel: 'Bilateral Comparison',
+    definitionVersion: '1.0',
+    formula: 'AI = |F_left - F_right| / ((F_left + F_right) / 2) × 100',
+    dependentMetrics: [],
+    versionHistory: [
+      { version: '1.0', effectiveFrom: '2025-01-01', changeSummary: 'Initial definition.' },
+    ],
+    notes: 'Percentage difference between left and right peak forces. Requires bilateral force plate channels.',
+  },
+  CMJ_TAKEOFF_VELOCITY: {
+    domain: 'CMJ',
+    physicalQuantity: 'Takeoff Velocity',
+    method: 'impulse_integration',
+    methodLabel: 'Impulse Integration',
+    definitionVersion: '1.0',
+    formula: 'v_takeoff = ∫F_net·dt / m_body',
+    dependentMetrics: ['CMJ_PEAK_FORCE'],
+    versionHistory: [
+      { version: '1.0', effectiveFrom: '2025-01-01', changeSummary: 'Initial definition.' },
+    ],
+    notes: 'Vertical velocity at takeoff computed from net impulse and body mass.',
+  },
+  SPRINT_REACTION_TIME_BLOCK: {
+    domain: 'Sprint',
+    physicalQuantity: 'Block Reaction Time',
+    method: 'force_threshold',
+    methodLabel: 'Force Threshold',
+    definitionVersion: '1.0',
+    formula: 't_reaction = t(rear_block_force > threshold) - t_signal',
+    dependentMetrics: [],
+    versionHistory: [
+      { version: '1.0', effectiveFrom: '2025-01-01', changeSummary: 'Initial definition.' },
+    ],
+    notes: 'Time from the start signal to the rear foot force exceeding the threshold on the starting block.',
+  },
+  SPRINT_PEAK_VELOCITY: {
+    domain: 'Sprint',
+    physicalQuantity: 'Peak Velocity',
+    method: 'radar_direct',
+    methodLabel: 'Radar Direct',
+    definitionVersion: '1.0',
+    formula: 'v_peak = max(v_horizontal(t)) over 30m',
+    dependentMetrics: [],
+    versionHistory: [
+      { version: '1.0', effectiveFrom: '2025-01-01', changeSummary: 'Initial definition.' },
+    ],
+    notes: 'Maximum horizontal velocity achieved during the 30m sprint, measured directly by radar gun.',
+  },
+  SPRINT_GROUND_CONTACT_TIME: {
+    domain: 'Sprint',
+    physicalQuantity: 'Ground Contact Time',
+    method: 'force_bilateral',
+    methodLabel: 'Bilateral Force',
+    definitionVersion: '1.0',
+    formula: 'GCT = mean(t_contact_i) over all steps',
+    dependentMetrics: [],
+    versionHistory: [
+      { version: '1.0', effectiveFrom: '2025-01-01', changeSummary: 'Initial definition.' },
+    ],
+    notes: 'Average foot-ground contact time across all steps, detected via bilateral force plates.',
+  },
+  SPRINT_PEAK_GROUND_REACTION_FORCE: {
+    domain: 'Sprint',
+    physicalQuantity: 'Peak GRF (Single Step)',
+    method: 'force_plate',
+    methodLabel: 'Force Plate',
+    definitionVersion: '1.0',
+    formula: 'F_peak_step = max(F_front_block(t)) during push-off',
+    dependentMetrics: [],
+    versionHistory: [
+      { version: '1.0', effectiveFrom: '2025-01-01', changeSummary: 'Initial definition.' },
+    ],
+    notes: 'Maximum force recorded on the front block plate during push-off.',
+  },
+  SPRINT_POWER_TRANSFER: {
+    domain: 'Sprint',
+    physicalQuantity: 'Power Transfer Index',
+    method: 'impulse_rate',
+    methodLabel: 'Impulse Rate',
+    definitionVersion: '1.0',
+    formula: 'PTI = dF_rear/dt at block exit',
+    dependentMetrics: [],
+    versionHistory: [
+      { version: '1.0', effectiveFrom: '2025-01-01', changeSummary: 'Initial definition.' },
+    ],
+    notes: 'Rate of force development on the rear block as a proxy for block efficiency.',
+  },
+};
+
 // --- Audit log -------------------------------------------------------------
 
 let auditLogs: AuditLogResponse[] = [

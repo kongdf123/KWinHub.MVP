@@ -11,6 +11,7 @@ import { MetricCard } from '@/components/ui/MetricCard';
 import { StatusBadge, StatusDot } from '@/components/ui/StatusBadge';
 import { TrendChart } from '@/components/ui/TrendChart';
 import { Upload, AlertCircle, ArrowRight, Clock, Activity, Database, CheckCircle, AlertTriangle, RefreshCw, XCircle, Zap, Waves, TrendingUp, Dumbbell, Shuffle, Server, HardDrive, BarChart3 } from 'lucide-react';
+import { DemoScenarioControls } from '@/features/science';
 
 const SPORT_ICONS: Record<string, typeof Activity> = {
   'sport-cmj': Activity, 'sport-sprint': Zap, 'sport-swim': Waves,
@@ -75,6 +76,8 @@ export function HomePage() {
           <MetricCard label={tr('home.processingQueue', lang)} value={processingQueue} status={processingQueue > 0 ? 'warning' : 'normal'} />
           <MetricCard label={tr('home.failedSessions', lang)} value={failedSessions} status={failedSessions > 0 ? 'attention' : 'normal'} />
         </div>
+
+        {import.meta.env.VITE_DEMO_CONTROLS === 'true' ? <DemoScenarioControls /> : null}
 
         {/* Performance Overview + Attention List */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

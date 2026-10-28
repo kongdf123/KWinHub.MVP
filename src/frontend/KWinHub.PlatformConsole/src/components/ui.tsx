@@ -245,7 +245,7 @@ export function Modal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink-950/50 p-4">
-      <div className="w-full max-w-lg animate-slide-up rounded-xl bg-white shadow-xl">
+      <div className="flex max-h-[calc(100vh-2rem)] w-full max-w-lg flex-col overflow-hidden rounded-xl bg-white shadow-xl animate-slide-up">
         <div className="flex items-center justify-between border-b border-ink-200 px-5 py-4">
           <h2 className="text-base font-semibold text-ink-900">{title}</h2>
           <button
@@ -257,7 +257,7 @@ export function Modal({
             <X size={18} />
           </button>
         </div>
-        <div className="px-5 py-4">{children}</div>
+        <div className="flex-1 overflow-y-auto px-5 py-4">{children}</div>
         {footer ? (
           <div className="flex justify-end gap-2 border-t border-ink-200 px-5 py-3">{footer}</div>
         ) : null}
