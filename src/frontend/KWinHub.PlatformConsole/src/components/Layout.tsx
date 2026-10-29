@@ -2,7 +2,6 @@ import { useState, type ReactNode } from 'react';
 import {
   Building2,
   ClipboardList,
-  CreditCard,
   GitBranch,
   LayoutDashboard,
   LogOut,
@@ -29,7 +28,6 @@ type NavItem = {
 const NAV_ITEMS: NavItem[] = [
   { path: '/', labelKey: 'nav.dashboard', icon: LayoutDashboard },
   { path: '/organizations', labelKey: 'nav.organizations', icon: Building2 },
-  { path: '/subscription-plans', labelKey: 'nav.subscriptionPlans', icon: CreditCard },
   { path: '/subscriptions', labelKey: 'nav.subscriptions', icon: ShieldCheck },
   { path: '/users', labelKey: 'nav.users', icon: Users },
   { path: '/catalogs/protocols', labelKey: 'nav.catalogs', icon: ClipboardList },

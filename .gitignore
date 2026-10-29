@@ -1,6 +1,7 @@
 .vs/
 .vscode/
 .idea/
+.trae/
 *.swp
 *.swo
 

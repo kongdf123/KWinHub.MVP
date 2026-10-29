@@ -47,7 +47,7 @@ function resolveRoute(path: string, t: (key: TranslationKey) => string): { title
   }
   if (path === '/audit-logs') return { titleKey: 'audit.title', page: <AuditLogPage /> };
   if (path === '/workflows') return { titleKey: 'workflows.title', page: <WorkflowExplorerPage /> };
-  if (path === '/subscription-plans') {
+  if (path === '/subscriptions/plans') {
     return { titleKey: 'plans.title', page: <SubscriptionPlansPage /> };
   }
   if (path === '/subscriptions') return { titleKey: 'subs.title', page: <SubscriptionsPage /> };

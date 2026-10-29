@@ -674,7 +674,7 @@ const zhCN: Dictionary = {
   'dashboard.securityEvents': '最近安全相关操作',
 
   // Subscription Center
-  'nav.subscriptionPlans': '方案',
+  'nav.subscriptionPlans': '订阅方案',
   'nav.subscriptions': '订阅',
   'plans.title': '订阅方案',
   'plans.subtitle': '可分配给组织的方案定义',

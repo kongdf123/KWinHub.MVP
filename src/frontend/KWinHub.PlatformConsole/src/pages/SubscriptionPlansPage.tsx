@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api, type PlanResponse, type CreatePlanRequest } from '../lib/api';
 import { useI18n } from '../lib/i18n';
+import { SubscriptionTabs } from '../components/SubscriptionTabs';
 import {
   Button,
   Card,
@@ -94,6 +95,8 @@ export function SubscriptionPlansPage() {
           </Button>
         }
       />
+
+      <SubscriptionTabs />
 
       {actionError && !createOpen && !publishTarget ? (
         <div className="mb-4">

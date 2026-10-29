@@ -7,6 +7,7 @@ import {
 } from '../lib/api';
 import { useI18n } from '../lib/i18n';
 import { navigate } from '../lib/router';
+import { SubscriptionTabs } from '../components/SubscriptionTabs';
 import {
   Button,
   Card,
@@ -97,6 +98,8 @@ export function SubscriptionsPage() {
   return (
     <div>
       <PageHeader title={t('subs.title')} subtitle={t('subs.subtitle')} />
+
+      <SubscriptionTabs />
 
       {actionError && !assignOpen ? (
         <div className="mb-4">
