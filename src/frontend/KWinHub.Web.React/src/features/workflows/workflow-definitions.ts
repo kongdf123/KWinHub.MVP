@@ -1,6 +1,7 @@
 import type { WorkflowDefinition } from './types';
 
 const SPEC = 'docs/product/kwinhub-workflow-spec-v0.2.md';
+const SUBSCRIPTION_SPEC = 'docs/specs/subscription-center/subscription-center-prd.md';
 
 export const ORG_WORKFLOWS: WorkflowDefinition[] = [
   {
@@ -510,6 +511,111 @@ export const ORG_WORKFLOWS: WorkflowDefinition[] = [
     edges: [
       { id: 'ORG-08-e1', from: 'ORG-08-1', to: 'ORG-08-2' },
       { id: 'ORG-08-e2', from: 'ORG-08-2', to: 'ORG-08-3' },
+    ],
+  },
+  {
+    id: 'ORG-09',
+    name: { en: 'Subscription center', zhCN: '订阅中心' },
+    persona: { en: 'Organization owner / admin', zhCN: '组织所有者 / 管理员' },
+    summary: {
+      en: 'Review the current plan, resource usage, feature entitlements, and request plan changes through the sales-managed subscription center.',
+      zhCN: '通过销售管理的订阅中心查看当前套餐、资源用量、功能权益，并申请套餐变更。',
+    },
+    happyPath: ['ORG-09-1', 'ORG-09-2', 'ORG-09-3', 'ORG-09-4'],
+    recoveryBranch: ['ORG-09-5', 'ORG-09-1'],
+    steps: [
+      {
+        id: 'ORG-09-1',
+        title: { en: 'Review subscription overview', zhCN: '查看订阅概览' },
+        description: {
+          en: 'Open the subscription center to review the current plan name, version, status (Active / Trialing / PastDue / etc.), billing period, renewal mode, and revision.',
+          zhCN: '打开订阅中心，查看当前套餐名称、版本、状态（生效中 / 试用中 / 欠费等）、计费周期、续费模式和修订号。',
+        },
+        actor: { en: 'Organization owner / admin', zhCN: '组织所有者 / 管理员' },
+        preconditions: [
+          { en: 'The user is a member of an organization with an active subscription.', zhCN: '用户是拥有有效订阅的组织成员。' },
+        ],
+        expectedOutcome: {
+          en: 'The plan overview card displays the plan, status, period, and sales-managed renewal information.',
+          zhCN: '套餐概览卡片显示套餐、状态、周期和销售管理的续费信息。',
+        },
+        requirementStatus: 'AGREED',
+        implementationStatus: 'prototype',
+        demoBehavior: 'mock',
+        specificationRefs: [{ documentPath: SUBSCRIPTION_SPEC, section: 'Overview', requirementId: 'FR-8' }],
+        demoRoute: 'subscription',
+      },
+      {
+        id: 'ORG-09-2',
+        title: { en: 'Monitor resource usage', zhCN: '监控资源用量' },
+        description: {
+          en: 'Review consumption against quota for monthly sessions, team members, registered devices, cloud storage, and athletes. Usage near the limit is highlighted.',
+          zhCN: '查看月度测试次数、团队成员、注册设备、云存储和运动员的配额使用情况。接近限额时会高亮提示。',
+        },
+        actor: { en: 'Organization owner / admin', zhCN: '组织所有者 / 管理员' },
+        requirementStatus: 'AGREED',
+        implementationStatus: 'prototype',
+        demoBehavior: 'mock',
+        specificationRefs: [{ documentPath: SUBSCRIPTION_SPEC, section: 'Usage', requirementId: 'FR-8' }],
+        demoRoute: 'subscription',
+      },
+      {
+        id: 'ORG-09-3',
+        title: { en: 'Review feature entitlements', zhCN: '查看功能权益' },
+        description: {
+          en: 'Inspect which features are enabled or disabled by the current plan, such as force-plate analysis, sprint testing, video analysis, advanced analytics, report exports, and API integrations.',
+          zhCN: '查看当前套餐启用或禁用的功能，如测力台分析、短跑测试、视频分析、高级分析、报告导出和 API 集成。',
+        },
+        actor: { en: 'Organization owner / admin', zhCN: '组织所有者 / 管理员' },
+        requirementStatus: 'AGREED',
+        implementationStatus: 'prototype',
+        demoBehavior: 'mock',
+        specificationRefs: [{ documentPath: SUBSCRIPTION_SPEC, section: 'Entitlements', requirementId: 'FR-10' }],
+        demoRoute: 'subscription',
+      },
+      {
+        id: 'ORG-09-4',
+        title: { en: 'Request plan change', zhCN: '申请套餐变更' },
+        description: {
+          en: 'Initiate an upgrade, downgrade, or add-on request. Because V1 is sales-managed, the request is routed to Kunwei sales/support rather than processed automatically.',
+          zhCN: '发起升级、降级或增值功能申请。由于 V1 为销售管理模式，申请将转交坤维销售/支持处理，而非自动执行。',
+        },
+        actor: { en: 'Organization owner / admin', zhCN: '组织所有者 / 管理员' },
+        expectedOutcome: {
+          en: 'A change request is submitted to sales; the subscription revision remains unchanged until sales provisions it.',
+          zhCN: '变更申请已提交给销售；在销售配置前，订阅修订号保持不变。',
+        },
+        requirementStatus: 'PROPOSED',
+        implementationStatus: 'prototype',
+        demoBehavior: 'mock',
+        specificationRefs: [{ documentPath: SUBSCRIPTION_SPEC, section: 'Plan management', requirementId: 'FR-9' }],
+        demoRoute: 'subscription',
+      },
+      {
+        id: 'ORG-09-5',
+        title: { en: 'Resolve subscription disruption', zhCN: '处理订阅中断' },
+        description: {
+          en: 'When the subscription enters PastDue, GracePeriod, Suspended, or Expired status, follow the guidance to contact sales and restore service.',
+          zhCN: '当订阅进入欠费、宽限期、暂停或过期状态时，按指引联系销售恢复服务。',
+        },
+        actor: { en: 'Organization owner / admin', zhCN: '组织所有者 / 管理员' },
+        expectedOutcome: {
+          en: 'Service is restored after sales provisions the renewal or override; the status returns to Active.',
+          zhCN: '销售配置续费或覆盖后服务恢复，状态回到生效中。',
+        },
+        requirementStatus: 'PROPOSED',
+        implementationStatus: 'prototype',
+        demoBehavior: 'mock',
+        specificationRefs: [{ documentPath: SUBSCRIPTION_SPEC, section: 'Subscription status', requirementId: 'FR-2' }],
+        demoRoute: 'subscription',
+      },
+    ],
+    edges: [
+      { id: 'ORG-09-e1', from: 'ORG-09-1', to: 'ORG-09-2', label: { en: 'Usage', zhCN: '用量' } },
+      { id: 'ORG-09-e2', from: 'ORG-09-2', to: 'ORG-09-3', label: { en: 'Features', zhCN: '功能' } },
+      { id: 'ORG-09-e3', from: 'ORG-09-3', to: 'ORG-09-4', label: { en: 'Change plan', zhCN: '变更套餐' } },
+      { id: 'ORG-09-e4', from: 'ORG-09-1', to: 'ORG-09-5', label: { en: 'Disrupted', zhCN: '中断' } },
+      { id: 'ORG-09-e5', from: 'ORG-09-5', to: 'ORG-09-1', label: { en: 'Restored', zhCN: '已恢复' } },
     ],
   },
 ];

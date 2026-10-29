@@ -8,6 +8,7 @@ const VALID_VIEWS = new Set([
   'trends', 'comparisons', 'biomechanics', 'datasets', 'raw-data',
   'data-sources', 'dashboards', 'integrations', 'sync-center', 'reports',
   'organization', 'users', 'roles', 'teams', 'devices', 'settings', 'workflows',
+  'subscription',
 ]);
 
 describe('workflow definitions', () => {

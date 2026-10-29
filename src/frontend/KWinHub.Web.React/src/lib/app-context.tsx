@@ -84,11 +84,31 @@ interface AppContextValue {
    *  server-side feature entitlement. */
   canOpenView: (view: string) => boolean;
   serverFeatures: Record<string, boolean>;
+  /** True while the server-side access response is in flight. Feature-gated
+   *  views are denied until this resolves (fail-closed). */
+  accessLoading: boolean;
+  /** Non-null when the most recent access request failed. Feature-gated views
+   *  remain denied while this is set. */
+  accessError: string | null;
   loadAccess: () => Promise<void>;
   logout: () => void;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
+
+const API_MODE = import.meta.env.VITE_DATA_MODE === 'api';
+
+// Default feature set used when running in demo/dev mode (no backend).
+// Mirrors the capabilities a typical Performance Pro subscription would grant.
+const DEMO_FEATURES: Record<string, boolean> = {
+  [FEATURE_KEYS.testingSprint]: true,
+  [FEATURE_KEYS.testingForceplate]: true,
+  [FEATURE_KEYS.analyticsAdvanced]: true,
+  [FEATURE_KEYS.reportsExport]: true,
+  [FEATURE_KEYS.integrationsApi]: false,
+  [FEATURE_KEYS.subscriptionView]: true,
+  [FEATURE_KEYS.subscriptionManage]: true,
+};
 
 export function AppProvider({ children, onLogout }: { children: ReactNode; onLogout?: () => void }) {
   const [currentView, setCurrentView] = useState('home');
@@ -97,7 +117,11 @@ export function AppProvider({ children, onLogout }: { children: ReactNode; onLog
   const [selectedTeamId, setSelectedTeamId] = useState('team-1');
   const [lang, setLang] = useState<Lang>('cn');
   const [role, setRole] = useState<UserRole>('org-admin');
-  const [serverFeatures, setServerFeatures] = useState<Record<string, boolean>>({});
+  const [serverFeatures, setServerFeatures] = useState<Record<string, boolean>>(() =>
+    API_MODE ? {} : { ...DEMO_FEATURES },
+  );
+  const [accessLoading, setAccessLoading] = useState(API_MODE);
+  const [accessError, setAccessError] = useState<string | null>(null);
 
   const navigate = useCallback((view: string, params: Record<string, string> = {}) => {
     setCurrentView(view);
@@ -121,8 +145,10 @@ export function AppProvider({ children, onLogout }: { children: ReactNode; onLog
     if (!ROLE_PERMISSIONS[role].includes(view)) return false;
     const featureKey = VIEW_FEATURES[view];
     if (!featureKey) return true; // not feature-gated
-    // Fail-open until the access response arrives so the UI stays usable.
-    if (!(featureKey in serverFeatures)) return true;
+    // Fail-closed: until the server access response resolves (or if it failed),
+    // feature-gated views are denied. This prevents leaking protected views
+    // before authorization is confirmed. Backend endpoints remain authoritative.
+    if (!(featureKey in serverFeatures)) return false;
     return serverFeatures[featureKey] === true;
   }, [role, serverFeatures]);
 
@@ -130,11 +156,23 @@ export function AppProvider({ children, onLogout }: { children: ReactNode; onLog
   const canOpenView = useCallback((view: string) => canAccess(view), [canAccess]);
 
   const loadAccess = useCallback(async () => {
+    if (!API_MODE) {
+      setServerFeatures(DEMO_FEATURES);
+      setAccessError(null);
+      setAccessLoading(false);
+      return;
+    }
+    setAccessLoading(true);
+    setAccessError(null);
     try {
       const access = await subscriptionApi.getAccess();
       setServerFeatures(access.features ?? {});
-    } catch {
-      // Network/auth errors leave serverFeatures empty; canOpenView fails open.
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setAccessError(msg);
+      // Network/auth errors leave serverFeatures empty; canAccess fails closed.
+    } finally {
+      setAccessLoading(false);
     }
   }, []);
 
@@ -143,7 +181,7 @@ export function AppProvider({ children, onLogout }: { children: ReactNode; onLog
   }, [onLogout]);
 
   return (
-    <AppContext.Provider value={{ currentView, navigate, viewParams, toasts, addToast, dismissToast, selectedTeamId, setSelectedTeamId, lang, setLang, t: tFn, role, setRole, canAccess, canOpenView, serverFeatures, loadAccess, logout }}>
+    <AppContext.Provider value={{ currentView, navigate, viewParams, toasts, addToast, dismissToast, selectedTeamId, setSelectedTeamId, lang, setLang, t: tFn, role, setRole, canAccess, canOpenView, serverFeatures, accessLoading, accessError, loadAccess, logout }}>
       {children}
     </AppContext.Provider>
   );
