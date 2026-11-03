@@ -6,6 +6,7 @@ export const STRINGS: Record<string, { en: string; cn: string }> = {
   'nav.people': { en: 'People', cn: '人员' },
   'nav.athletes': { en: 'Athletes', cn: '运动员' },
   'nav.teams': { en: 'Teams', cn: '队伍' },
+  'nav.groups': { en: 'Groups', cn: '分组' },
   'nav.workspace.testing': { en: 'Testing', cn: '测试' },
   'nav.workspace.analysis': { en: 'Analysis', cn: '分析' },
   'nav.workspace.data': { en: 'Data & Integrations', cn: '数据与集成' },

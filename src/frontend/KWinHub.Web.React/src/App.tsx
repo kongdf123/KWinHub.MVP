@@ -29,6 +29,7 @@ import { OrganizationPage } from '@/pages/admin/OrganizationPage';
 import { UsersPage } from '@/pages/admin/UsersPage';
 import { RolesPage } from '@/pages/admin/RolesPage';
 import { TeamsPage } from '@/pages/admin/TeamsPage';
+import { GroupsPage } from '@/pages/admin/GroupsPage';
 import { DevicesPage } from '@/pages/admin/DevicesPage';
 import { SettingsPage } from '@/pages/admin/SettingsPage';
 import { WorkflowExplorerPage } from '@/pages/WorkflowExplorerPage';
@@ -71,6 +72,7 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
       case 'users': return <UsersPage />;
       case 'roles': return <RolesPage />;
       case 'teams': return <TeamsPage />;
+      case 'groups': return <GroupsPage />;
       case 'devices': return <DevicesPage />;
       case 'settings': return <SettingsPage />;
       case 'workflows': return <WorkflowExplorerPage />;

@@ -58,7 +58,6 @@ public class TeamRepository : ITeamRepository
 
     public async Task UpdateAsync(Team team, CancellationToken cancellationToken = default)
     {
-        _dbContext.Teams.Update(team);
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
@@ -66,5 +65,25 @@ public class TeamRepository : ITeamRepository
     {
         return await _dbContext.TeamMemberships
             .CountAsync(m => m.TeamId == teamId, cancellationToken);
+    }
+
+    public async Task AddMembershipAsync(TeamMembership membership, CancellationToken cancellationToken = default)
+    {
+        await _dbContext.TeamMemberships.AddAsync(membership, cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<bool> RemoveMembershipAsync(Guid teamId, Guid subjectId, CancellationToken cancellationToken = default)
+    {
+        var membership = await _dbContext.TeamMemberships
+            .FirstOrDefaultAsync(m => m.TeamId == teamId && m.SubjectId == subjectId, cancellationToken);
+        if (membership is null)
+        {
+            return false;
+        }
+
+        _dbContext.TeamMemberships.Remove(membership);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return true;
     }
 }

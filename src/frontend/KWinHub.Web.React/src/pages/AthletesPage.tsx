@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useApp } from '@/lib/app-context';
 import { t as tr } from '@/lib/i18n';
 import { DEMO_ATHLETES, DEMO_TEAMS, DEMO_GROUPS, DEMO_SPORTS, getSessionsForAthlete, getSport } from '@/lib/demo-data';
@@ -7,8 +7,11 @@ import { DataTable } from '@/components/ui/DataTable';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Sparkline } from '@/components/ui/Sparkline';
 import { WORKSPACE_TABS_BY_VIEW } from '@/lib/navigation';
-import { Search, Filter, Download, UserPlus, ChevronRight, Activity, Zap, Waves, TrendingUp, Dumbbell, Shuffle } from 'lucide-react';
+import { Search, Filter, Download, UserPlus, ChevronRight, Activity, Zap, Waves, TrendingUp, Dumbbell, Shuffle, Archive, RotateCcw } from 'lucide-react';
+import { subjectsApi, type SubjectDto } from '@/lib/api/subjects';
 import type { Athlete } from '@/lib/types';
+
+const API_MODE = import.meta.env.VITE_DATA_MODE === 'api';
 
 const SPORT_ICONS: Record<string, typeof Activity> = {
   'sport-cmj': Activity,
@@ -19,21 +22,61 @@ const SPORT_ICONS: Record<string, typeof Activity> = {
   'sport-cod': Shuffle,
 };
 
+function mapSubjectToAthlete(s: SubjectDto): Athlete {
+  return {
+    id: s.id,
+    subjectType: (s.subjectType as Athlete['subjectType']) || 'ATHLETE',
+    firstName: s.firstName,
+    lastName: s.lastName,
+    dateOfBirth: s.dateOfBirth ?? '',
+    sex: (s.sex as Athlete['sex']) ?? 'M',
+    sportId: 'sport-cmj',
+    position: '',
+    teamId: '',
+    groupIds: [],
+    status: s.status === 'Archived' ? 'attention' : 'normal',
+    lastTestDate: null,
+    lastTestProtocol: null,
+    photoUrl: null,
+    height: 0,
+    weight: 0,
+    baseline: {},
+    personalBest: {},
+    tags: [],
+  };
+}
+
 export function AthletesPage() {
   const { navigate, selectedTeamId, addToast, lang, canAccess } = useApp();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [groupFilter, setGroupFilter] = useState('all');
   const [sportFilter, setSportFilter] = useState('all');
+  const [apiSubjects, setApiSubjects] = useState<SubjectDto[]>([]);
+  const [loading, setLoading] = useState(API_MODE);
 
   const workspaceTabs = (WORKSPACE_TABS_BY_VIEW['athletes'] ?? []).filter((tab) => canAccess(tab.view));
 
+  useEffect(() => {
+    if (!API_MODE) return;
+    let cancelled = false;
+    setLoading(true);
+    subjectsApi.list({ search: search || undefined, status: statusFilter === 'all' ? undefined : statusFilter })
+      .then((data) => { if (!cancelled) setApiSubjects(data); })
+      .catch(() => { if (!cancelled) setApiSubjects([]); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [search, statusFilter]);
+
   const teamAthletes = useMemo(
-    () => DEMO_ATHLETES.filter((a) => a.teamId === selectedTeamId),
-    [selectedTeamId],
+    () => API_MODE
+      ? apiSubjects.map(mapSubjectToAthlete)
+      : DEMO_ATHLETES.filter((a) => a.teamId === selectedTeamId),
+    [apiSubjects, selectedTeamId],
   );
 
   const filteredAthletes = useMemo(() => {
+    if (API_MODE) return teamAthletes;
     return teamAthletes.filter((a) => {
       const fullName = `${a.lastName} ${a.firstName}`.toLowerCase();
       const matchesSearch = fullName.includes(search.toLowerCase()) || a.position.toLowerCase().includes(search.toLowerCase());
@@ -57,12 +100,21 @@ export function AthletesPage() {
     return sessions.reverse().map((s) => Object.values(s.summary)[0] || 0);
   };
 
+  const handleArchive = async (id: string) => {
+    try {
+      await subjectsApi.archive(id);
+      addToast(lang === 'cn' ? '已归档' : 'Archived', 'success');
+      setApiSubjects((prev) => prev.filter((s) => s.id !== id));
+    } catch {
+      addToast(lang === 'cn' ? '归档失败' : 'Archive failed', 'error');
+    }
+  };
+
   return (
     <div>
       <TopBar />
 
       <div className="px-6 pt-6">
-        {/* Section heading — VALD-style: workspace name, not the active tab */}
         <div className="flex items-center justify-between gap-4">
           <h2 className="text-xl font-semibold text-content-primary">{tr('nav.people', lang)}</h2>
           <div className="flex items-center gap-2 text-sm text-content-secondary">
@@ -72,7 +124,6 @@ export function AthletesPage() {
           </div>
         </div>
 
-        {/* Workspace tabs — direct row under the heading, no extra container */}
         {workspaceTabs.length > 1 && (
           <nav
             aria-label={tr('nav.people', lang)}
@@ -100,7 +151,6 @@ export function AthletesPage() {
         )}
       </div>
 
-      {/* Content toolbar + table — VALD-style single-surface body */}
       <div className="px-6 py-6 space-y-4">
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative flex-1 min-w-[200px] max-w-sm">
@@ -113,27 +163,36 @@ export function AthletesPage() {
               className="w-full pl-9 pr-3 py-2 text-sm bg-surface-panel border border-default rounded-lg focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent transition-all"
             />
           </div>
-          <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-content-muted" />
-            <select value={sportFilter} onChange={(e) => setSportFilter(e.target.value)} className="text-sm bg-surface-panel border border-default rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent transition-all">
-              <option value="all">{tr('library.allSports', lang)}</option>
-              {DEMO_SPORTS.map((s) => (
-                <option key={s.id} value={s.id}>{lang === 'cn' ? s.nameCn : s.name}</option>
-              ))}
-            </select>
+          {!API_MODE && (
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-content-muted" />
+              <select value={sportFilter} onChange={(e) => setSportFilter(e.target.value)} className="text-sm bg-surface-panel border border-default rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent transition-all">
+                <option value="all">{tr('library.allSports', lang)}</option>
+                {DEMO_SPORTS.map((s) => (
+                  <option key={s.id} value={s.id}>{lang === 'cn' ? s.nameCn : s.name}</option>
+                ))}
+              </select>
+              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="text-sm bg-surface-panel border border-default rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent transition-all">
+                <option value="all">{tr('athletes.allStatuses', lang)}</option>
+                <option value="normal">{tr('common.normal', lang)}</option>
+                <option value="warning">{tr('common.warning', lang)}</option>
+                <option value="attention">{tr('common.attention', lang)}</option>
+              </select>
+              <select value={groupFilter} onChange={(e) => setGroupFilter(e.target.value)} className="text-sm bg-surface-panel border border-default rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent transition-all">
+                <option value="all">{tr('athletes.allGroups', lang)}</option>
+                {DEMO_GROUPS.map((g) => (
+                  <option key={g.id} value={g.id}>{lang === 'cn' ? g.nameCn : g.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          {API_MODE && (
             <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="text-sm bg-surface-panel border border-default rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent transition-all">
               <option value="all">{tr('athletes.allStatuses', lang)}</option>
-              <option value="normal">{tr('common.normal', lang)}</option>
-              <option value="warning">{tr('common.warning', lang)}</option>
-              <option value="attention">{tr('common.attention', lang)}</option>
+              <option value="Active">{lang === 'cn' ? '活跃' : 'Active'}</option>
+              <option value="Archived">{lang === 'cn' ? '已归档' : 'Archived'}</option>
             </select>
-            <select value={groupFilter} onChange={(e) => setGroupFilter(e.target.value)} className="text-sm bg-surface-panel border border-default rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent transition-all">
-              <option value="all">{tr('athletes.allGroups', lang)}</option>
-              {DEMO_GROUPS.map((g) => (
-                <option key={g.id} value={g.id}>{lang === 'cn' ? g.nameCn : g.name}</option>
-              ))}
-            </select>
-          </div>
+          )}
           <div className="flex-1" />
           <div className="flex items-center gap-2">
             <button
@@ -152,107 +211,109 @@ export function AthletesPage() {
         </div>
 
         <div className="bg-surface-panel rounded-xl border border-default overflow-hidden">
-          <DataTable
-            columns={[
-              {
-                key: 'lastName',
-                header: lang === 'cn' ? '运动员' : 'Athlete',
-                sortable: true,
-                render: (a) => {
-                  const sport = getSport(a.sportId);
-                  const SportIcon = sport ? SPORT_ICONS[sport.id] || Activity : Activity;
-                  return (
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-surface-hover flex items-center justify-center text-sm font-medium text-content-secondary shrink-0">
-                        {a.firstName[0]}{a.lastName[0]}
+          {loading && API_MODE ? (
+            <div className="px-5 py-8 text-center text-sm text-content-muted">
+              {lang === 'cn' ? '加载中...' : 'Loading...'}
+            </div>
+          ) : (
+            <DataTable
+              columns={[
+                {
+                  key: 'lastName',
+                  header: lang === 'cn' ? '运动员' : 'Athlete',
+                  sortable: true,
+                  render: (a) => {
+                    const sport = getSport(a.sportId);
+                    const SportIcon = sport ? SPORT_ICONS[sport.id] || Activity : Activity;
+                    return (
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-surface-hover flex items-center justify-center text-sm font-medium text-content-secondary shrink-0">
+                          {a.firstName[0]}{a.lastName[0]}
+                        </div>
+                        <div>
+                          <p className="font-medium text-content-primary">{a.lastName} {a.firstName}</p>
+                          <p className="text-xs text-content-muted flex items-center gap-1">
+                            <SportIcon className="w-3 h-3" />
+                            {a.position} {!API_MODE && `· ${a.height}cm · ${a.weight}kg`}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium text-content-primary">{a.lastName} {a.firstName}</p>
-                        <p className="text-xs text-content-muted flex items-center gap-1">
-                          <SportIcon className="w-3 h-3" />
-                          {a.position} · {a.height}cm · {a.weight}kg
-                        </p>
+                    );
+                  },
+                },
+                {
+                  key: 'sportId',
+                  header: lang === 'cn' ? '项目' : 'Sport',
+                  sortable: true,
+                  render: (a) => {
+                    const sport = getSport(a.sportId);
+                    return <span className="text-sm text-content-primary">{sport ? (lang === 'cn' ? sport.nameCn : sport.name) : '—'}</span>;
+                  },
+                },
+                {
+                  key: 'status',
+                  header: lang === 'cn' ? '状态' : 'Status',
+                  sortable: true,
+                  render: (a) => <StatusBadge status={a.status} lang={lang} />,
+                },
+                {
+                  key: 'lastTestDate',
+                  header: tr('athletes.lastTest', lang),
+                  sortable: true,
+                  render: (a) => (
+                    <div>
+                      <p className="text-content-primary">{formatDate(a.lastTestDate)}</p>
+                      <p className="text-xs text-content-muted">{a.lastTestProtocol || '—'}</p>
+                    </div>
+                  ),
+                },
+                ...(!API_MODE ? [{
+                  key: 'trend',
+                  header: lang === 'cn' ? '趋势' : 'Trend',
+                  align: 'right' as const,
+                  render: (a: Athlete) => {
+                    const trend = getTrendData(a);
+                    if (trend.length < 2) return <span className="text-content-muted">—</span>;
+                    return (
+                      <div className="flex items-center justify-end gap-2">
+                        <Sparkline data={trend} width={50} height={20} color={a.status === 'attention' ? '#f97316' : a.status === 'warning' ? '#fbbf24' : '#06b56b'} />
                       </div>
+                    );
+                  },
+                }] : []),
+                {
+                  key: 'action',
+                  header: '',
+                  align: 'right',
+                  render: (a) => (
+                    <div className="flex items-center justify-end gap-1">
+                      {API_MODE && a.status !== 'attention' && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleArchive(a.id); }}
+                          className="p-1.5 text-content-muted hover:text-attention-700 hover:bg-attention-soft rounded-md transition-colors"
+                          title={lang === 'cn' ? '归档' : 'Archive'}
+                        >
+                          <Archive className="w-4 h-4" />
+                        </button>
+                      )}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); navigate('athlete-profile', { athleteId: a.id }); }}
+                        className="p-1.5 text-content-muted hover:text-accent hover:bg-accent-soft rounded-md transition-colors"
+                        title={tr('common.viewAll', lang)}
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
                     </div>
-                  );
+                  ),
                 },
-              },
-              {
-                key: 'sportId',
-                header: lang === 'cn' ? '项目' : 'Sport',
-                sortable: true,
-                render: (a) => {
-                  const sport = getSport(a.sportId);
-                  return <span className="text-sm text-content-primary">{sport ? (lang === 'cn' ? sport.nameCn : sport.name) : '—'}</span>;
-                },
-              },
-              {
-                key: 'status',
-                header: lang === 'cn' ? '状态' : 'Status',
-                sortable: true,
-                render: (a) => <StatusBadge status={a.status} lang={lang} />,
-              },
-              {
-                key: 'lastTestDate',
-                header: tr('athletes.lastTest', lang),
-                sortable: true,
-                render: (a) => (
-                  <div>
-                    <p className="text-content-primary">{formatDate(a.lastTestDate)}</p>
-                    <p className="text-xs text-content-muted">{a.lastTestProtocol || '—'}</p>
-                  </div>
-                ),
-              },
-              {
-                key: 'trend',
-                header: lang === 'cn' ? '趋势' : 'Trend',
-                align: 'right',
-                render: (a) => {
-                  const trend = getTrendData(a);
-                  if (trend.length < 2) return <span className="text-content-muted">—</span>;
-                  return (
-                    <div className="flex items-center justify-end gap-2">
-                      <Sparkline data={trend} width={50} height={20} color={a.status === 'attention' ? '#f97316' : a.status === 'warning' ? '#fbbf24' : '#06b56b'} />
-                    </div>
-                  );
-                },
-              },
-              {
-                key: 'tags',
-                header: lang === 'cn' ? '标签' : 'Tags',
-                render: (a) => (
-                  <div className="flex flex-wrap gap-1">
-                    {a.tags.length === 0 ? <span className="text-content-muted text-xs">—</span> :
-                      a.tags.map((tag) => (
-                        <span key={tag} className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                          tag === 'Flagged' || tag === 'RTP' ? 'bg-attention-soft text-attention-700' : 'bg-surface-hover text-content-secondary'
-                        }`}>{tag}</span>
-                      ))
-                    }
-                  </div>
-                ),
-              },
-              {
-                key: 'action',
-                header: '',
-                align: 'right',
-                render: (a) => (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); navigate('athlete-profile', { athleteId: a.id }); }}
-                    className="p-1.5 text-content-muted hover:text-accent hover:bg-accent-soft rounded-md transition-colors"
-                    title={tr('common.viewAll', lang)}
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                ),
-              },
-            ]}
-            data={filteredAthletes}
-            rowKey={(a) => a.id}
-            onRowClick={(a) => navigate('athlete-profile', { athleteId: a.id })}
-            initialSort={{ key: 'lastName', direction: 'asc' }}
-            emptyMessage={tr('athletes.noMatch', lang)}
-          />
+              ]}
+              data={filteredAthletes}
+              rowKey={(a) => a.id}
+              onRowClick={(a) => navigate('athlete-profile', { athleteId: a.id })}
+              initialSort={{ key: 'lastName', direction: 'asc' }}
+              emptyMessage={tr('athletes.noMatch', lang)}
+            />
+          )}
         </div>
       </div>
     </div>

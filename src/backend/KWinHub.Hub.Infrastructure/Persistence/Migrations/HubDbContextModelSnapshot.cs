@@ -23,6 +23,78 @@ namespace KWinHub.Hub.Infrastructure.Persistence.Migrations
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "uuid-ossp");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("KWinHub.Hub.Groups.Group", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("GroupType")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.ToTable("groups", "hub");
+                });
+
+            modelBuilder.Entity("KWinHub.Hub.Groups.GroupMembership", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("GroupId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Role")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Guid>("SubjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SubjectId");
+
+                    b.HasIndex("GroupId", "SubjectId")
+                        .IsUnique();
+
+                    b.ToTable("group_memberships", "hub");
+                });
+
             modelBuilder.Entity("KWinHub.Hub.Organizations.OrganizationEventConsumption", b =>
                 {
                     b.Property<Guid>("Id")
@@ -488,6 +560,15 @@ namespace KWinHub.Hub.Infrastructure.Persistence.Migrations
                     b.ToTable("team_memberships", "hub");
                 });
 
+            modelBuilder.Entity("KWinHub.Hub.Groups.GroupMembership", b =>
+                {
+                    b.HasOne("KWinHub.Hub.Groups.Group", null)
+                        .WithMany("Memberships")
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("KWinHub.Hub.Results.Metric", b =>
                 {
                     b.HasOne("KWinHub.Hub.Results.Result", null)
@@ -504,6 +585,11 @@ namespace KWinHub.Hub.Infrastructure.Persistence.Migrations
                         .HasForeignKey("TeamId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("KWinHub.Hub.Groups.Group", b =>
+                {
+                    b.Navigation("Memberships");
                 });
 
             modelBuilder.Entity("KWinHub.Hub.Results.Result", b =>

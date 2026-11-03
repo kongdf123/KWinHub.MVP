@@ -332,7 +332,7 @@ public class TeamIntegrationTests : IClassFixture<HubApiFactory>
         var userId = Guid.NewGuid();
         var orgId = Guid.NewGuid();
 
-        var (teamId, subjectId) = await SeedAsync(db =>
+        var (teamId, subjectId) = await SeedTupleAsync(db =>
         {
             SeedActiveMembership(db, userId, orgId, OrganizationRoles.Admin);
             var team = new Team(orgId, "Test Team");
@@ -359,7 +359,7 @@ public class TeamIntegrationTests : IClassFixture<HubApiFactory>
         var userId = Guid.NewGuid();
         var orgId = Guid.NewGuid();
 
-        var (teamId, subjectId) = await SeedAsync(db =>
+        var (teamId, subjectId) = await SeedTupleAsync(db =>
         {
             SeedActiveMembership(db, userId, orgId, OrganizationRoles.Admin);
             var team = new Team(orgId, "Test Team");

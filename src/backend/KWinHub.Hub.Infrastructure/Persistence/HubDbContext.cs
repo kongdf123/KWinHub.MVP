@@ -1,3 +1,4 @@
+using KWinHub.Hub.Groups;
 using KWinHub.Hub.Organizations;
 using KWinHub.Hub.Protocols;
 using KWinHub.Hub.Results;
@@ -34,6 +35,10 @@ public class HubDbContext : DbContext
     public DbSet<Team> Teams => Set<Team>();
 
     public DbSet<TeamMembership> TeamMemberships => Set<TeamMembership>();
+
+    public DbSet<Group> Groups => Set<Group>();
+
+    public DbSet<GroupMembership> GroupMemberships => Set<GroupMembership>();
 
     public DbSet<Protocol> Protocols => Set<Protocol>();
 
@@ -115,6 +120,30 @@ public class HubDbContext : DbContext
             b.HasKey(m => m.Id);
             b.Property(m => m.Role).HasMaxLength(50);
             b.HasIndex(m => new { m.TeamId, m.SubjectId }).IsUnique();
+            b.HasIndex(m => m.SubjectId);
+        });
+
+        modelBuilder.Entity<Group>(b =>
+        {
+            b.ToTable("groups", SchemaName);
+            b.HasKey(g => g.Id);
+            b.Property(g => g.Name).IsRequired().HasMaxLength(200);
+            b.Property(g => g.Description).HasMaxLength(1000);
+            b.Property(g => g.GroupType).HasMaxLength(100);
+            b.Property(g => g.Status).IsRequired().HasMaxLength(50);
+            b.HasIndex(g => g.OrganizationId);
+            b.HasMany(g => g.Memberships)
+                .WithOne()
+                .HasForeignKey(m => m.GroupId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<GroupMembership>(b =>
+        {
+            b.ToTable("group_memberships", SchemaName);
+            b.HasKey(m => m.Id);
+            b.Property(m => m.Role).HasMaxLength(50);
+            b.HasIndex(m => new { m.GroupId, m.SubjectId }).IsUnique();
             b.HasIndex(m => m.SubjectId);
         });
 

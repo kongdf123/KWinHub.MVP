@@ -32,7 +32,7 @@ export const VIEW_FEATURES: Record<string, string> = {
 
 export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
   coach: [
-    'home', 'athletes', 'athlete-profile', 'teams',
+    'home', 'athletes', 'athlete-profile', 'teams', 'groups',
     'sessions', 'session-detail', 'protocols', 'protocol-detail', 'devices', 'sync-center',
     'results', 'result-detail', 'performance', 'trends', 'comparisons', 'biomechanics',
     'dashboards', 'reports',
@@ -40,7 +40,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'workflows',
   ],
   'org-admin': [
-    'home', 'athletes', 'athlete-profile', 'teams',
+    'home', 'athletes', 'athlete-profile', 'teams', 'groups',
     'sessions', 'session-detail', 'protocols', 'protocol-detail', 'devices', 'sync-center',
     'results', 'result-detail', 'performance', 'trends', 'comparisons', 'biomechanics',
     'dashboards', 'reports',
@@ -56,7 +56,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'workflows',
   ],
   support: [
-    'home', 'athletes', 'athlete-profile', 'teams',
+    'home', 'athletes', 'athlete-profile', 'teams', 'groups',
     'sessions', 'session-detail', 'protocols', 'protocol-detail',
     'results', 'result-detail', 'performance', 'trends', 'comparisons', 'biomechanics',
     'dashboards', 'reports',

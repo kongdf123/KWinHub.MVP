@@ -17,4 +17,8 @@ public interface ITeamRepository
     Task UpdateAsync(Team team, CancellationToken cancellationToken = default);
 
     Task<int> CountMembersAsync(Guid teamId, CancellationToken cancellationToken = default);
+
+    Task AddMembershipAsync(TeamMembership membership, CancellationToken cancellationToken = default);
+
+    Task<bool> RemoveMembershipAsync(Guid teamId, Guid subjectId, CancellationToken cancellationToken = default);
 }

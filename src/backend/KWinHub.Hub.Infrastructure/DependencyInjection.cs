@@ -1,5 +1,6 @@
 using KWinHub.Hub.Application.Authorization;
 using KWinHub.Hub.Application.CrossContext;
+using KWinHub.Hub.Application.Groups;
 using KWinHub.Hub.Application.Protocols;
 using KWinHub.Hub.Application.Results;
 using KWinHub.Hub.Application.Sessions;
@@ -28,6 +29,7 @@ public static class DependencyInjection
 
         services.AddScoped<ISubjectRepository, SubjectRepository>();
         services.AddScoped<ITeamRepository, TeamRepository>();
+        services.AddScoped<IGroupRepository, GroupRepository>();
         services.AddScoped<IProtocolRepository, ProtocolRepository>();
         services.AddScoped<ISessionRepository, SessionRepository>();
         services.AddScoped<IResultRepository, ResultRepository>();

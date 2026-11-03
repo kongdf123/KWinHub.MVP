@@ -45,8 +45,9 @@ export const PRIMARY_NAV: PrimaryNavItem[] = [
     tabs: [
       { view: 'athletes', labelKey: 'nav.athletes' },
       { view: 'teams', labelKey: 'nav.teams' },
+      { view: 'groups', labelKey: 'nav.groups' },
     ],
-    matchViews: ['athletes', 'athlete-profile', 'teams'],
+    matchViews: ['athletes', 'athlete-profile', 'teams', 'groups'],
   },
   {
     id: 'testing',

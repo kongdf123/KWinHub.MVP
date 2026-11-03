@@ -123,7 +123,7 @@ public class TeamService : ITeamService
         }
 
         var membership = team.AddMember(request.SubjectId, request.Role);
-        await _repository.UpdateAsync(team, cancellationToken);
+        await _repository.AddMembershipAsync(membership, cancellationToken);
 
         return new TeamMemberResponse(membership.Id, team.Id, subject.Id, membership.Role);
     }
@@ -140,14 +140,8 @@ public class TeamService : ITeamService
             return false;
         }
 
-        var removed = team.RemoveMember(subjectId);
-        if (!removed)
-        {
-            return false;
-        }
-
-        await _repository.UpdateAsync(team, cancellationToken);
-        return true;
+        var removed = await _repository.RemoveMembershipAsync(teamId, subjectId, cancellationToken);
+        return removed;
     }
 
     public async Task<List<TeamMemberResponse>> ListMembersAsync(
