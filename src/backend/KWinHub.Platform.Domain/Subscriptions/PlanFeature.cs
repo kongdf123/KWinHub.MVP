@@ -1,4 +1,4 @@
-namespace KWinHub.Domain.Subscriptions;
+﻿namespace KWinHub.Platform.Subscriptions;
 
 /// <summary>
 /// Feature grant attached to a specific plan version. Enabled indicates the

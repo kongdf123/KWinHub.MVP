@@ -1,7 +1,7 @@
-using KWinHub.Contracts.Auth;
-using KWinHub.Contracts.Registrations;
+using KWinHub.Platform.Contracts.Auth;
+using KWinHub.Platform.Contracts.Registrations;
 
-namespace KWinHub.Application.Registration;
+namespace KWinHub.Platform.Application.Registration;
 
 public interface IRegistrationService
 {

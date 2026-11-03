@@ -1,6 +1,6 @@
-using KWinHub.Domain.Common;
+﻿using KWinHub.BuildingBlocks.Common;
 
-namespace KWinHub.Domain.Results;
+namespace KWinHub.Hub.Results;
 
 public class Metric : BaseEntity<Guid>
 {

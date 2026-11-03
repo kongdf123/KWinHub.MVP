@@ -1,4 +1,4 @@
-namespace KWinHub.Domain.Subscriptions;
+﻿namespace KWinHub.Platform.Subscriptions;
 
 /// <summary>
 /// Quota rule attached to a specific plan version. LimitValue = null means

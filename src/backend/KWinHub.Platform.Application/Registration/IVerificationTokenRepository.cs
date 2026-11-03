@@ -1,6 +1,6 @@
-using KWinHub.Domain.Users;
+using KWinHub.Platform.Users;
 
-namespace KWinHub.Application.Registration;
+namespace KWinHub.Platform.Application.Registration;
 
 public interface IVerificationTokenRepository
 {

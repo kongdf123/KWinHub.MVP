@@ -1,4 +1,4 @@
-namespace KWinHub.Contracts.Common;
+namespace KWinHub.BuildingBlocks.Contracts;
 
 public record ApiErrorResponse(
     string Code,

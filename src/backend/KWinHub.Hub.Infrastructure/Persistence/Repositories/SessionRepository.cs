@@ -1,14 +1,15 @@
-using KWinHub.Application.Sessions;
-using KWinHub.Domain.Sessions;
+using KWinHub.Hub.Application.Sessions;
+using KWinHub.Hub.Infrastructure.Persistence;
+using KWinHub.Hub.Sessions;
 using Microsoft.EntityFrameworkCore;
 
-namespace KWinHub.Infrastructure.Persistence.Repositories;
+namespace KWinHub.Hub.Infrastructure.Persistence.Repositories;
 
 public class SessionRepository : ISessionRepository
 {
-    private readonly KWinHubDbContext _dbContext;
+    private readonly HubDbContext _dbContext;
 
-    public SessionRepository(KWinHubDbContext dbContext)
+    public SessionRepository(HubDbContext dbContext)
     {
         _dbContext = dbContext;
     }

@@ -1,6 +1,6 @@
-using KWinHub.Contracts.Platform;
+using KWinHub.Platform.Contracts.Platform;
 
-namespace KWinHub.Application.Platform;
+namespace KWinHub.Platform.Application.Platform;
 
 public interface IPlatformService
 {

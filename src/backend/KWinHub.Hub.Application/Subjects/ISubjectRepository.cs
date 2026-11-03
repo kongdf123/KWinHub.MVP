@@ -1,6 +1,6 @@
-using KWinHub.Domain.Subjects;
+using KWinHub.Hub.Subjects;
 
-namespace KWinHub.Application.Subjects;
+namespace KWinHub.Hub.Application.Subjects;
 
 public interface ISubjectRepository
 {
@@ -11,6 +11,9 @@ public interface ISubjectRepository
 
     Task<IReadOnlyList<Subject>> ListByOrganizationAsync(
         Guid organizationId,
+        string? search = null,
+        string? status = null,
+        string? subjectType = null,
         CancellationToken cancellationToken = default);
 
     Task AddAsync(Subject subject, CancellationToken cancellationToken = default);

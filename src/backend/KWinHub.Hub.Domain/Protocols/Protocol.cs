@@ -1,6 +1,6 @@
-using KWinHub.Domain.Common;
+﻿using KWinHub.BuildingBlocks.Common;
 
-namespace KWinHub.Domain.Protocols;
+namespace KWinHub.Hub.Protocols;
 
 public class Protocol : BaseEntity<Guid>
 {

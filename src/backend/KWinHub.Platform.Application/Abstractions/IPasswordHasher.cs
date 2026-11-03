@@ -1,4 +1,4 @@
-namespace KWinHub.Application.Abstractions;
+namespace KWinHub.Platform.Application.Abstractions;
 
 public interface IPasswordHasher
 {

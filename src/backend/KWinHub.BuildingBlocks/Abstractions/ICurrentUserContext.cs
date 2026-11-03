@@ -1,4 +1,4 @@
-namespace KWinHub.Application.Abstractions;
+namespace KWinHub.BuildingBlocks.Abstractions;
 
 public interface ICurrentUserContext
 {

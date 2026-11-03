@@ -1,8 +1,8 @@
 using System.Text.Json;
-using KWinHub.Contracts.Subscriptions;
-using KWinHub.Domain.Subscriptions;
+using KWinHub.Platform.Contracts.Subscriptions;
+using KWinHub.Platform.Subscriptions;
 
-namespace KWinHub.Application.Subscriptions;
+namespace KWinHub.Platform.Application.Subscriptions;
 
 public class PlatformSubscriptionService : IPlatformSubscriptionService
 {

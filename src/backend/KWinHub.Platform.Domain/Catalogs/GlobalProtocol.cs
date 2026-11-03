@@ -1,6 +1,6 @@
-using KWinHub.Domain.Common;
+﻿using KWinHub.BuildingBlocks.Common;
 
-namespace KWinHub.Domain.Catalogs;
+namespace KWinHub.Platform.Catalogs;
 
 public class GlobalProtocol : BaseEntity<Guid>
 {

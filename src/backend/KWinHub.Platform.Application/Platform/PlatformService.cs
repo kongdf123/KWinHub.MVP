@@ -1,9 +1,11 @@
-using KWinHub.Contracts.Platform;
-using KWinHub.Domain.Audit;
-using KWinHub.Domain.Organizations;
-using KWinHub.Domain.Users;
+using KWinHub.Platform.Application.CrossContext;
+using KWinHub.Platform.Application.Organizations;
+using KWinHub.Platform.Contracts.Platform;
+using KWinHub.Platform.Audit;
+using KWinHub.Platform.Organizations;
+using KWinHub.Platform.Users;
 
-namespace KWinHub.Application.Platform;
+namespace KWinHub.Platform.Application.Platform;
 
 public class PlatformService : IPlatformService
 {
@@ -12,10 +14,14 @@ public class PlatformService : IPlatformService
     private const int DefaultAuditLogTake = 100;
 
     private readonly IPlatformRepository _repository;
+    private readonly IHubGateway _hubGateway;
+    private readonly IOrganizationEventOutbox _eventOutbox;
 
-    public PlatformService(IPlatformRepository repository)
+    public PlatformService(IPlatformRepository repository, IHubGateway hubGateway, IOrganizationEventOutbox eventOutbox)
     {
         _repository = repository;
+        _hubGateway = hubGateway;
+        _eventOutbox = eventOutbox;
     }
 
     public async Task<PlatformDashboardResponse> GetDashboardAsync(CancellationToken cancellationToken = default)
@@ -32,7 +38,7 @@ public class PlatformService : IPlatformService
         var totalProtocols = await _repository.CountGlobalProtocolsAsync(cancellationToken);
         var totalMetrics = await _repository.CountGlobalMetricsAsync(cancellationToken);
 
-        var organizations = await _repository.ListOrganizationsAsync(null, null, null, cancellationToken);
+        var organizations = await ListOrganizationsAsync(null, null, null, cancellationToken);
         var auditLogs = await _repository.ListAuditLogsAsync(null, RecentAuditLogCount, cancellationToken);
 
         return new PlatformDashboardResponse(
@@ -45,7 +51,7 @@ public class PlatformService : IPlatformService
             PendingVerificationUsers: pendingUsers,
             TotalProtocolDefinitions: totalProtocols,
             TotalMetrics: totalMetrics,
-            RecentOrganizations: organizations.Take(RecentOrganizationCount).Select(ToResponse).ToList(),
+            RecentOrganizations: organizations.Take(RecentOrganizationCount).ToList(),
             RecentAuditLogs: auditLogs.Select(ToResponse).ToList());
     }
 
@@ -56,7 +62,11 @@ public class PlatformService : IPlatformService
         CancellationToken cancellationToken = default)
     {
         var rows = await _repository.ListOrganizationsAsync(search, status, type, cancellationToken);
-        return rows.Select(ToResponse).ToList();
+        var stats = await _hubGateway.GetOrganizationStatsAsync(
+            rows.Select(r => r.Id).ToList(),
+            cancellationToken);
+
+        return rows.Select(row => ToResponse(ApplyStats(row, stats))).ToList();
     }
 
     public async Task<PlatformOrganizationDetailResponse?> GetOrganizationAsync(
@@ -70,7 +80,27 @@ public class PlatformService : IPlatformService
         }
 
         var organization = await _repository.GetOrganizationAsync(id, cancellationToken);
-        var members = await _repository.ListMembersAsync(id, cancellationToken);
+
+        // Memberships are Hub-owned; user identities are Platform-owned. Merge the
+        // two in the application layer rather than joining across contexts.
+        var memberships = await _hubGateway.ListMembershipsAsync(id, cancellationToken);
+        var userIds = memberships.Select(m => m.UserId).Distinct().ToList();
+        var users = await _repository.GetUserSummariesByIdsAsync(userIds, cancellationToken);
+        var usersById = users.ToDictionary(u => u.Id);
+
+        var members = memberships
+            .Select(m =>
+            {
+                usersById.TryGetValue(m.UserId, out var user);
+                return new PlatformOrganizationMemberResponse(
+                    m.UserId,
+                    user?.Email ?? string.Empty,
+                    user?.DisplayName ?? string.Empty,
+                    m.Role,
+                    m.Status,
+                    m.JoinedAt);
+            })
+            .ToList();
 
         return new PlatformOrganizationDetailResponse(
             Id: row.Id,
@@ -84,13 +114,7 @@ public class PlatformService : IPlatformService
             Locale: organization?.Locale,
             CreatedByUserId: organization?.CreatedByUserId,
             CreatedAt: row.CreatedAt,
-            Members: members.Select(m => new PlatformOrganizationMemberResponse(
-                m.UserId,
-                m.Email,
-                m.DisplayName,
-                m.Role,
-                m.Status,
-                m.JoinedAt)).ToList());
+            Members: members);
     }
 
     public async Task<bool> ChangeOrganizationStatusAsync(
@@ -122,6 +146,25 @@ public class PlatformService : IPlatformService
             organization.Reactivate();
         }
 
+        var eventType = normalizedAction == "suspend"
+            ? OrganizationLifecycleEventTypes.Suspended
+            : OrganizationLifecycleEventTypes.Reactivated;
+        var latestVersion = await _eventOutbox.GetLatestVersionAsync(organization.Id, cancellationToken);
+        var nextVersion = latestVersion + 1;
+        var payload = new OrganizationLifecycleEventPayload(
+            organization.Id,
+            eventType,
+            nextVersion,
+            organization.Status.ToString(),
+            DateTimeOffset.UtcNow);
+        await _eventOutbox.AddAsync(
+            new OrganizationLifecycleEvent(
+                organization.Id,
+                eventType,
+                nextVersion,
+                System.Text.Json.JsonSerializer.Serialize(payload)),
+            cancellationToken);
+
         await _repository.SaveOrganizationAsync(cancellationToken);
 
         await RecordAuditAsync(
@@ -145,7 +188,16 @@ public class PlatformService : IPlatformService
         CancellationToken cancellationToken = default)
     {
         var rows = await _repository.ListUsersAsync(search, status, cancellationToken);
-        return rows.Select(ToResponse).ToList();
+        var membershipCounts = await _hubGateway.GetUserMembershipCountsAsync(
+            rows.Select(r => r.Id).ToList(),
+            cancellationToken);
+
+        return rows
+            .Select(row => ToResponse(row with
+            {
+                OrganizationCount = membershipCounts.TryGetValue(row.Id, out var count) ? count : 0
+            }))
+            .ToList();
     }
 
     public async Task<bool> ChangeUserStatusAsync(
@@ -245,6 +297,20 @@ public class PlatformService : IPlatformService
         await _repository.SaveAuditAsync(cancellationToken);
 
         return log.Id;
+    }
+
+    private static OrganizationListRow ApplyStats(
+        OrganizationListRow row,
+        IReadOnlyList<HubOrganizationStats> stats)
+    {
+        var stat = stats.FirstOrDefault(s => s.OrganizationId == row.Id);
+        return row with
+        {
+            MemberCount = stat?.MemberCount ?? 0,
+            SubjectCount = stat?.SubjectCount ?? 0,
+            SessionCount = stat?.SessionCount ?? 0,
+            ResultCount = stat?.ResultCount ?? 0
+        };
     }
 
     private static PlatformOrganizationResponse ToResponse(OrganizationListRow row) =>

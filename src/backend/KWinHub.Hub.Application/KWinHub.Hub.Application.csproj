@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FluentValidation" Version="12.2.0" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.2.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\KWinHub.BuildingBlocks\KWinHub.BuildingBlocks.csproj" />
+    <ProjectReference Include="..\KWinHub.Hub.Domain\KWinHub.Hub.Domain.csproj" />
+    <ProjectReference Include="..\KWinHub.Hub.Contracts\KWinHub.Hub.Contracts.csproj" />
+  </ItemGroup>
+
+</Project>

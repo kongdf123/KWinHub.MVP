@@ -1,6 +1,6 @@
-using KWinHub.Domain.Sessions;
+using KWinHub.Hub.Sessions;
 
-namespace KWinHub.Application.Sessions;
+namespace KWinHub.Hub.Application.Sessions;
 
 public interface ISessionRepository
 {

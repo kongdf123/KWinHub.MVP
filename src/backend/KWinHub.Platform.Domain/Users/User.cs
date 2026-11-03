@@ -1,6 +1,6 @@
-using KWinHub.Domain.Common;
+﻿using KWinHub.BuildingBlocks.Common;
 
-namespace KWinHub.Domain.Users;
+namespace KWinHub.Platform.Users;
 
 public class User : BaseEntity<Guid>
 {
@@ -21,6 +21,8 @@ public class User : BaseEntity<Guid>
     public DateTimeOffset? LastLoginAt { get; private set; }
 
     public string PreferredLanguage { get; private set; } = "en";
+
+    public string SecurityStamp { get; private set; } = Guid.NewGuid().ToString("N");
 
     public bool IsPlatformAdmin =>
         string.Equals(PlatformRole, PlatformAdminRole, StringComparison.Ordinal);
@@ -66,6 +68,7 @@ public class User : BaseEntity<Guid>
     public void ChangePassword(string passwordHash)
     {
         PasswordHash = passwordHash;
+        SecurityStamp = Guid.NewGuid().ToString("N");
         UpdatedAt = DateTimeOffset.UtcNow;
     }
 
@@ -84,6 +87,12 @@ public class User : BaseEntity<Guid>
     public void RevokePlatformAdmin()
     {
         PlatformRole = null;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    public void RevokeSessions()
+    {
+        SecurityStamp = Guid.NewGuid().ToString("N");
         UpdatedAt = DateTimeOffset.UtcNow;
     }
 }

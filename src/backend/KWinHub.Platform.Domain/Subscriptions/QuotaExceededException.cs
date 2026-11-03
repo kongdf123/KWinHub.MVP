@@ -1,4 +1,4 @@
-namespace KWinHub.Domain.Subscriptions;
+﻿namespace KWinHub.Platform.Subscriptions;
 
 /// <summary>
 /// Thrown when a usage consumption request would exceed the effective quota.

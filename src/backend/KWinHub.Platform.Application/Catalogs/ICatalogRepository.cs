@@ -1,6 +1,6 @@
-using KWinHub.Domain.Catalogs;
+using KWinHub.Platform.Catalogs;
 
-namespace KWinHub.Application.Catalogs;
+namespace KWinHub.Platform.Application.Catalogs;
 
 public interface ICatalogRepository
 {

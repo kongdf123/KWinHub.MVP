@@ -1,4 +1,4 @@
-namespace KWinHub.Domain.Organizations;
+﻿namespace KWinHub.Platform.Organizations;
 
 public enum OrganizationType
 {

@@ -1,14 +1,15 @@
-using KWinHub.Application.Registration;
-using KWinHub.Domain.Users;
+using KWinHub.Platform.Application.Registration;
+using KWinHub.Platform.Infrastructure.Persistence;
+using KWinHub.Platform.Users;
 using Microsoft.EntityFrameworkCore;
 
-namespace KWinHub.Infrastructure.Persistence.Repositories;
+namespace KWinHub.Platform.Infrastructure.Persistence.Repositories;
 
 public class UserRepository : IUserRepository
 {
-    private readonly KWinHubDbContext _dbContext;
+    private readonly PlatformDbContext _dbContext;
 
-    public UserRepository(KWinHubDbContext dbContext)
+    public UserRepository(PlatformDbContext dbContext)
     {
         _dbContext = dbContext;
     }
@@ -25,6 +26,14 @@ public class UserRepository : IUserRepository
             .SingleOrDefaultAsync(u => u.Id == id, cancellationToken);
     }
 
+    public async Task<string?> GetSecurityStampAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.Users
+            .Where(u => u.Id == id)
+            .Select(u => u.SecurityStamp)
+            .SingleOrDefaultAsync(cancellationToken);
+    }
+
     public async Task AddAsync(User user, CancellationToken cancellationToken = default)
     {
         await _dbContext.Users.AddAsync(user, cancellationToken);
@@ -39,23 +48,6 @@ public class UserRepository : IUserRepository
     public async Task<bool> EmailExistsAsync(string email, CancellationToken cancellationToken = default)
     {
         return await _dbContext.Users.AnyAsync(u => u.Email == email, cancellationToken);
-    }
-
-    public async Task<(Guid OrganizationId, string OrganizationName, string Role)?> GetPrimaryOrganizationAsync(
-        Guid userId,
-        CancellationToken cancellationToken = default)
-    {
-        var organization = await (
-                from membership in _dbContext.OrganizationMemberships
-                join org in _dbContext.Organizations on membership.OrganizationId equals org.Id
-                where membership.UserId == userId && membership.Status == "Active"
-                orderby membership.CreatedAt
-                select new { org.Id, org.Name, membership.Role })
-            .FirstOrDefaultAsync(cancellationToken);
-
-        return organization is null
-            ? null
-            : (organization.Id, organization.Name, organization.Role);
     }
 
     public async Task SaveChangesAsync(CancellationToken cancellationToken = default)

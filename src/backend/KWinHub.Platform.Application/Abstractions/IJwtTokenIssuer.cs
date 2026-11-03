@@ -1,4 +1,4 @@
-namespace KWinHub.Application.Abstractions;
+namespace KWinHub.Platform.Application.Abstractions;
 
 public interface IJwtTokenIssuer
 {
@@ -8,5 +8,6 @@ public interface IJwtTokenIssuer
         string displayName,
         Guid organizationId,
         string organizationRole,
-        bool isPlatformAdmin);
+        bool isPlatformAdmin,
+        string securityStamp);
 }

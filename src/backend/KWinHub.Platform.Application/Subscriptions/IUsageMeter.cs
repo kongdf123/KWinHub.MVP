@@ -1,6 +1,6 @@
-using KWinHub.Domain.Subscriptions;
+using KWinHub.Platform.Subscriptions;
 
-namespace KWinHub.Application.Subscriptions;
+namespace KWinHub.Platform.Application.Subscriptions;
 
 /// <summary>
 /// Atomic, idempotent usage metering. Consumption is recorded once per stable

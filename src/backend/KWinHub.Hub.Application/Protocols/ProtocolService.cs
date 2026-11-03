@@ -1,7 +1,7 @@
-using KWinHub.Contracts.Protocols;
-using KWinHub.Domain.Protocols;
+using KWinHub.Hub.Contracts.Protocols;
+using KWinHub.Hub.Protocols;
 
-namespace KWinHub.Application.Protocols;
+namespace KWinHub.Hub.Application.Protocols;
 
 public class ProtocolService : IProtocolService
 {

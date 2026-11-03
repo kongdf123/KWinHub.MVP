@@ -1,4 +1,4 @@
-namespace KWinHub.Domain.Catalogs;
+﻿namespace KWinHub.Platform.Catalogs;
 
 public enum CatalogStatus
 {

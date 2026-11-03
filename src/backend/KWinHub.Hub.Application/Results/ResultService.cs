@@ -1,7 +1,7 @@
-using KWinHub.Contracts.Results;
-using KWinHub.Domain.Results;
+using KWinHub.Hub.Contracts.Results;
+using KWinHub.Hub.Results;
 
-namespace KWinHub.Application.Results;
+namespace KWinHub.Hub.Application.Results;
 
 public class ResultService : IResultService
 {

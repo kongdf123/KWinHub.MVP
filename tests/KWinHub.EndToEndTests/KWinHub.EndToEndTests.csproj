@@ -21,8 +21,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\backend\KWinHub.Api\KWinHub.Api.csproj" />
-    <ProjectReference Include="..\..\src\backend\KWinHub.Contracts\KWinHub.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\backend\KWinHub.Platform.Api\KWinHub.Platform.Api.csproj" />
+    <ProjectReference Include="..\..\src\backend\KWinHub.Hub.Api\KWinHub.Hub.Api.csproj" />
   </ItemGroup>
 
 </Project>

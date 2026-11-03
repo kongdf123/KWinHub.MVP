@@ -1,7 +1,7 @@
-using KWinHub.Application.Abstractions;
+using KWinHub.Platform.Application.Abstractions;
 using Microsoft.AspNetCore.Identity;
 
-namespace KWinHub.Infrastructure.Identity;
+namespace KWinHub.Platform.Infrastructure.Identity;
 
 public class AspNetCorePasswordHasher : IPasswordHasher
 {

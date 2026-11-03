@@ -1,6 +1,6 @@
-using KWinHub.Contracts.Subscriptions;
+using KWinHub.Platform.Contracts.Subscriptions;
 
-namespace KWinHub.Application.Subscriptions;
+namespace KWinHub.Platform.Application.Subscriptions;
 
 /// <summary>
 /// Platform-facing subscription management. All mutations require a mandatory

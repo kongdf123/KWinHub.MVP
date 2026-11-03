@@ -1,34 +1,47 @@
 using System.Security.Cryptography;
 using System.Text;
-using KWinHub.Application.Abstractions;
-using KWinHub.Contracts.Auth;
-using KWinHub.Contracts.Registrations;
-using KWinHub.Domain.Organizations;
-using KWinHub.Domain.Users;
+using KWinHub.Platform.Application.Abstractions;
+using KWinHub.Platform.Application.Audit;
+using KWinHub.Platform.Application.CrossContext;
+using KWinHub.Platform.Application.Organizations;
+using KWinHub.Platform.Contracts.Auth;
+using KWinHub.Platform.Contracts.Registrations;
+using KWinHub.Platform.Organizations;
+using KWinHub.Platform.Users;
 
-namespace KWinHub.Application.Registration;
+namespace KWinHub.Platform.Application.Registration;
 
 public class RegistrationService : IRegistrationService
 {
     private static readonly TimeSpan VerificationLifetime = TimeSpan.FromHours(24);
     private const string StandardAccountType = "Standard";
     private const string IndividualAccountType = "Individual";
+    private const string AdminRole = "OrganizationAdmin";
 
     private readonly IUserRepository _users;
     private readonly IOrganizationRepository _organizations;
     private readonly IVerificationTokenRepository _tokens;
     private readonly IPasswordHasher _passwordHasher;
+    private readonly IHubGateway _hubGateway;
+    private readonly IOrganizationEventOutbox _eventOutbox;
+    private readonly IAuditService _audit;
 
     public RegistrationService(
         IUserRepository users,
         IOrganizationRepository organizations,
         IVerificationTokenRepository tokens,
-        IPasswordHasher passwordHasher)
+        IPasswordHasher passwordHasher,
+        IHubGateway hubGateway,
+        IOrganizationEventOutbox eventOutbox,
+        IAuditService audit)
     {
         _users = users;
         _organizations = organizations;
         _tokens = tokens;
         _passwordHasher = passwordHasher;
+        _hubGateway = hubGateway;
+        _eventOutbox = eventOutbox;
+        _audit = audit;
     }
 
     public async Task<RegistrationResponse> RegisterAsync(
@@ -99,11 +112,6 @@ public class RegistrationService : IRegistrationService
             countryCode: request.Organization?.CountryCode ?? request.CountryCode,
             createdByUserId: user.Id);
 
-        var membership = new OrganizationMembership(
-            userId: user.Id,
-            organizationId: organization.Id,
-            role: "OrganizationAdmin");
-
         var rawToken = GenerateRawToken();
         var token = new EmailVerificationToken(
             userId: user.Id,
@@ -112,9 +120,42 @@ public class RegistrationService : IRegistrationService
 
         await _users.AddAsync(user, cancellationToken);
         await _organizations.AddAsync(organization, cancellationToken);
-        await _organizations.AddMembershipAsync(membership, cancellationToken);
         await _tokens.AddAsync(token, cancellationToken);
+
+        var createdPayload = new OrganizationLifecycleEventPayload(
+            organization.Id,
+            OrganizationLifecycleEventTypes.Created,
+            1,
+            organization.Status.ToString(),
+            DateTimeOffset.UtcNow);
+        await _eventOutbox.AddAsync(
+            new OrganizationLifecycleEvent(
+                organization.Id,
+                OrganizationLifecycleEventTypes.Created,
+                1,
+                System.Text.Json.JsonSerializer.Serialize(createdPayload)),
+            cancellationToken);
+
         await _users.SaveChangesAsync(cancellationToken);
+
+        // The admin membership is owned by the Hub context. Provision it through
+        // the internal Hub API only after the Platform transaction above commits.
+        // M0 limitation: this is a best-effort synchronous call; M1-2 makes it
+        // reliable via the Platform outbox + Hub event consumer.
+        await _hubGateway.ProvisionAdminMembershipAsync(
+            organization.Id,
+            user.Id,
+            AdminRole,
+            cancellationToken);
+
+        await _audit.RecordAsync(
+            "user.registered",
+            "User",
+            user.Id.ToString(),
+            $"User registered with email {user.Email} and created organization '{organization.Name}'",
+            actorUserId: user.Id,
+            actorEmail: user.Email,
+            cancellationToken: cancellationToken);
 
         return new RegistrationResponse(
             UserId: user.Id,
@@ -151,6 +192,15 @@ public class RegistrationService : IRegistrationService
         verificationToken.Consume();
         user.MarkEmailVerified();
         await _users.SaveChangesAsync(cancellationToken);
+
+        await _audit.RecordAsync(
+            "user.email_verified",
+            "User",
+            user.Id.ToString(),
+            $"Email verified for {user.Email}",
+            actorUserId: user.Id,
+            actorEmail: user.Email,
+            cancellationToken: cancellationToken);
 
         return new VerifyEmailResponse(true, user.Email, user.Status.ToString());
     }

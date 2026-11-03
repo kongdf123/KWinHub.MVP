@@ -1,4 +1,4 @@
-namespace KWinHub.Application.Authorization;
+namespace KWinHub.Hub.Application.Authorization;
 
 public sealed record AccessDecision(bool Allowed, string? DenialCode);
 

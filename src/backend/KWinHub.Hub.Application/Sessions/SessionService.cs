@@ -1,30 +1,20 @@
-using KWinHub.Application.Protocols;
-using KWinHub.Application.Results;
-using KWinHub.Application.Subscriptions;
-using KWinHub.Contracts.Sessions;
-using KWinHub.Domain.Results;
-using KWinHub.Domain.Sessions;
-using KWinHub.Domain.Subscriptions;
+using KWinHub.Hub.Application.CrossContext;
+using KWinHub.Hub.Contracts.Sessions;
+using KWinHub.Hub.Sessions;
 
-namespace KWinHub.Application.Sessions;
+namespace KWinHub.Hub.Application.Sessions;
 
 public class SessionService : ISessionService
 {
     private readonly ISessionRepository _repository;
-    private readonly IProtocolRepository _protocolRepository;
-    private readonly IResultRepository _resultRepository;
-    private readonly IUsageMeter _usageMeter;
+    private readonly IPlatformGateway _platformGateway;
 
     public SessionService(
         ISessionRepository repository,
-        IProtocolRepository protocolRepository,
-        IResultRepository resultRepository,
-        IUsageMeter usageMeter)
+        IPlatformGateway platformGateway)
     {
         _repository = repository;
-        _protocolRepository = protocolRepository;
-        _resultRepository = resultRepository;
-        _usageMeter = usageMeter;
+        _platformGateway = platformGateway;
     }
 
     public async Task<SessionResponse> CreateAsync(
@@ -44,34 +34,24 @@ public class SessionService : ISessionService
             externalId: request.ExternalId,
             timezone: request.Timezone);
 
-        // Enforce monthly sessions quota before persisting. Uses the stable
-        // business event id (external id, falling back to the session id) so
-        // retries are idempotent.
+        // Enforce monthly sessions quota before persisting. The Platform context
+        // owns all plan/quota logic; the Hub only reports the business event. The
+        // stable business event id makes retries idempotent.
         var businessEventId = string.IsNullOrWhiteSpace(request.ExternalId)
             ? session.Id.ToString()
             : request.ExternalId;
-        await _usageMeter.ConsumeAsync(
+        await _platformGateway.ConsumeUsageAsync(
             organizationId,
-            SubscriptionCatalog.QuotaSessionsMonthly,
+            HubUsageMetrics.SessionsMonthly,
             businessEventId,
             delta: 1,
             cancellationToken);
 
         await _repository.AddAsync(session, cancellationToken);
 
-        // Simulated analysis (inline — fine for MVP)
-        var protocol = await _protocolRepository.GetByIdAsync(
-            organizationId, session.ProtocolId, cancellationToken);
-
-        if (protocol is not null)
-        {
-            var result = ResultSimulator.CreateSimulatedResult(session, protocol);
-            await _resultRepository.AddAsync(result, cancellationToken);
-
-            session.TransitionTo(SessionStatus.Published);
-            await _repository.UpdateAsync(session, cancellationToken);
-        }
-
+        // Sessions are persisted in their initial (Received) state. Scientific
+        // results are produced only by the real analysis pipeline; the Hub never
+        // fabricates metrics (ADR-0001 — ResultSimulator removed from production).
         return ToResponse(session);
     }
 

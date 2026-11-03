@@ -1,4 +1,4 @@
-namespace KWinHub.Domain.Users;
+﻿namespace KWinHub.Platform.Users;
 
 public enum UserStatus
 {

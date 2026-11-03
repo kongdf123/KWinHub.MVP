@@ -1,6 +1,6 @@
-using KWinHub.Contracts.Protocols;
+using KWinHub.Hub.Contracts.Protocols;
 
-namespace KWinHub.Application.Protocols;
+namespace KWinHub.Hub.Application.Protocols;
 
 public interface IProtocolService
 {

@@ -21,9 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\backend\KWinHub.Domain\KWinHub.Domain.csproj" />
-    <ProjectReference Include="..\..\src\backend\KWinHub.Application\KWinHub.Application.csproj" />
-    <ProjectReference Include="..\..\src\backend\KWinHub.Contracts\KWinHub.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\backend\KWinHub.Hub.Domain\KWinHub.Hub.Domain.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,14 +1,15 @@
-using KWinHub.Application.Protocols;
-using KWinHub.Domain.Protocols;
+using KWinHub.Hub.Application.Protocols;
+using KWinHub.Hub.Infrastructure.Persistence;
+using KWinHub.Hub.Protocols;
 using Microsoft.EntityFrameworkCore;
 
-namespace KWinHub.Infrastructure.Persistence.Repositories;
+namespace KWinHub.Hub.Infrastructure.Persistence.Repositories;
 
 public class ProtocolRepository : IProtocolRepository
 {
-    private readonly KWinHubDbContext _dbContext;
+    private readonly HubDbContext _dbContext;
 
-    public ProtocolRepository(KWinHubDbContext dbContext)
+    public ProtocolRepository(HubDbContext dbContext)
     {
         _dbContext = dbContext;
     }

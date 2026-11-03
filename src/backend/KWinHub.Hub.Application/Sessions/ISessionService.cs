@@ -1,6 +1,6 @@
-using KWinHub.Contracts.Sessions;
+using KWinHub.Hub.Contracts.Sessions;
 
-namespace KWinHub.Application.Sessions;
+namespace KWinHub.Hub.Application.Sessions;
 
 public interface ISessionService
 {

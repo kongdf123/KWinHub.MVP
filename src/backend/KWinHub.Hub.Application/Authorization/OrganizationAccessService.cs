@@ -1,18 +1,18 @@
-using KWinHub.Application.Subscriptions;
+using KWinHub.Hub.Application.CrossContext;
 
-namespace KWinHub.Application.Authorization;
+namespace KWinHub.Hub.Application.Authorization;
 
 public class OrganizationAccessService : IOrganizationAccessService
 {
     private readonly IMembershipRepository _membershipRepository;
-    private readonly IEntitlementResolver _entitlementResolver;
+    private readonly IPlatformGateway _platformGateway;
 
     public OrganizationAccessService(
         IMembershipRepository membershipRepository,
-        IEntitlementResolver entitlementResolver)
+        IPlatformGateway platformGateway)
     {
         _membershipRepository = membershipRepository;
-        _entitlementResolver = entitlementResolver;
+        _platformGateway = platformGateway;
     }
 
     public async Task<AccessDecision> AuthorizeAsync(
@@ -31,18 +31,22 @@ public class OrganizationAccessService : IOrganizationAccessService
             return new AccessDecision(false, "not_a_member");
         }
 
-        // 2) Feature entitlement (fail closed on resolver errors).
+        // 2) Feature entitlement (fail closed when Platform is unreachable).
         try
         {
-            var entitlement = await _entitlementResolver.ResolveAsync(organizationId, featureKey, cancellationToken);
-            if (!entitlement.Enabled)
+            var decision = await _platformGateway.ResolveEntitlementAsync(
+                organizationId,
+                featureKey,
+                cancellationToken);
+
+            if (!decision.Allowed)
             {
                 return new AccessDecision(false, "feature_not_entitled");
             }
         }
         catch
         {
-            // Fail closed for gated writes when entitlement store is unavailable.
+            // Fail closed for gated writes when the entitlement authority is unavailable.
             return new AccessDecision(false, "entitlement_unavailable");
         }
 

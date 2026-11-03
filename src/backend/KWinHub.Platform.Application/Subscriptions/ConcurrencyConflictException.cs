@@ -1,4 +1,4 @@
-namespace KWinHub.Application.Subscriptions;
+namespace KWinHub.Platform.Application.Subscriptions;
 
 /// <summary>
 /// Thrown when a platform mutation targets a subscription whose revision does

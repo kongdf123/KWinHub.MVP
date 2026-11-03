@@ -1,14 +1,15 @@
-using KWinHub.Application.Registration;
-using KWinHub.Domain.Users;
+using KWinHub.Platform.Application.Registration;
+using KWinHub.Platform.Infrastructure.Persistence;
+using KWinHub.Platform.Users;
 using Microsoft.EntityFrameworkCore;
 
-namespace KWinHub.Infrastructure.Persistence.Repositories;
+namespace KWinHub.Platform.Infrastructure.Persistence.Repositories;
 
 public class VerificationTokenRepository : IVerificationTokenRepository
 {
-    private readonly KWinHubDbContext _dbContext;
+    private readonly PlatformDbContext _dbContext;
 
-    public VerificationTokenRepository(KWinHubDbContext dbContext)
+    public VerificationTokenRepository(PlatformDbContext dbContext)
     {
         _dbContext = dbContext;
     }

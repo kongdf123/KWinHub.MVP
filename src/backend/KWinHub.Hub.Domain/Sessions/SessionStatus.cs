@@ -1,4 +1,4 @@
-namespace KWinHub.Domain.Sessions;
+﻿namespace KWinHub.Hub.Sessions;
 
 public enum SessionStatus
 {

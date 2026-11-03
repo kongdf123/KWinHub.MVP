@@ -1,4 +1,4 @@
-namespace KWinHub.Application.Authentication;
+namespace KWinHub.Platform.Application.Authentication;
 
 public record AuthenticatedUser(
     Guid UserId,
@@ -9,13 +9,15 @@ public record AuthenticatedUser(
     string OrganizationRole,
     bool IsPlatformAdmin,
     bool EmailVerified,
-    string Status);
+    string Status,
+    string SecurityStamp);
 
 public interface IAuthenticationService
 {
     Task<AuthenticatedUser?> AuthenticateAsync(
         string email,
         string password,
+        string? ipAddress = null,
         CancellationToken cancellationToken = default);
 
     Task<AuthenticatedUser?> GetProfileAsync(

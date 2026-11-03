@@ -1,6 +1,6 @@
-using KWinHub.Domain.Common;
+﻿using KWinHub.BuildingBlocks.Common;
 
-namespace KWinHub.Domain.Subscriptions;
+namespace KWinHub.Platform.Subscriptions;
 
 /// <summary>
 /// Append-only ledger of usage events. Unique on (OrganizationId, MetricKey,

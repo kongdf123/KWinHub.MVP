@@ -1,17 +1,17 @@
-using KWinHub.Application.Subscriptions;
-using KWinHub.Domain.Subscriptions;
-using KWinHub.Infrastructure.Persistence;
+using KWinHub.Platform.Application.Subscriptions;
+using KWinHub.Platform.Infrastructure.Persistence;
+using KWinHub.Platform.Subscriptions;
 using Microsoft.EntityFrameworkCore;
 
-namespace KWinHub.Infrastructure.Subscriptions;
+namespace KWinHub.Platform.Infrastructure.Subscriptions;
 
 public class UsageMeter : IUsageMeter
 {
-    private readonly KWinHubDbContext _db;
+    private readonly PlatformDbContext _db;
     private readonly ISubscriptionRepository _repository;
     private readonly TimeProvider _clock;
 
-    public UsageMeter(KWinHubDbContext db, ISubscriptionRepository repository, TimeProvider clock)
+    public UsageMeter(PlatformDbContext db, ISubscriptionRepository repository, TimeProvider clock)
     {
         _db = db;
         _repository = repository;

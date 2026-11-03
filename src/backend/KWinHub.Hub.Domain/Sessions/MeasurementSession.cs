@@ -1,6 +1,6 @@
-using KWinHub.Domain.Common;
+﻿using KWinHub.BuildingBlocks.Common;
 
-namespace KWinHub.Domain.Sessions;
+namespace KWinHub.Hub.Sessions;
 
 public class MeasurementSession : BaseEntity<Guid>
 {

@@ -1,8 +1,8 @@
-using KWinHub.Domain.Audit;
-using KWinHub.Domain.Organizations;
-using KWinHub.Domain.Users;
+using KWinHub.Platform.Audit;
+using KWinHub.Platform.Organizations;
+using KWinHub.Platform.Users;
 
-namespace KWinHub.Application.Platform;
+namespace KWinHub.Platform.Application.Platform;
 
 public record OrganizationListRow(
     Guid Id,
@@ -17,13 +17,7 @@ public record OrganizationListRow(
     int SessionCount,
     int ResultCount);
 
-public record OrganizationMemberRow(
-    Guid UserId,
-    string Email,
-    string DisplayName,
-    string Role,
-    string Status,
-    DateTimeOffset JoinedAt);
+public record UserSummary(Guid Id, string Email, string DisplayName);
 
 public record UserListRow(
     Guid Id,
@@ -53,8 +47,9 @@ public interface IPlatformRepository
         Guid id,
         CancellationToken cancellationToken = default);
 
-    Task<IReadOnlyList<OrganizationMemberRow>> ListMembersAsync(
-        Guid organizationId,
+    /// <summary>Platform-side user identity records used to enrich Hub membership rows.</summary>
+    Task<IReadOnlyList<UserSummary>> GetUserSummariesByIdsAsync(
+        IReadOnlyCollection<Guid> userIds,
         CancellationToken cancellationToken = default);
 
     Task<Organization?> GetOrganizationAsync(Guid id, CancellationToken cancellationToken = default);

@@ -1,4 +1,4 @@
-namespace KWinHub.Domain.Subjects;
+﻿namespace KWinHub.Hub.Subjects;
 
 public enum SubjectType
 {

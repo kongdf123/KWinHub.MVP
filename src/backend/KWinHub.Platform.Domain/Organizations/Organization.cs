@@ -1,6 +1,6 @@
-using KWinHub.Domain.Common;
+﻿using KWinHub.BuildingBlocks.Common;
 
-namespace KWinHub.Domain.Organizations;
+namespace KWinHub.Platform.Organizations;
 
 public class Organization : BaseEntity<Guid>
 {

@@ -1,6 +1,6 @@
-using KWinHub.Contracts.Platform;
+using KWinHub.Platform.Contracts.Platform;
 
-namespace KWinHub.Application.Catalogs;
+namespace KWinHub.Platform.Application.Catalogs;
 
 public interface ICatalogService
 {

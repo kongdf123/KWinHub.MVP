@@ -1,6 +1,6 @@
-using KWinHub.Contracts.Subscriptions;
+using KWinHub.Platform.Contracts.Subscriptions;
 
-namespace KWinHub.Application.Subscriptions;
+namespace KWinHub.Platform.Application.Subscriptions;
 
 /// <summary>
 /// Customer-facing subscription read services. All methods enforce that the

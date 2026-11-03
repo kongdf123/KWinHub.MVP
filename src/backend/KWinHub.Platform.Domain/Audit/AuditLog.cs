@@ -1,6 +1,6 @@
-using KWinHub.Domain.Common;
+﻿using KWinHub.BuildingBlocks.Common;
 
-namespace KWinHub.Domain.Audit;
+namespace KWinHub.Platform.Audit;
 
 public class AuditLog : BaseEntity<Guid>
 {

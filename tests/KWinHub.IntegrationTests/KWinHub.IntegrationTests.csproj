@@ -1,4 +1,4 @@
-﻿﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="6.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
     <PackageReference Include="xunit" Version="2.5.3" />
@@ -22,9 +23,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\backend\KWinHub.Api\KWinHub.Api.csproj" />
-    <ProjectReference Include="..\..\src\backend\KWinHub.Infrastructure\KWinHub.Infrastructure.csproj" />
-    <ProjectReference Include="..\..\src\backend\KWinHub.Application\KWinHub.Application.csproj" />
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\backend\KWinHub.Platform.Application\KWinHub.Platform.Application.csproj" />
+    <ProjectReference Include="..\..\src\backend\KWinHub.Platform.Infrastructure\KWinHub.Platform.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\backend\KWinHub.Platform.Api\KWinHub.Platform.Api.csproj" />
+    <ProjectReference Include="..\..\src\backend\KWinHub.Hub.Api\KWinHub.Hub.Api.csproj" />
   </ItemGroup>
 
 </Project>

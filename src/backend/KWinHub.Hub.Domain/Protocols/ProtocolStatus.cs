@@ -1,4 +1,4 @@
-namespace KWinHub.Domain.Protocols;
+﻿namespace KWinHub.Hub.Protocols;
 
 public enum ProtocolStatus
 {

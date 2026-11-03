@@ -1,6 +1,6 @@
-using KWinHub.Domain.Common;
+﻿using KWinHub.BuildingBlocks.Common;
 
-namespace KWinHub.Domain.Subscriptions;
+namespace KWinHub.Platform.Subscriptions;
 
 /// <summary>
 /// Append-only audit record for subscription state changes. Stores before/after

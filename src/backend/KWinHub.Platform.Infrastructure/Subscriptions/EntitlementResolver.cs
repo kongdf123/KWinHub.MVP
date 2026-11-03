@@ -1,7 +1,7 @@
-using KWinHub.Application.Subscriptions;
-using KWinHub.Domain.Subscriptions;
+using KWinHub.Platform.Application.Subscriptions;
+using KWinHub.Platform.Subscriptions;
 
-namespace KWinHub.Infrastructure.Subscriptions;
+namespace KWinHub.Platform.Infrastructure.Subscriptions;
 
 public class EntitlementResolver : IEntitlementResolver
 {

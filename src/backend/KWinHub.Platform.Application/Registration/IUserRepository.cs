@@ -1,6 +1,6 @@
-using KWinHub.Domain.Users;
+using KWinHub.Platform.Users;
 
-namespace KWinHub.Application.Registration;
+namespace KWinHub.Platform.Application.Registration;
 
 public interface IUserRepository
 {
@@ -8,15 +8,13 @@ public interface IUserRepository
 
     Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
+    Task<string?> GetSecurityStampAsync(Guid id, CancellationToken cancellationToken = default);
+
     Task AddAsync(User user, CancellationToken cancellationToken = default);
 
     Task UpdateAsync(User user, CancellationToken cancellationToken = default);
 
     Task<bool> EmailExistsAsync(string email, CancellationToken cancellationToken = default);
-
-    Task<(Guid OrganizationId, string OrganizationName, string Role)?> GetPrimaryOrganizationAsync(
-        Guid userId,
-        CancellationToken cancellationToken = default);
 
     Task SaveChangesAsync(CancellationToken cancellationToken = default);
 }

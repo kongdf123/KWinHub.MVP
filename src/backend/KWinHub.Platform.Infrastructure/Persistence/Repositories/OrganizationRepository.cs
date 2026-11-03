@@ -1,14 +1,15 @@
-using KWinHub.Application.Registration;
-using KWinHub.Domain.Organizations;
+using KWinHub.Platform.Application.Registration;
+using KWinHub.Platform.Infrastructure.Persistence;
+using KWinHub.Platform.Organizations;
 using Microsoft.EntityFrameworkCore;
 
-namespace KWinHub.Infrastructure.Persistence.Repositories;
+namespace KWinHub.Platform.Infrastructure.Persistence.Repositories;
 
 public class OrganizationRepository : IOrganizationRepository
 {
-    private readonly KWinHubDbContext _dbContext;
+    private readonly PlatformDbContext _dbContext;
 
-    public OrganizationRepository(KWinHubDbContext dbContext)
+    public OrganizationRepository(PlatformDbContext dbContext)
     {
         _dbContext = dbContext;
     }
@@ -23,10 +24,8 @@ public class OrganizationRepository : IOrganizationRepository
         await _dbContext.Organizations.AddAsync(organization, cancellationToken);
     }
 
-    public async Task AddMembershipAsync(
-        OrganizationMembership membership,
-        CancellationToken cancellationToken = default)
+    public async Task<Organization?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        await _dbContext.OrganizationMemberships.AddAsync(membership, cancellationToken);
+        return await _dbContext.Organizations.SingleOrDefaultAsync(o => o.Id == id, cancellationToken);
     }
 }

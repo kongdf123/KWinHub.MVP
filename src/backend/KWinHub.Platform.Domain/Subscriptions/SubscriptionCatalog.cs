@@ -1,4 +1,4 @@
-namespace KWinHub.Domain.Subscriptions;
+﻿namespace KWinHub.Platform.Subscriptions;
 
 /// <summary>
 /// Centralized, stable catalog of feature and quota keys. Both the API

@@ -1,4 +1,4 @@
-namespace KWinHub.Domain.Common;
+namespace KWinHub.BuildingBlocks.Common;
 
 public abstract class BaseEntity<TId>
 {

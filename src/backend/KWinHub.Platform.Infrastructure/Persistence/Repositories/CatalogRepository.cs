@@ -1,14 +1,15 @@
-using KWinHub.Application.Catalogs;
-using KWinHub.Domain.Catalogs;
+using KWinHub.Platform.Application.Catalogs;
+using KWinHub.Platform.Catalogs;
+using KWinHub.Platform.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace KWinHub.Infrastructure.Persistence.Repositories;
+namespace KWinHub.Platform.Infrastructure.Persistence.Repositories;
 
 public class CatalogRepository : ICatalogRepository
 {
-    private readonly KWinHubDbContext _dbContext;
+    private readonly PlatformDbContext _dbContext;
 
-    public CatalogRepository(KWinHubDbContext dbContext)
+    public CatalogRepository(PlatformDbContext dbContext)
     {
         _dbContext = dbContext;
     }

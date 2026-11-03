@@ -1,6 +1,6 @@
-using KWinHub.Domain.Common;
+﻿using KWinHub.BuildingBlocks.Common;
 
-namespace KWinHub.Domain.Users;
+namespace KWinHub.Platform.Users;
 
 public class EmailVerificationToken : BaseEntity<Guid>
 {

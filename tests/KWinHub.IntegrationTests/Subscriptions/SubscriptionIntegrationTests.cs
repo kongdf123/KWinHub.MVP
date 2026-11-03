@@ -1,6 +1,6 @@
-using KWinHub.Application.Subscriptions;
-using KWinHub.Contracts.Subscriptions;
-using KWinHub.Domain.Subscriptions;
+using KWinHub.Platform.Application.Subscriptions;
+using KWinHub.Platform.Contracts.Subscriptions;
+using KWinHub.Platform.Subscriptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using System.Security.Claims;

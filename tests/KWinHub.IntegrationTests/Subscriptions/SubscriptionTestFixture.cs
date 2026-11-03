@@ -1,10 +1,10 @@
-using KWinHub.Application.Subscriptions;
-using KWinHub.Domain.Organizations;
-using KWinHub.Domain.Subscriptions;
-using KWinHub.Domain.Users;
-using KWinHub.Infrastructure.Persistence;
-using KWinHub.Infrastructure.Persistence.Repositories;
-using KWinHub.Infrastructure.Subscriptions;
+using KWinHub.Platform.Application.Subscriptions;
+using KWinHub.Platform.Organizations;
+using KWinHub.Platform.Subscriptions;
+using KWinHub.Platform.Users;
+using KWinHub.Platform.Infrastructure.Persistence;
+using KWinHub.Platform.Infrastructure.Persistence.Repositories;
+using KWinHub.Platform.Infrastructure.Subscriptions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 
@@ -18,7 +18,7 @@ namespace KWinHub.IntegrationTests.Subscriptions;
 /// </summary>
 public sealed class SubscriptionTestFixture : IDisposable
 {
-    public KWinHubDbContext Db { get; }
+    public PlatformDbContext Db { get; }
     public TestTimeProvider Clock { get; } = new();
 
     public Guid OrgAId { get; } = Guid.NewGuid();
@@ -39,12 +39,12 @@ public sealed class SubscriptionTestFixture : IDisposable
 
     public SubscriptionTestFixture()
     {
-        var options = new DbContextOptionsBuilder<KWinHubDbContext>()
+        var options = new DbContextOptionsBuilder<PlatformDbContext>()
             .UseInMemoryDatabase(databaseName: $"kwinhub_sub_{Guid.NewGuid():N}")
             .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning))
             .Options;
 
-        Db = new KWinHubDbContext(options);
+        Db = new PlatformDbContext(options);
         Seed();
 
         Repository = new SubscriptionRepository(Db);

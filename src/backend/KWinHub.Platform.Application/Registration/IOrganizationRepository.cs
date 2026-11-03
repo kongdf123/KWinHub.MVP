@@ -1,6 +1,6 @@
-using KWinHub.Domain.Organizations;
+using KWinHub.Platform.Organizations;
 
-namespace KWinHub.Application.Registration;
+namespace KWinHub.Platform.Application.Registration;
 
 public interface IOrganizationRepository
 {
@@ -8,5 +8,5 @@ public interface IOrganizationRepository
 
     Task AddAsync(Organization organization, CancellationToken cancellationToken = default);
 
-    Task AddMembershipAsync(OrganizationMembership membership, CancellationToken cancellationToken = default);
+    Task<Organization?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 }

@@ -1,8 +1,8 @@
-using KWinHub.Application.Platform;
-using KWinHub.Contracts.Platform;
-using KWinHub.Domain.Catalogs;
+using KWinHub.Platform.Application.Platform;
+using KWinHub.Platform.Contracts.Platform;
+using KWinHub.Platform.Catalogs;
 
-namespace KWinHub.Application.Catalogs;
+namespace KWinHub.Platform.Application.Catalogs;
 
 public class CatalogService : ICatalogService
 {

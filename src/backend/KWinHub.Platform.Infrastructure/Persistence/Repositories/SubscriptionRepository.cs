@@ -1,15 +1,15 @@
-using KWinHub.Application.Subscriptions;
-using KWinHub.Domain.Subscriptions;
-using KWinHub.Infrastructure.Persistence;
+using KWinHub.Platform.Application.Subscriptions;
+using KWinHub.Platform.Subscriptions;
+using KWinHub.Platform.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace KWinHub.Infrastructure.Persistence.Repositories;
+namespace KWinHub.Platform.Infrastructure.Persistence.Repositories;
 
 public class SubscriptionRepository : ISubscriptionRepository
 {
-    private readonly KWinHubDbContext _db;
+    private readonly PlatformDbContext _db;
 
-    public SubscriptionRepository(KWinHubDbContext db)
+    public SubscriptionRepository(PlatformDbContext db)
     {
         _db = db;
     }

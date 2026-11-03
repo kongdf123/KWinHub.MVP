@@ -1,14 +1,15 @@
-using KWinHub.Application.Results;
-using KWinHub.Domain.Results;
+using KWinHub.Hub.Application.Results;
+using KWinHub.Hub.Infrastructure.Persistence;
+using KWinHub.Hub.Results;
 using Microsoft.EntityFrameworkCore;
 
-namespace KWinHub.Infrastructure.Persistence.Repositories;
+namespace KWinHub.Hub.Infrastructure.Persistence.Repositories;
 
 public class ResultRepository : IResultRepository
 {
-    private readonly KWinHubDbContext _dbContext;
+    private readonly HubDbContext _dbContext;
 
-    public ResultRepository(KWinHubDbContext dbContext)
+    public ResultRepository(HubDbContext dbContext)
     {
         _dbContext = dbContext;
     }

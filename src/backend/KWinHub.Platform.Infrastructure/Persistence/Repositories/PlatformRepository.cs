@@ -1,16 +1,17 @@
-using KWinHub.Application.Platform;
-using KWinHub.Domain.Audit;
-using KWinHub.Domain.Organizations;
-using KWinHub.Domain.Users;
+using KWinHub.Platform.Application.Platform;
+using KWinHub.Platform.Audit;
+using KWinHub.Platform.Infrastructure.Persistence;
+using KWinHub.Platform.Organizations;
+using KWinHub.Platform.Users;
 using Microsoft.EntityFrameworkCore;
 
-namespace KWinHub.Infrastructure.Persistence.Repositories;
+namespace KWinHub.Platform.Infrastructure.Persistence.Repositories;
 
 public class PlatformRepository : IPlatformRepository
 {
-    private readonly KWinHubDbContext _dbContext;
+    private readonly PlatformDbContext _dbContext;
 
-    public PlatformRepository(KWinHubDbContext dbContext)
+    public PlatformRepository(PlatformDbContext dbContext)
     {
         _dbContext = dbContext;
     }
@@ -78,35 +79,20 @@ public class PlatformRepository : IPlatformRepository
         return row is null ? null : ToRow(row);
     }
 
-    public async Task<IReadOnlyList<OrganizationMemberRow>> ListMembersAsync(
-        Guid organizationId,
+    public async Task<IReadOnlyList<UserSummary>> GetUserSummariesByIdsAsync(
+        IReadOnlyCollection<Guid> userIds,
         CancellationToken cancellationToken = default)
     {
-        var rows = await (
-                from membership in _dbContext.OrganizationMemberships.AsNoTracking()
-                join user in _dbContext.Users.AsNoTracking() on membership.UserId equals user.Id
-                where membership.OrganizationId == organizationId
-                orderby membership.CreatedAt
-                select new
-                {
-                    user.Id,
-                    user.Email,
-                    user.DisplayName,
-                    membership.Role,
-                    membership.Status,
-                    membership.CreatedAt
-                })
-            .ToListAsync(cancellationToken);
+        if (userIds.Count == 0)
+        {
+            return [];
+        }
 
-        return rows
-            .Select(r => new OrganizationMemberRow(
-                r.Id,
-                r.Email,
-                r.DisplayName,
-                r.Role,
-                r.Status,
-                r.CreatedAt))
-            .ToList();
+        return await _dbContext.Users
+            .AsNoTracking()
+            .Where(u => userIds.Contains(u.Id))
+            .Select(u => new UserSummary(u.Id, u.Email, u.DisplayName))
+            .ToListAsync(cancellationToken);
     }
 
     public async Task<Organization?> GetOrganizationAsync(
@@ -165,8 +151,7 @@ public class PlatformRepository : IPlatformRepository
                 u.PlatformRole,
                 u.EmailVerifiedAt != null,
                 u.LastLoginAt,
-                u.CreatedAt,
-                _dbContext.OrganizationMemberships.Count(m => m.UserId == u.Id)))
+                u.CreatedAt))
             .ToListAsync(cancellationToken);
 
         return rows.Select(ToRow).ToList();
@@ -223,6 +208,9 @@ public class PlatformRepository : IPlatformRepository
         return await _dbContext.GlobalMetrics.CountAsync(cancellationToken);
     }
 
+    // Workspace counts (members/subjects/sessions/results) are owned by the Hub
+    // context. The Platform repository projects zeros here; PlatformService
+    // overlays the authoritative values returned by IHubGateway.
     private IQueryable<OrganizationProjection> Project(IQueryable<Organization> query) =>
         query.Select(o => new OrganizationProjection(
             o.Id,
@@ -231,11 +219,7 @@ public class PlatformRepository : IPlatformRepository
             o.Type,
             o.Status,
             o.CountryCode,
-            o.CreatedAt,
-            _dbContext.OrganizationMemberships.Count(m => m.OrganizationId == o.Id),
-            _dbContext.Subjects.Count(s => s.OrganizationId == o.Id),
-            _dbContext.MeasurementSessions.Count(s => s.OrganizationId == o.Id),
-            _dbContext.Results.Count(r => r.OrganizationId == o.Id)));
+            o.CreatedAt));
 
     private static OrganizationListRow ToRow(OrganizationProjection row) =>
         new(
@@ -246,10 +230,10 @@ public class PlatformRepository : IPlatformRepository
             row.Status.ToString(),
             row.CountryCode,
             row.CreatedAt,
-            row.MemberCount,
-            row.SubjectCount,
-            row.SessionCount,
-            row.ResultCount);
+            MemberCount: 0,
+            SubjectCount: 0,
+            SessionCount: 0,
+            ResultCount: 0);
 
     private static UserListRow ToRow(UserProjection row) =>
         new(
@@ -261,7 +245,7 @@ public class PlatformRepository : IPlatformRepository
             row.EmailVerified,
             row.LastLoginAt,
             row.CreatedAt,
-            row.OrganizationCount);
+            OrganizationCount: 0);
 
     private sealed record OrganizationProjection(
         Guid Id,
@@ -270,11 +254,7 @@ public class PlatformRepository : IPlatformRepository
         OrganizationType Type,
         OrganizationStatus Status,
         string? CountryCode,
-        DateTimeOffset CreatedAt,
-        int MemberCount,
-        int SubjectCount,
-        int SessionCount,
-        int ResultCount);
+        DateTimeOffset CreatedAt);
 
     private sealed record UserProjection(
         Guid Id,
@@ -284,6 +264,5 @@ public class PlatformRepository : IPlatformRepository
         string? PlatformRole,
         bool EmailVerified,
         DateTimeOffset? LastLoginAt,
-        DateTimeOffset CreatedAt,
-        int OrganizationCount);
+        DateTimeOffset CreatedAt);
 }

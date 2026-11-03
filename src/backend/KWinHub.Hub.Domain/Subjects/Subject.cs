@@ -1,9 +1,12 @@
-using KWinHub.Domain.Common;
+﻿using KWinHub.BuildingBlocks.Common;
 
-namespace KWinHub.Domain.Subjects;
+namespace KWinHub.Hub.Subjects;
 
 public class Subject : BaseEntity<Guid>
 {
+    public const string StatusActive = "Active";
+    public const string StatusArchived = "Archived";
+
     public Guid OrganizationId { get; private set; }
 
     public string? ExternalId { get; private set; }
@@ -20,7 +23,7 @@ public class Subject : BaseEntity<Guid>
 
     public string? Sex { get; private set; }
 
-    public string Status { get; private set; } = "Active";
+    public string Status { get; private set; } = StatusActive;
 
     private Subject()
     {
@@ -48,4 +51,32 @@ public class Subject : BaseEntity<Guid>
     }
 
     public string FullName => $"{FirstName} {LastName}".Trim();
+
+    public void Update(
+        string firstName,
+        string lastName,
+        SubjectType subjectType,
+        string? externalId,
+        string? displayName,
+        DateTimeOffset? dateOfBirth,
+        string? sex)
+    {
+        FirstName = firstName;
+        LastName = lastName;
+        SubjectType = subjectType;
+        ExternalId = externalId;
+        DisplayName = displayName;
+        DateOfBirth = dateOfBirth;
+        Sex = sex;
+    }
+
+    public void Archive()
+    {
+        Status = StatusArchived;
+    }
+
+    public void Restore()
+    {
+        Status = StatusActive;
+    }
 }

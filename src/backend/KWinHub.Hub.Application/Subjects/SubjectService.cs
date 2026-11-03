@@ -1,7 +1,7 @@
-using KWinHub.Contracts.Subjects;
-using KWinHub.Domain.Subjects;
+using KWinHub.Hub.Contracts.Subjects;
+using KWinHub.Hub.Subjects;
 
-namespace KWinHub.Application.Subjects;
+namespace KWinHub.Hub.Application.Subjects;
 
 public class SubjectService : ISubjectService
 {
@@ -37,11 +37,50 @@ public class SubjectService : ISubjectService
         return ToResponse(subject);
     }
 
-    public async Task<IReadOnlyList<SubjectResponse>> ListByOrganizationAsync(
+    public async Task<SubjectResponse?> UpdateAsync(
         Guid organizationId,
+        Guid id,
+        UpdateSubjectRequest request,
         CancellationToken cancellationToken = default)
     {
-        var subjects = await _repository.ListByOrganizationAsync(organizationId, cancellationToken);
+        var subject = await _repository.GetByIdAsync(organizationId, id, cancellationToken);
+        if (subject is null)
+        {
+            return null;
+        }
+
+        if (!Enum.TryParse<SubjectType>(request.SubjectType, true, out var subjectType))
+        {
+            throw new ArgumentException($"Invalid subject type: {request.SubjectType}", nameof(request));
+        }
+
+        subject.Update(
+            firstName: request.FirstName,
+            lastName: request.LastName,
+            subjectType: subjectType,
+            externalId: request.ExternalId,
+            displayName: request.DisplayName,
+            dateOfBirth: request.DateOfBirth,
+            sex: request.Sex);
+
+        await _repository.UpdateAsync(subject, cancellationToken);
+
+        return ToResponse(subject);
+    }
+
+    public async Task<IReadOnlyList<SubjectResponse>> ListByOrganizationAsync(
+        Guid organizationId,
+        string? search = null,
+        string? status = null,
+        string? subjectType = null,
+        CancellationToken cancellationToken = default)
+    {
+        var subjects = await _repository.ListByOrganizationAsync(
+            organizationId,
+            search,
+            status,
+            subjectType,
+            cancellationToken);
         return subjects.Select(ToResponse).ToList();
     }
 
@@ -52,6 +91,38 @@ public class SubjectService : ISubjectService
     {
         var subject = await _repository.GetByIdAsync(organizationId, id, cancellationToken);
         return subject is null ? null : ToResponse(subject);
+    }
+
+    public async Task<bool> ArchiveAsync(
+        Guid organizationId,
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        var subject = await _repository.GetByIdAsync(organizationId, id, cancellationToken);
+        if (subject is null)
+        {
+            return false;
+        }
+
+        subject.Archive();
+        await _repository.UpdateAsync(subject, cancellationToken);
+        return true;
+    }
+
+    public async Task<bool> RestoreAsync(
+        Guid organizationId,
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        var subject = await _repository.GetByIdAsync(organizationId, id, cancellationToken);
+        if (subject is null)
+        {
+            return false;
+        }
+
+        subject.Restore();
+        await _repository.UpdateAsync(subject, cancellationToken);
+        return true;
     }
 
     private static SubjectResponse ToResponse(Subject subject) =>

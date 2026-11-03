@@ -1,4 +1,4 @@
-namespace KWinHub.Domain.Subscriptions;
+﻿namespace KWinHub.Platform.Subscriptions;
 
 public enum RenewalMode
 {

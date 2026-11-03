@@ -1,8 +1,8 @@
 using FluentValidation;
-using KWinHub.Contracts.Subjects;
-using KWinHub.Domain.Subjects;
+using KWinHub.Hub.Contracts.Subjects;
+using KWinHub.Hub.Subjects;
 
-namespace KWinHub.Application.Subjects;
+namespace KWinHub.Hub.Application.Subjects;
 
 public class CreateSubjectRequestValidator : AbstractValidator<CreateSubjectRequest>
 {
