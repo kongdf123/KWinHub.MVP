@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Activity, ArrowRight, Loader2, Lock, Mail } from 'lucide-react';
-import { http, setToken, clearToken } from '@/lib/api/http';
+import { http, setToken, clearToken, issueDevToken } from '@/lib/api/http';
 import { LanguageSwitcher, useI18n } from '@/lib/i18n-context';
 
 interface LoginPageProps {
@@ -65,16 +65,21 @@ export function LoginPage({ onLogin, onGoToRegister }: LoginPageProps) {
     setLoading(true);
     try {
       if (import.meta.env.VITE_DATA_MODE === 'api') {
-        const response = await http.post<LoginResponse>('/auth/login', {
-          email: email.trim(),
-          password,
-        });
-        setToken(response.token);
-        if (response.isPlatformAdmin) {
-          // Platform admins have no organization workspace — keep them on this screen
-          // with a shortcut into the console instead of opening the org app.
-          setPlatformAdmin(true);
-          return;
+        const devUserId = import.meta.env.VITE_DEV_USER_ID;
+        const devOrgId = import.meta.env.VITE_DEV_ORG_ID;
+        if (devUserId && devOrgId) {
+          const token = await issueDevToken(devUserId, devOrgId, 'Owner');
+          setToken(token);
+        } else {
+          const response = await http.post<LoginResponse>('/auth/login', {
+            email: email.trim(),
+            password,
+          });
+          setToken(response.token);
+          if (response.isPlatformAdmin) {
+            setPlatformAdmin(true);
+            return;
+          }
         }
       } else {
         // Demo mode: fake token, real check so App.tsx's isLoggedIn() picks it up

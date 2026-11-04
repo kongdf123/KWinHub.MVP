@@ -95,7 +95,7 @@ export const http = {
 };
 
 export async function issueDevToken(userId: string, organizationId: string, role = 'Owner'): Promise<string> {
-  const res = await fetch(`${BASE_URL.replace(/\/api\/v1$/, '')}/DevAuth/token`, {
+  const res = await fetch(`${BASE_URL}/DevAuth/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ userId, organizationId, role }),
