@@ -20,7 +20,11 @@ public static class DependencyInjection
         services.AddScoped<ITeamService, TeamService>();
         services.AddScoped<IGroupService, GroupService>();
         services.AddScoped<IProtocolService, ProtocolService>();
+        services.AddScoped<IMetricDefinitionService, MetricDefinitionService>();
         services.AddScoped<ISessionService, SessionService>();
+        services.AddScoped<ITrialService, TrialService>();
+        services.AddScoped<IDataSourceService, DataSourceService>();
+        services.AddScoped<IDeviceService, DeviceService>();
         services.AddScoped<IResultService, ResultService>();
 
         services.AddScoped<IOrganizationAccessService, OrganizationAccessService>();

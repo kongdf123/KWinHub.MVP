@@ -33,7 +33,11 @@ public static class DependencyInjection
         services.AddScoped<ITeamRepository, TeamRepository>();
         services.AddScoped<IGroupRepository, GroupRepository>();
         services.AddScoped<IProtocolRepository, ProtocolRepository>();
+        services.AddScoped<IMetricDefinitionRepository, MetricDefinitionRepository>();
         services.AddScoped<ISessionRepository, SessionRepository>();
+        services.AddScoped<ITrialRepository, TrialRepository>();
+        services.AddScoped<IDataSourceRepository, DataSourceRepository>();
+        services.AddScoped<IDeviceRepository, DeviceRepository>();
         services.AddScoped<IResultRepository, ResultRepository>();
         services.AddScoped<IMembershipRepository, MembershipRepository>();
         services.AddScoped<IOrganizationInvitationRepository, OrganizationInvitationRepository>();

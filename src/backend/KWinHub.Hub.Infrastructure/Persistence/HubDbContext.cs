@@ -46,7 +46,15 @@ public class HubDbContext : DbContext
 
     public DbSet<Protocol> Protocols => Set<Protocol>();
 
+    public DbSet<MetricDefinition> MetricDefinitions => Set<MetricDefinition>();
+
+    public DbSet<DataSource> DataSources => Set<DataSource>();
+
+    public DbSet<Device> Devices => Set<Device>();
+
     public DbSet<MeasurementSession> MeasurementSessions => Set<MeasurementSession>();
+
+    public DbSet<Trial> Trials => Set<Trial>();
 
     public DbSet<Result> Results => Set<Result>();
 
@@ -188,6 +196,51 @@ public class HubDbContext : DbContext
             b.HasIndex(p => p.OrganizationId);
         });
 
+        modelBuilder.Entity<MetricDefinition>(b =>
+        {
+            b.ToTable("metric_definitions", SchemaName);
+            b.HasKey(m => m.Id);
+            b.Property(m => m.Code).IsRequired().HasMaxLength(100);
+            b.Property(m => m.Name).IsRequired().HasMaxLength(200);
+            b.Property(m => m.ValueType).HasConversion<string>();
+            b.Property(m => m.Unit).IsRequired().HasMaxLength(50);
+            b.Property(m => m.Version).IsRequired().HasMaxLength(50);
+            b.Property(m => m.Status).IsRequired().HasMaxLength(50);
+            b.Property(m => m.Method).HasMaxLength(200);
+            b.Property(m => m.AlgorithmVersion).HasMaxLength(50);
+            b.Property(m => m.Category).HasMaxLength(100);
+            b.Property(m => m.Description).HasMaxLength(1000);
+            b.HasIndex(m => new { m.OrganizationId, m.Code, m.Version }).IsUnique();
+            b.HasIndex(m => m.OrganizationId);
+        });
+
+        modelBuilder.Entity<DataSource>(b =>
+        {
+            b.ToTable("data_sources", SchemaName);
+            b.HasKey(d => d.Id);
+            b.Property(d => d.Name).IsRequired().HasMaxLength(200);
+            b.Property(d => d.Code).IsRequired().HasMaxLength(100);
+            b.Property(d => d.SourceApp).IsRequired().HasMaxLength(100);
+            b.Property(d => d.Version).HasMaxLength(50);
+            b.Property(d => d.Description).HasMaxLength(500);
+            b.Property(d => d.Status).IsRequired().HasMaxLength(50);
+            b.HasIndex(d => new { d.OrganizationId, d.Code }).IsUnique();
+            b.HasIndex(d => d.OrganizationId);
+        });
+
+        modelBuilder.Entity<Device>(b =>
+        {
+            b.ToTable("devices", SchemaName);
+            b.HasKey(d => d.Id);
+            b.Property(d => d.Name).IsRequired().HasMaxLength(200);
+            b.Property(d => d.Model).HasMaxLength(100);
+            b.Property(d => d.Manufacturer).HasMaxLength(100);
+            b.Property(d => d.SerialNumber).HasMaxLength(200);
+            b.Property(d => d.FirmwareVersion).HasMaxLength(50);
+            b.Property(d => d.Status).IsRequired().HasMaxLength(50);
+            b.HasIndex(d => d.OrganizationId);
+        });
+
         modelBuilder.Entity<MeasurementSession>(b =>
         {
             b.ToTable("measurement_sessions", SchemaName);
@@ -199,6 +252,19 @@ public class HubDbContext : DbContext
             b.HasIndex(s => new { s.OrganizationId, s.ExternalId }).IsUnique();
         });
 
+        modelBuilder.Entity<Trial>(b =>
+        {
+            b.ToTable("trials", SchemaName);
+            b.HasKey(t => t.Id);
+            b.Property(t => t.Status).HasConversion<string>();
+            b.Property(t => t.ExternalId).HasMaxLength(200);
+            b.Property(t => t.Notes).HasMaxLength(1000);
+            b.HasIndex(t => t.OrganizationId);
+            b.HasIndex(t => t.SessionId);
+            b.HasIndex(t => new { t.SessionId, t.TrialIndex }).IsUnique();
+            b.HasIndex(t => new { t.OrganizationId, t.ExternalId });
+        });
+
         modelBuilder.Entity<Result>(b =>
         {
             b.ToTable("results", SchemaName);
@@ -207,6 +273,7 @@ public class HubDbContext : DbContext
             b.HasIndex(r => r.OrganizationId);
             b.HasIndex(r => r.SessionId);
             b.HasIndex(r => r.ProtocolId);
+            b.HasIndex(r => r.TrialId);
             b.HasMany(r => r.Metrics)
                 .WithOne()
                 .HasForeignKey(m => m.ResultId)
@@ -217,9 +284,15 @@ public class HubDbContext : DbContext
         {
             b.ToTable("metrics", SchemaName);
             b.HasKey(m => m.Id);
-            b.Property(m => m.MetricCode).IsRequired().HasMaxLength(50);
+            b.Property(m => m.MetricCode).IsRequired().HasMaxLength(100);
             b.Property(m => m.MetricName).IsRequired().HasMaxLength(200);
-            b.Property(m => m.Unit).IsRequired().HasMaxLength(20);
+            b.Property(m => m.ValueType).HasConversion<string>();
+            b.Property(m => m.Unit).IsRequired().HasMaxLength(50);
+            b.Property(m => m.Side).HasMaxLength(20);
+            b.Property(m => m.CategoricalValue).HasMaxLength(200);
+            b.Property(m => m.StructuredValue).HasColumnType("jsonb");
+            b.HasIndex(m => m.ResultId);
+            b.HasIndex(m => m.MetricDefinitionId);
         });
 
         base.OnModelCreating(modelBuilder);

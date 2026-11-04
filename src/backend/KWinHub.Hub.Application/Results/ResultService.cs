@@ -65,9 +65,15 @@ public class ResultService : IResultService
     private static MetricValueResponse ToMetricResponse(Metric metric) =>
         new(
             Id: metric.Id,
+            MetricDefinitionId: metric.MetricDefinitionId,
             MetricCode: metric.MetricCode,
             MetricName: metric.MetricName,
-            Value: metric.Value,
+            ValueType: metric.ValueType.ToString(),
+            ScalarValue: metric.ScalarValue,
+            LeftValue: metric.LeftValue,
+            RightValue: metric.RightValue,
+            CategoricalValue: metric.CategoricalValue,
+            StructuredValue: metric.StructuredValue,
             Unit: metric.Unit,
             Side: metric.Side);
 }
