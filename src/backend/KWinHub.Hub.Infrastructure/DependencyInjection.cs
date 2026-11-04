@@ -1,6 +1,7 @@
 using KWinHub.Hub.Application.Authorization;
 using KWinHub.Hub.Application.CrossContext;
 using KWinHub.Hub.Application.Groups;
+using KWinHub.Hub.Application.Organizations;
 using KWinHub.Hub.Application.Protocols;
 using KWinHub.Hub.Application.Results;
 using KWinHub.Hub.Application.Sessions;
@@ -28,12 +29,14 @@ public static class DependencyInjection
             options.UseNpgsql(connectionString));
 
         services.AddScoped<ISubjectRepository, SubjectRepository>();
+        services.AddScoped<ISourceIdentityMappingRepository, SourceIdentityMappingRepository>();
         services.AddScoped<ITeamRepository, TeamRepository>();
         services.AddScoped<IGroupRepository, GroupRepository>();
         services.AddScoped<IProtocolRepository, ProtocolRepository>();
         services.AddScoped<ISessionRepository, SessionRepository>();
         services.AddScoped<IResultRepository, ResultRepository>();
         services.AddScoped<IMembershipRepository, MembershipRepository>();
+        services.AddScoped<IOrganizationInvitationRepository, OrganizationInvitationRepository>();
         services.AddScoped<IOrganizationStatusRepository, OrganizationStatusRepository>();
         services.AddScoped<IOrganizationEventConsumptionRepository, OrganizationEventConsumptionRepository>();
         services.AddScoped<IWorkspaceStatsReader, WorkspaceStatsReader>();

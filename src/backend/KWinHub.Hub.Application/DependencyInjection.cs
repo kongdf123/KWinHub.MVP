@@ -1,6 +1,7 @@
 using FluentValidation;
 using KWinHub.Hub.Application.Authorization;
 using KWinHub.Hub.Application.Groups;
+using KWinHub.Hub.Application.Organizations;
 using KWinHub.Hub.Application.Protocols;
 using KWinHub.Hub.Application.Results;
 using KWinHub.Hub.Application.Sessions;
@@ -15,6 +16,7 @@ public static class DependencyInjection
     public static IServiceCollection AddHubApplication(this IServiceCollection services)
     {
         services.AddScoped<ISubjectService, SubjectService>();
+        services.AddScoped<ISourceIdentityMappingService, SourceIdentityMappingService>();
         services.AddScoped<ITeamService, TeamService>();
         services.AddScoped<IGroupService, GroupService>();
         services.AddScoped<IProtocolService, ProtocolService>();
@@ -25,6 +27,7 @@ public static class DependencyInjection
         services.AddScoped<IMembershipService, MembershipService>();
         services.AddScoped<IOrgContextService, OrgContextService>();
         services.AddScoped<IOrganizationLifecycleEventConsumer, OrganizationLifecycleEventConsumer>();
+        services.AddScoped<IOrganizationMemberService, OrganizationMemberService>();
 
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
 

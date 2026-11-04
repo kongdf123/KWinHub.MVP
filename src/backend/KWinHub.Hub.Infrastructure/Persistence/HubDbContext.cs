@@ -26,11 +26,15 @@ public class HubDbContext : DbContext
 
     public DbSet<OrganizationMembership> OrganizationMemberships => Set<OrganizationMembership>();
 
+    public DbSet<OrganizationInvitation> OrganizationInvitations => Set<OrganizationInvitation>();
+
     public DbSet<OrganizationStatus> OrganizationStatuses => Set<OrganizationStatus>();
 
     public DbSet<OrganizationEventConsumption> OrganizationEventConsumptions => Set<OrganizationEventConsumption>();
 
     public DbSet<Subject> Subjects => Set<Subject>();
+
+    public DbSet<SourceIdentityMapping> SourceIdentityMappings => Set<SourceIdentityMapping>();
 
     public DbSet<Team> Teams => Set<Team>();
 
@@ -62,6 +66,19 @@ public class HubDbContext : DbContext
             b.HasIndex(m => m.UserId);
             // OrganizationId/User_id are cross-context identifiers (platform schema);
             // intentionally no FK constraint.
+        });
+
+        modelBuilder.Entity<OrganizationInvitation>(b =>
+        {
+            b.ToTable("organization_invitations", SchemaName);
+            b.HasKey(i => i.Id);
+            b.Property(i => i.Email).IsRequired().HasMaxLength(254);
+            b.Property(i => i.Role).IsRequired().HasMaxLength(50);
+            b.Property(i => i.Token).IsRequired().HasMaxLength(100);
+            b.Property(i => i.Status).IsRequired().HasMaxLength(50);
+            b.HasIndex(i => i.Token).IsUnique();
+            b.HasIndex(i => i.OrganizationId);
+            b.HasIndex(i => new { i.OrganizationId, i.Email, i.Status });
         });
 
         modelBuilder.Entity<OrganizationStatus>(b =>
@@ -96,6 +113,19 @@ public class HubDbContext : DbContext
             b.Property(s => s.Status).IsRequired().HasMaxLength(50);
             b.HasIndex(s => s.OrganizationId);
             b.HasIndex(s => new { s.OrganizationId, s.ExternalId });
+        });
+
+        modelBuilder.Entity<SourceIdentityMapping>(b =>
+        {
+            b.ToTable("source_identity_mappings", SchemaName);
+            b.HasKey(m => m.Id);
+            b.Property(m => m.SourceApp).IsRequired().HasMaxLength(100);
+            b.Property(m => m.InstallationScope).IsRequired().HasMaxLength(200);
+            b.Property(m => m.ExternalId).IsRequired().HasMaxLength(200);
+            b.Property(m => m.Status).IsRequired().HasMaxLength(50);
+            b.Property(m => m.ConflictReason).HasMaxLength(500);
+            b.HasIndex(m => new { m.OrganizationId, m.SourceApp, m.InstallationScope, m.ExternalId }).IsUnique();
+            b.HasIndex(m => m.SubjectId);
         });
 
         modelBuilder.Entity<Team>(b =>

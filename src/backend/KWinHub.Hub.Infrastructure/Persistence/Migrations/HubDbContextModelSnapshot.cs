@@ -135,6 +135,71 @@ namespace KWinHub.Hub.Infrastructure.Persistence.Migrations
                     b.ToTable("organization_event_consumptions", "hub");
                 });
 
+            modelBuilder.Entity("KWinHub.Hub.Organizations.OrganizationInvitation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AcceptedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("AcceptedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("RevokedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("OrganizationId", "Email", "Status");
+
+                    b.HasIndex("Token")
+                        .IsUnique();
+
+                    b.ToTable("organization_invitations", "hub");
+                });
+
             modelBuilder.Entity("KWinHub.Hub.Organizations.OrganizationMembership", b =>
                 {
                     b.Property<Guid>("Id")
@@ -482,6 +547,26 @@ namespace KWinHub.Hub.Infrastructure.Persistence.Migrations
                     b.HasIndex("OrganizationId", "ExternalId");
 
                     b.ToTable("subjects", "hub");
+                });
+
+            modelBuilder.Entity("KWinHub.Hub.Subjects.SourceIdentityMapping", b =>
+                {
+                    b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uuid");
+                    b.Property<string>("ConflictReason").HasMaxLength(500).HasColumnType("character varying(500)");
+                    b.Property<DateTimeOffset>("CreatedAt").HasColumnType("timestamp with time zone");
+                    b.Property<string>("ExternalId").IsRequired().HasMaxLength(200).HasColumnType("character varying(200)");
+                    b.Property<string>("InstallationScope").IsRequired().HasMaxLength(200).HasColumnType("character varying(200)");
+                    b.Property<Guid>("OrganizationId").HasColumnType("uuid");
+                    b.Property<Guid?>("ResolvedBy").HasColumnType("uuid");
+                    b.Property<DateTimeOffset?>("ResolvedAt").HasColumnType("timestamp with time zone");
+                    b.Property<string>("SourceApp").IsRequired().HasMaxLength(100).HasColumnType("character varying(100)");
+                    b.Property<string>("Status").IsRequired().HasMaxLength(50).HasColumnType("character varying(50)");
+                    b.Property<Guid>("SubjectId").HasColumnType("uuid");
+                    b.Property<DateTimeOffset?>("UpdatedAt").HasColumnType("timestamp with time zone");
+                    b.HasKey("Id");
+                    b.HasIndex("OrganizationId", "SourceApp", "InstallationScope", "ExternalId").IsUnique();
+                    b.HasIndex("SubjectId");
+                    b.ToTable("source_identity_mappings", "hub");
                 });
 
             modelBuilder.Entity("KWinHub.Hub.Teams.Team", b =>
