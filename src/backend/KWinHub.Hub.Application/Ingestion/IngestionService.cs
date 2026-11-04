@@ -6,6 +6,7 @@ using KWinHub.Hub.Application.Protocols;
 using KWinHub.Hub.Application.Results;
 using KWinHub.Hub.Application.Sessions;
 using KWinHub.Hub.Application.Subjects;
+using KWinHub.Hub.Assets;
 using KWinHub.Hub.Contracts.Ingestion;
 using KWinHub.Hub.Protocols;
 using KWinHub.Hub.Results;
@@ -24,6 +25,7 @@ public class IngestionService : IIngestionService
     private readonly ITrialRepository _trialRepository;
     private readonly IResultRepository _resultRepository;
     private readonly IIngestionOperationRepository _operationRepository;
+    private readonly IAssetRepository _assetRepository;
     private readonly ITransactionManager _transactionManager;
 
     public IngestionService(
@@ -34,6 +36,7 @@ public class IngestionService : IIngestionService
         ITrialRepository trialRepository,
         IResultRepository resultRepository,
         IIngestionOperationRepository operationRepository,
+        IAssetRepository assetRepository,
         ITransactionManager transactionManager)
     {
         _subjectRepository = subjectRepository;
@@ -43,6 +46,7 @@ public class IngestionService : IIngestionService
         _trialRepository = trialRepository;
         _resultRepository = resultRepository;
         _operationRepository = operationRepository;
+        _assetRepository = assetRepository;
         _transactionManager = transactionManager;
     }
 
@@ -138,6 +142,18 @@ public class IngestionService : IIngestionService
             {
                 foreach (var asset in request.AssetPlaceholders)
                 {
+                    var dataAsset = new DataAsset(
+                        organizationId,
+                        session.Id,
+                        null,
+                        asset.AssetType,
+                        asset.Size,
+                        asset.ExternalId,
+                        asset.MimeType,
+                        asset.Checksum);
+
+                    await _assetRepository.AddAsync(dataAsset, cancellationToken);
+
                     assetResults.Add(new IngestAssetPlaceholderResult(
                         asset.AssetType,
                         asset.ExternalId,

@@ -1,3 +1,5 @@
+using Amazon;
+using Amazon.S3;
 using KWinHub.Hub.Application.Authorization;
 using KWinHub.Hub.Application.Common;
 using KWinHub.Hub.Application.CrossContext;
@@ -8,9 +10,11 @@ using KWinHub.Hub.Application.Results;
 using KWinHub.Hub.Application.Sessions;
 using KWinHub.Hub.Application.Subjects;
 using KWinHub.Hub.Application.Teams;
+using KWinHub.Hub.Assets;
 using KWinHub.Hub.Infrastructure.CrossContext;
 using KWinHub.Hub.Infrastructure.Persistence;
 using KWinHub.Hub.Infrastructure.Persistence.Repositories;
+using KWinHub.Hub.Infrastructure.Storage;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -45,12 +49,65 @@ public static class DependencyInjection
         services.AddScoped<IOrganizationStatusRepository, OrganizationStatusRepository>();
         services.AddScoped<IOrganizationEventConsumptionRepository, OrganizationEventConsumptionRepository>();
         services.AddScoped<IIngestionOperationRepository, IngestionOperationRepository>();
+        services.AddScoped<IAssetRepository, AssetRepository>();
         services.AddScoped<ITransactionManager, EfTransactionManager>();
         services.AddScoped<IWorkspaceStatsReader, WorkspaceStatsReader>();
+
+        var storageSection = configuration.GetSection("ObjectStorage");
+        var storageOptions = new ObjectStorageOptions();
+        storageSection.Bind(storageOptions);
+        services.AddSingleton(storageOptions);
+
+        var cloudProvider = configuration["Cloud:Provider"]?.ToLowerInvariant() ?? "aliyun";
+
+        switch (cloudProvider)
+        {
+            case "aliyun":
+                RegisterAliyunStorage(services, configuration);
+                break;
+            case "aws":
+                RegisterAwsStorage(services, configuration);
+                break;
+            default:
+                throw new InvalidOperationException(
+                    $"Unknown cloud provider '{cloudProvider}'. Supported values: 'aliyun', 'aws'.");
+        }
 
         AddPlatformInternalClient(services, configuration);
 
         return services;
+    }
+
+    private static void RegisterAliyunStorage(IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddSingleton<Aliyun.OSS.IOss>(_ =>
+        {
+            var endpoint = configuration["ObjectStorage:ServiceUrl"]
+                ?? throw new InvalidOperationException("ObjectStorage:ServiceUrl is required for Aliyun OSS.");
+            var accessKey = configuration["ObjectStorage:AccessKey"] ?? string.Empty;
+            var secretKey = configuration["ObjectStorage:SecretKey"] ?? string.Empty;
+            return new Aliyun.OSS.OssClient(endpoint, accessKey, secretKey);
+        });
+        services.AddScoped<IObjectStorage, AliyunOssObjectStorage>();
+    }
+
+    private static void RegisterAwsStorage(IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddSingleton<IAmazonS3>(_ =>
+        {
+            var s3Config = new AmazonS3Config
+            {
+                ServiceURL = configuration["ObjectStorage:ServiceUrl"],
+                ForcePathStyle = configuration.GetValue<bool>("ObjectStorage:ForcePathStyle", true),
+                RegionEndpoint = RegionEndpoint.GetBySystemName(configuration["ObjectStorage:Region"] ?? "us-east-1")
+            };
+
+            return new AmazonS3Client(
+                configuration["ObjectStorage:AccessKey"] ?? "minioadmin",
+                configuration["ObjectStorage:SecretKey"] ?? "minioadmin",
+                s3Config);
+        });
+        services.AddScoped<IObjectStorage, S3ObjectStorage>();
     }
 
     private static void AddPlatformInternalClient(IServiceCollection services, IConfiguration configuration)

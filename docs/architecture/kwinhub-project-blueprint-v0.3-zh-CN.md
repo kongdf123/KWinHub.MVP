@@ -541,6 +541,8 @@ flowchart TB
 
 客户端“上传完成”仅是提示：服务端需要核实目标对象及预期元数据。分片上传不能把 ETag 一律视为整文件 MD5；按选定上传模式采用可靠校验方式。通知重复或丢失不制造重复资产，定期核对可补齐丢失事件。
 
+对象存储访问通过 `IObjectStorage` 抽象隔离，服务端不直接依赖具体云 SDK。该抽象至少覆盖：签发短时上传授权（Presigned URL 或等效机制）、查询对象元信息（大小/ETag/Content-Type/最后修改时间）、获取对象校验值、删除对象以及存在性检查。`IObjectStorage` 的实现由配置驱动，一期落地阿里云 OSS 适配器，海外场景切换为 AWS S3 适配器，业务代码无需改动。详见 8.5 节多云抽象。
+
 ### 8.2 Outbox 到 MQ 到媒体处理
 
 ```mermaid
@@ -631,6 +633,88 @@ flowchart TB
 | 视频处理积压 | 媒体队列与报告队列隔离，限并发并告警；不得无限重试 |
 
 **对应 PRD：** FR-02/06/07/08/10/12，AC-03/04/05/06/10/11；新增媒体异常用例应进入下一版 PRD 验收矩阵。详尽状态枚举是建议契约，需客户端、后端和测试共同冻结。
+
+### 8.5 多云存储与媒体处理抽象
+
+一期以阿里云为落地云，海外应用上线时切换至 AWS S3。为避免业务代码耦合具体云厂商，对象存储、消息队列与媒体处理均通过应用层接口隔离，适配器实现放在 Infrastructure 层，由配置项决定注入哪一个。
+
+```mermaid
+flowchart LR
+    subgraph Application["Application 层（云无关）"]
+        A1["IObjectStorage"]
+        A2["IMediaProcessor"]
+        A3["IMessageBus"]
+    end
+    subgraph Aliyun["Infrastructure：阿里云适配器"]
+        B1["OssObjectStorage"]
+        B2["VodMediaProcessor"]
+        B3["RocketMqMessageBus"]
+    end
+    subgraph AWS["Infrastructure：AWS 适配器"]
+        C1["S3ObjectStorage"]
+        C2["MediaconvertProcessor"]
+        C3["SqsMessageBus"]
+    end
+    A1 -.实现.-> B1
+    A1 -.实现.-> C1
+    A2 -.实现.-> B2
+    A2 -.实现.-> C2
+    A3 -.实现.-> B3
+    A3 -.实现.-> C3
+    CFG["appsettings Cloud:Provider=aliyun|aws"] --> DI["DI 注册适配器"]
+    DI --> Aliyun
+    DI --> AWS
+```
+
+**核心抽象接口：**
+
+| 接口 | 职责 | 阿里云实现 | AWS 实现 |
+|---|---|---|---|
+| `IObjectStorage` | 签发上传授权、查询对象元信息、校验、删除 | `AliyunOssObjectStorage` | `S3ObjectStorage` |
+| `IMediaProcessor` | 注册媒资、提交转码任务、查询处理状态、获取播放凭证 | `AliyunVodProcessor` | `MediaConvertProcessor`（待定） |
+| `IMessageBus` | 投递/消费消息、可见性延长、死信 | `RocketMqMessageBus` | `SqsMessageBus` |
+
+**`IObjectStorage` 能力对齐：**
+
+| 能力 | 阿里云 OSS | AWS S3 | 说明 |
+|---|---|---|---|
+| 短时上传授权 | 预签名 URL（`GeneratePresignedUri`） | 预签名 URL（`GetPreSignedURL`） | 过期时间由配置控制，默认 15 分钟 |
+| 对象元信息 | `GetObjectMetadata` | `GetObjectMetadataAsync` | 读取大小、ETag、Content-Type、LastModified |
+| 校验值 | ETag 或自定义 Header | ETag | 分片上传时 ETag 不等于 MD5，需额外校验策略 |
+| 路径样式 | Path-Style 或 Virtual-Hosted-Style | 支持两种 | MinIO 本地开发使用 Path-Style |
+| 区域/Endpoint | Region + Endpoint | Region | 由 `ObjectStorage:ServiceUrl` 等配置项注入 |
+
+**适配器切换机制：**
+
+1. `appsettings.json` 中 `Cloud:Provider` 配置项决定激活的适配器集合（`aliyun` 或 `aws`）。
+2. `AddHubInfrastructure` 扩展方法根据该配置注册对应的 `IObjectStorage`、`IMediaProcessor`、`IMessageBus` 实现。
+3. 业务层（`AssetService`、媒体 Worker、Outbox Relay）只依赖抽象接口，不引用任何云 SDK。
+4. 本地开发使用 MinIO（S3 兼容）作为 `IObjectStorage` 的默认实现，与生产阿里云 OSS 行为一致。
+
+**视频播放凭证的多云处理：**
+
+- 阿里云 VOD：服务端调用 `GetVideoPlayAuth` 获取短时 PlayAuth，播放器 SDK 用 PlayAuth 换取播放地址；CDN 鉴权走 VOD 内置机制。
+- AWS 方案：服务端生成 CloudFront 签名 URL 或使用 AWS MediaConvert + S3 预签名 URL；播放凭证有效期与权限校验逻辑在 `IMediaProcessor` 抽象内统一。
+- 无论哪种云，播放授权均需二次校验机构/人员/报告/资产权限，凭证短时效（分钟级），资产非 Ready 状态不签发凭证。
+
+**配置项约定：**
+
+```json
+"Cloud": {
+  "Provider": "aliyun"
+},
+"ObjectStorage": {
+  "ServiceUrl": "https://oss-cn-hangzhou.aliyuncs.com",
+  "AccessKey": "",
+  "SecretKey": "",
+  "Bucket": "kwinhub-assets",
+  "Region": "cn-hangzhou",
+  "ForcePathStyle": false,
+  "UploadGrantExpiryMinutes": 15
+}
+```
+
+切换到 AWS 时只需将 `Provider` 改为 `aws` 并填入对应 `ServiceUrl`、`Region`、`Bucket` 与凭证；业务代码和数据库结构不变。
 
 ## 技术方案依据与选型验证
 

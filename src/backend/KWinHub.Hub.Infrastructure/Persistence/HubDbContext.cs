@@ -1,3 +1,4 @@
+using KWinHub.Hub.Assets;
 using KWinHub.Hub.Groups;
 using KWinHub.Hub.Organizations;
 using KWinHub.Hub.Protocols;
@@ -59,6 +60,8 @@ public class HubDbContext : DbContext
     public DbSet<Result> Results => Set<Result>();
 
     public DbSet<Metric> Metrics => Set<Metric>();
+
+    public DbSet<DataAsset> DataAssets => Set<DataAsset>();
 
     public DbSet<IngestionOperation> IngestionOperations => Set<IngestionOperation>();
 
@@ -310,6 +313,8 @@ public class HubDbContext : DbContext
             b.HasIndex(o => new { o.OrganizationId, o.ClientOperationId }).IsUnique();
             b.HasIndex(o => o.SessionId);
         });
+
+        modelBuilder.ApplyConfiguration(new Configurations.DataAssetConfiguration());
 
         base.OnModelCreating(modelBuilder);
     }

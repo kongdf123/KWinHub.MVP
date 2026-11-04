@@ -48,24 +48,27 @@ public class IngestionContractTests
         Assert.False(request.IsCorrection);
 
         Assert.NotNull(request.Trials);
-        Assert.Equal(2, request.Trials!.Count);
+        var trials = request.Trials!;
+        Assert.Equal(2, trials.Count);
 
-        var trial0 = request.Trials[0];
+        var trial0 = trials[0];
         Assert.Equal(0, trial0.TrialIndex);
         Assert.Equal("trial-0", trial0.ExternalId);
         Assert.Equal("Warm-up", trial0.Notes);
         Assert.NotNull(trial0.Metrics);
-        Assert.Equal(2, trial0.Metrics!.Count);
+        var metrics = trial0.Metrics!;
+        Assert.Equal(2, metrics.Count);
 
-        var metric0 = trial0.Metrics[0];
+        var metric0 = metrics[0];
         Assert.Equal("cmj.jump_height", metric0.MetricDefinitionCode);
         Assert.Equal("scalar", metric0.ValueType);
         Assert.Equal(28.5, metric0.ScalarValue);
         Assert.Equal("cm", metric0.Unit);
 
         Assert.NotNull(request.AssetPlaceholders);
-        Assert.Single(request.AssetPlaceholders!);
-        var asset = request.AssetPlaceholders![0];
+        var assets = request.AssetPlaceholders!;
+        Assert.Single(assets);
+        var asset = assets[0];
         Assert.Equal("force_plate_raw", asset.AssetType);
         Assert.Equal("asset-force-0", asset.ExternalId);
         Assert.Equal(102400, asset.Size);
@@ -115,21 +118,25 @@ public class IngestionContractTests
 
         Assert.NotNull(complete.Trials);
         Assert.NotNull(retry.Trials);
-        Assert.Equal(complete.Trials!.Count, retry.Trials!.Count);
-        for (var i = 0; i < complete.Trials.Count; i++)
+        var completeTrials = complete.Trials!;
+        var retryTrials = retry.Trials!;
+        Assert.Equal(completeTrials.Count, retryTrials.Count);
+        for (var i = 0; i < completeTrials.Count; i++)
         {
-            Assert.Equal(complete.Trials[i].TrialIndex, retry.Trials[i].TrialIndex);
-            Assert.Equal(complete.Trials[i].ExternalId, retry.Trials[i].ExternalId);
-            Assert.Equal(complete.Trials[i].Notes, retry.Trials[i].Notes);
-            Assert.NotNull(complete.Trials[i].Metrics);
-            Assert.NotNull(retry.Trials[i].Metrics);
-            Assert.Equal(complete.Trials[i].Metrics!.Count, retry.Trials[i].Metrics!.Count);
-            for (var j = 0; j < complete.Trials[i].Metrics.Count; j++)
+            Assert.Equal(completeTrials[i].TrialIndex, retryTrials[i].TrialIndex);
+            Assert.Equal(completeTrials[i].ExternalId, retryTrials[i].ExternalId);
+            Assert.Equal(completeTrials[i].Notes, retryTrials[i].Notes);
+            Assert.NotNull(completeTrials[i].Metrics);
+            Assert.NotNull(retryTrials[i].Metrics);
+            var completeMetrics = completeTrials[i].Metrics!;
+            var retryMetrics = retryTrials[i].Metrics!;
+            Assert.Equal(completeMetrics.Count, retryMetrics.Count);
+            for (var j = 0; j < completeMetrics.Count; j++)
             {
-                Assert.Equal(complete.Trials[i].Metrics[j].MetricDefinitionCode, retry.Trials[i].Metrics[j].MetricDefinitionCode);
-                Assert.Equal(complete.Trials[i].Metrics[j].ValueType, retry.Trials[i].Metrics[j].ValueType);
-                Assert.Equal(complete.Trials[i].Metrics[j].ScalarValue, retry.Trials[i].Metrics[j].ScalarValue);
-                Assert.Equal(complete.Trials[i].Metrics[j].Unit, retry.Trials[i].Metrics[j].Unit);
+                Assert.Equal(completeMetrics[j].MetricDefinitionCode, retryMetrics[j].MetricDefinitionCode);
+                Assert.Equal(completeMetrics[j].ValueType, retryMetrics[j].ValueType);
+                Assert.Equal(completeMetrics[j].ScalarValue, retryMetrics[j].ScalarValue);
+                Assert.Equal(completeMetrics[j].Unit, retryMetrics[j].Unit);
             }
         }
     }
@@ -144,10 +151,12 @@ public class IngestionContractTests
 
         Assert.NotNull(complete.Trials);
         Assert.NotNull(duplicate.Trials);
-        Assert.NotEqual(complete.Trials!.Count, duplicate.Trials!.Count);
+        var completeTrials = complete.Trials!;
+        var duplicateTrials = duplicate.Trials!;
+        Assert.NotEqual(completeTrials.Count, duplicateTrials.Count);
 
-        var completeMetric = complete.Trials[0].Metrics?.FirstOrDefault();
-        var duplicateMetric = duplicate.Trials[0].Metrics?.FirstOrDefault();
+        var completeMetric = completeTrials[0].Metrics?.FirstOrDefault();
+        var duplicateMetric = duplicateTrials[0].Metrics?.FirstOrDefault();
         Assert.NotNull(completeMetric);
         Assert.NotNull(duplicateMetric);
         Assert.NotEqual(completeMetric!.ScalarValue, duplicateMetric!.ScalarValue);

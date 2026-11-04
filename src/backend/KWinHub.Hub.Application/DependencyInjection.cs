@@ -8,6 +8,7 @@ using KWinHub.Hub.Application.Results;
 using KWinHub.Hub.Application.Sessions;
 using KWinHub.Hub.Application.Subjects;
 using KWinHub.Hub.Application.Teams;
+using KWinHub.Hub.Assets;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace KWinHub.Hub.Application;
@@ -28,6 +29,7 @@ public static class DependencyInjection
         services.AddScoped<IDeviceService, DeviceService>();
         services.AddScoped<IResultService, ResultService>();
         services.AddScoped<IIngestionService, IngestionService>();
+        services.AddScoped<IAssetService, AssetService>();
 
         services.AddScoped<IOrganizationAccessService, OrganizationAccessService>();
         services.AddScoped<IMembershipService, MembershipService>();
