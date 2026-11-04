@@ -1,4 +1,6 @@
 using KWinHub.Hub.Application.Common;
+using KWinHub.Hub.Application.Messaging;
+using KWinHub.Hub.Messaging;
 
 namespace KWinHub.Hub.Assets;
 
@@ -8,17 +10,20 @@ public class AssetService : IAssetService
     private readonly IObjectStorage _objectStorage;
     private readonly ITransactionManager _transactionManager;
     private readonly ObjectStorageOptions _storageOptions;
+    private readonly IOutbox _outbox;
 
     public AssetService(
         IAssetRepository assetRepository,
         IObjectStorage objectStorage,
         ITransactionManager transactionManager,
-        ObjectStorageOptions storageOptions)
+        ObjectStorageOptions storageOptions,
+        IOutbox outbox)
     {
         _assetRepository = assetRepository;
         _objectStorage = objectStorage;
         _transactionManager = transactionManager;
         _storageOptions = storageOptions;
+        _outbox = outbox;
     }
 
     public async Task<IReadOnlyList<AssetResponse>> ListBySessionAsync(
@@ -124,6 +129,25 @@ public class AssetService : IAssetService
 
             asset.MarkUploaded(storageKey, _storageOptions.Bucket);
             asset.MarkVerified();
+
+            var outboxMessage = new OutboxMessage(
+                eventId: Guid.NewGuid(),
+                eventType: "asset.verified",
+                organizationId: asset.OrganizationId,
+                aggregateType: "DataAsset",
+                aggregateId: asset.Id,
+                eventVersion: asset.Revision,
+                payloadJson: System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    assetId = asset.Id,
+                    sessionId = asset.SessionId,
+                    trialId = asset.TrialId,
+                    assetType = asset.AssetType,
+                    revision = asset.Revision
+                }));
+
+            await _outbox.AddAsync(outboxMessage, cancellationToken);
+
             await _assetRepository.UpdateAsync(asset, cancellationToken);
             await transaction.CommitAsync(cancellationToken);
 

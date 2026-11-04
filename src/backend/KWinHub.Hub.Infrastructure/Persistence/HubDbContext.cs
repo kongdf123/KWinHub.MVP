@@ -1,5 +1,6 @@
 using KWinHub.Hub.Assets;
 using KWinHub.Hub.Groups;
+using KWinHub.Hub.Messaging;
 using KWinHub.Hub.Organizations;
 using KWinHub.Hub.Protocols;
 using KWinHub.Hub.Results;
@@ -62,6 +63,8 @@ public class HubDbContext : DbContext
     public DbSet<Metric> Metrics => Set<Metric>();
 
     public DbSet<DataAsset> DataAssets => Set<DataAsset>();
+
+    public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
 
     public DbSet<IngestionOperation> IngestionOperations => Set<IngestionOperation>();
 
@@ -315,6 +318,7 @@ public class HubDbContext : DbContext
         });
 
         modelBuilder.ApplyConfiguration(new Configurations.DataAssetConfiguration());
+        modelBuilder.ApplyConfiguration(new Configurations.OutboxMessageConfiguration());
 
         base.OnModelCreating(modelBuilder);
     }
