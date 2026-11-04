@@ -60,6 +60,8 @@ public class HubDbContext : DbContext
 
     public DbSet<Metric> Metrics => Set<Metric>();
 
+    public DbSet<IngestionOperation> IngestionOperations => Set<IngestionOperation>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasPostgresExtension("uuid-ossp");
@@ -293,6 +295,19 @@ public class HubDbContext : DbContext
             b.Property(m => m.StructuredValue).HasColumnType("jsonb");
             b.HasIndex(m => m.ResultId);
             b.HasIndex(m => m.MetricDefinitionId);
+        });
+
+        modelBuilder.Entity<IngestionOperation>(b =>
+        {
+            b.ToTable("ingestion_operations", SchemaName);
+            b.HasKey(o => o.Id);
+            b.Property(o => o.ClientOperationId).IsRequired().HasMaxLength(200);
+            b.Property(o => o.Status).HasConversion<string>();
+            b.Property(o => o.ErrorCode).HasMaxLength(100);
+            b.Property(o => o.ErrorDetail).HasMaxLength(1000);
+            b.Property(o => o.SessionExternalId).HasMaxLength(200);
+            b.HasIndex(o => new { o.OrganizationId, o.ClientOperationId }).IsUnique();
+            b.HasIndex(o => o.SessionId);
         });
 
         base.OnModelCreating(modelBuilder);

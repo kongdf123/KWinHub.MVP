@@ -50,6 +50,11 @@ public class Result : BaseEntity<Guid>
         _metrics.Add(new Metric(Id, metricCode, metricName, value, unit, side));
     }
 
+    public void AddMetricDirect(Metric metric)
+    {
+        _metrics.Add(metric);
+    }
+
     public void MarkPublished(string? qualityStatus = null)
     {
         Status = "Published";

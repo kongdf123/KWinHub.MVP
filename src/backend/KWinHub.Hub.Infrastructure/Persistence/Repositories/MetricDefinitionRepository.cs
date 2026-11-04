@@ -39,6 +39,18 @@ public class MetricDefinitionRepository : IMetricDefinitionRepository
                 cancellationToken);
     }
 
+    public async Task<MetricDefinition?> GetByCodeAsync(
+        Guid organizationId,
+        string code,
+        CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.MetricDefinitions
+            .AsNoTracking()
+            .Where(m => m.OrganizationId == organizationId && m.Code == code && m.Status == "Active")
+            .OrderByDescending(m => m.Version)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyList<MetricDefinition>> ListByOrganizationAsync(
         Guid organizationId,
         CancellationToken cancellationToken = default)

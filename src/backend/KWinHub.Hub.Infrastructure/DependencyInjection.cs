@@ -1,4 +1,5 @@
 using KWinHub.Hub.Application.Authorization;
+using KWinHub.Hub.Application.Common;
 using KWinHub.Hub.Application.CrossContext;
 using KWinHub.Hub.Application.Groups;
 using KWinHub.Hub.Application.Organizations;
@@ -43,6 +44,8 @@ public static class DependencyInjection
         services.AddScoped<IOrganizationInvitationRepository, OrganizationInvitationRepository>();
         services.AddScoped<IOrganizationStatusRepository, OrganizationStatusRepository>();
         services.AddScoped<IOrganizationEventConsumptionRepository, OrganizationEventConsumptionRepository>();
+        services.AddScoped<IIngestionOperationRepository, IngestionOperationRepository>();
+        services.AddScoped<ITransactionManager, EfTransactionManager>();
         services.AddScoped<IWorkspaceStatsReader, WorkspaceStatsReader>();
 
         AddPlatformInternalClient(services, configuration);
