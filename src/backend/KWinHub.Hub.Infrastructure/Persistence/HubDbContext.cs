@@ -306,6 +306,7 @@ public class HubDbContext : DbContext
             b.Property(o => o.ErrorCode).HasMaxLength(100);
             b.Property(o => o.ErrorDetail).HasMaxLength(1000);
             b.Property(o => o.SessionExternalId).HasMaxLength(200);
+            b.Property(o => o.ContentHash).HasMaxLength(64);
             b.HasIndex(o => new { o.OrganizationId, o.ClientOperationId }).IsUnique();
             b.HasIndex(o => o.SessionId);
         });

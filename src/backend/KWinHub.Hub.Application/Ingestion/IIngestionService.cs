@@ -13,4 +13,9 @@ public interface IIngestionService
         Guid organizationId,
         string clientOperationId,
         CancellationToken cancellationToken = default);
+
+    Task<IngestionOperationStatusResponse?> GetSessionStatusAsync(
+        Guid organizationId,
+        Guid sessionId,
+        CancellationToken cancellationToken = default);
 }

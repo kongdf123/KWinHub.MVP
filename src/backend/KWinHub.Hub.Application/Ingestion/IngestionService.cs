@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using KWinHub.Hub.Application.Common;
 using KWinHub.Hub.Application.Ingestion;
 using KWinHub.Hub.Application.Protocols;
@@ -51,18 +53,42 @@ public class IngestionService : IIngestionService
     {
         ValidateContractVersion(request.Version);
 
+        var contentHash = ComputeContentHash(request);
+
         var existingOperation = await _operationRepository.GetByClientOperationIdAsync(
             organizationId, request.ClientOperationId, cancellationToken);
+
         if (existingOperation is not null)
         {
+            if (existingOperation.Status == IngestionOperationStatus.Pending)
+            {
+                return BuildPendingResponse(existingOperation);
+            }
+
+            if (existingOperation.Status == IngestionOperationStatus.Failed)
+            {
+                return ToResponse(existingOperation);
+            }
+
+            if (!string.Equals(existingOperation.ContentHash, contentHash, StringComparison.Ordinal))
+            {
+                throw new IngestionException(
+                    IngestionErrorCodes.Conflict,
+                    $"Operation '{request.ClientOperationId}' already accepted with different content. " +
+                    "Use a new ClientOperationId for corrections or set IsCorrection=true with a matching ExternalId.",
+                    "clientOperationId");
+            }
+
             return ToResponse(existingOperation);
         }
 
-        var operation = new IngestionOperation(organizationId, request.ClientOperationId);
+        var operation = new IngestionOperation(organizationId, request.ClientOperationId, contentHash);
 
         await using var transaction = await _transactionManager.BeginTransactionAsync(cancellationToken);
         try
         {
+            await _operationRepository.AddAsync(operation, cancellationToken);
+
             var subject = await _subjectRepository.GetByIdAsync(organizationId, request.SubjectId, cancellationToken);
             if (subject is null)
             {
@@ -79,6 +105,14 @@ public class IngestionService : IIngestionService
                     IngestionErrorCodes.InvalidProtocol,
                     $"Protocol {request.ProtocolId} not found in organization.",
                     "protocolId");
+            }
+
+            if (!string.Equals(protocol.Version, request.ProtocolVersion, StringComparison.Ordinal))
+            {
+                throw new IngestionException(
+                    IngestionErrorCodes.InvalidProtocolVersion,
+                    $"Protocol version '{request.ProtocolVersion}' does not match protocol '{protocol.Code}' version '{protocol.Version}'.",
+                    "protocolVersion");
             }
 
             var session = await GetOrCreateSessionAsync(organizationId, request, cancellationToken);
@@ -99,16 +133,30 @@ public class IngestionService : IIngestionService
                 }
             }
 
-            await transaction.CommitAsync(cancellationToken);
+            var assetResults = new List<IngestAssetPlaceholderResult>();
+            if (request.AssetPlaceholders is not null)
+            {
+                foreach (var asset in request.AssetPlaceholders)
+                {
+                    assetResults.Add(new IngestAssetPlaceholderResult(
+                        asset.AssetType,
+                        asset.ExternalId,
+                        asset.Size,
+                        "PendingUpload"));
+                }
+            }
 
             operation.MarkAccepted(session.Id, session.ExternalId);
             await _operationRepository.UpdateAsync(operation, cancellationToken);
+
+            await transaction.CommitAsync(cancellationToken);
 
             return new IngestSessionResponse(
                 SessionId: session.Id,
                 SessionExternalId: session.ExternalId,
                 Status: "Accepted",
-                Trials: trialResults);
+                Trials: trialResults,
+                AssetPlaceholders: assetResults);
         }
         catch (IngestionException)
         {
@@ -134,6 +182,16 @@ public class IngestionService : IIngestionService
         return operation is null ? null : ToStatusResponse(operation);
     }
 
+    public async Task<IngestionOperationStatusResponse?> GetSessionStatusAsync(
+        Guid organizationId,
+        Guid sessionId,
+        CancellationToken cancellationToken = default)
+    {
+        var operation = await _operationRepository.GetBySessionIdAsync(
+            organizationId, sessionId, cancellationToken);
+        return operation is null ? null : ToStatusResponse(operation);
+    }
+
     private async Task<MeasurementSession> GetOrCreateSessionAsync(
         Guid organizationId,
         IngestSessionRequest request,
@@ -145,6 +203,15 @@ public class IngestionService : IIngestionService
                 organizationId, request.ExternalId, cancellationToken);
             if (existing is not null)
             {
+                if (!request.IsCorrection)
+                {
+                    throw new IngestionException(
+                        IngestionErrorCodes.DuplicateSession,
+                        $"Session with external id '{request.ExternalId}' already exists. " +
+                        "Set IsCorrection=true to update an existing session.",
+                        "externalId");
+                }
+
                 return existing;
             }
         }
@@ -161,6 +228,11 @@ public class IngestionService : IIngestionService
             externalId: request.ExternalId,
             timezone: request.Timezone);
 
+        if (request.StartedAt.HasValue)
+        {
+            session.SetStartedAt(request.StartedAt.Value);
+        }
+
         await _sessionRepository.AddAsync(session, cancellationToken);
         return session;
     }
@@ -173,6 +245,16 @@ public class IngestionService : IIngestionService
         IngestTrialRequest trialRequest,
         CancellationToken cancellationToken)
     {
+        if (!string.IsNullOrWhiteSpace(trialRequest.ExternalId))
+        {
+            var existing = await _trialRepository.GetByExternalIdAsync(
+                organizationId, trialRequest.ExternalId, cancellationToken);
+            if (existing is not null)
+            {
+                return existing.Id;
+            }
+        }
+
         var trial = new Trial(
             organizationId: organizationId,
             sessionId: sessionId,
@@ -232,6 +314,14 @@ public class IngestionService : IIngestionService
                 $"metrics.{request.MetricDefinitionCode}.valueType");
         }
 
+        if (definition.ValueType != valueType)
+        {
+            throw new IngestionException(
+                IngestionErrorCodes.InvalidValueType,
+                $"Value type '{request.ValueType}' does not match metric definition value type '{definition.ValueType}'.",
+                $"metrics.{request.MetricDefinitionCode}.valueType");
+        }
+
         if (!string.IsNullOrWhiteSpace(request.Unit) &&
             !string.Equals(request.Unit, definition.Unit, StringComparison.OrdinalIgnoreCase))
         {
@@ -274,6 +364,98 @@ public class IngestionService : IIngestionService
         }
     }
 
+    private static string ComputeContentHash(IngestSessionRequest request)
+    {
+        var builder = new StringBuilder();
+        builder.Append(request.Version);
+        builder.Append('|');
+        builder.Append(request.SubjectId);
+        builder.Append('|');
+        builder.Append(request.ProtocolId);
+        builder.Append('|');
+        builder.Append(request.ProtocolVersion);
+        builder.Append('|');
+        builder.Append(request.ExternalId ?? string.Empty);
+        builder.Append('|');
+        builder.Append(request.SourceId?.ToString() ?? string.Empty);
+        builder.Append('|');
+        builder.Append(request.DeviceId?.ToString() ?? string.Empty);
+        builder.Append('|');
+        builder.Append(request.Timezone ?? string.Empty);
+        builder.Append('|');
+        builder.Append(request.ClientApplication ?? string.Empty);
+        builder.Append('|');
+        builder.Append(request.ClientVersion ?? string.Empty);
+
+        if (request.Trials is not null)
+        {
+            foreach (var trial in request.Trials)
+            {
+                builder.Append("|T:");
+                builder.Append(trial.TrialIndex);
+                builder.Append(':');
+                builder.Append(trial.ExternalId ?? string.Empty);
+                builder.Append(':');
+                builder.Append(trial.Notes ?? string.Empty);
+
+                if (trial.Metrics is not null)
+                {
+                    foreach (var metric in trial.Metrics)
+                    {
+                        builder.Append("|M:");
+                        builder.Append(metric.MetricDefinitionCode);
+                        builder.Append(':');
+                        builder.Append(metric.ValueType);
+                        builder.Append(':');
+                        builder.Append(metric.ScalarValue?.ToString("R") ?? string.Empty);
+                        builder.Append(':');
+                        builder.Append(metric.LeftValue?.ToString("R") ?? string.Empty);
+                        builder.Append(':');
+                        builder.Append(metric.RightValue?.ToString("R") ?? string.Empty);
+                        builder.Append(':');
+                        builder.Append(metric.CategoricalValue ?? string.Empty);
+                        builder.Append(':');
+                        builder.Append(metric.StructuredValue ?? string.Empty);
+                        builder.Append(':');
+                        builder.Append(metric.Unit ?? string.Empty);
+                        builder.Append(':');
+                        builder.Append(metric.Side ?? string.Empty);
+                    }
+                }
+            }
+        }
+
+        if (request.AssetPlaceholders is not null)
+        {
+            foreach (var asset in request.AssetPlaceholders)
+            {
+                builder.Append("|A:");
+                builder.Append(asset.AssetType);
+                builder.Append(':');
+                builder.Append(asset.ExternalId);
+                builder.Append(':');
+                builder.Append(asset.Size);
+                builder.Append(':');
+                builder.Append(asset.MimeType ?? string.Empty);
+                builder.Append(':');
+                builder.Append(asset.Checksum ?? string.Empty);
+            }
+        }
+
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(builder.ToString()));
+        return Convert.ToHexString(bytes);
+    }
+
+    private static IngestSessionResponse BuildPendingResponse(IngestionOperation operation)
+    {
+        return new IngestSessionResponse(
+            SessionId: operation.SessionId ?? Guid.Empty,
+            SessionExternalId: operation.SessionExternalId,
+            Status: "Pending",
+            Trials: null,
+            AssetPlaceholders: null);
+    }
+
     private static IngestSessionResponse ToResponse(IngestionOperation operation)
     {
         var errors = operation.Status == IngestionOperationStatus.Failed
@@ -289,6 +471,7 @@ public class IngestionService : IIngestionService
             SessionExternalId: operation.SessionExternalId,
             Status: operation.Status.ToString(),
             Trials: null,
+            AssetPlaceholders: null,
             Errors: errors);
     }
 

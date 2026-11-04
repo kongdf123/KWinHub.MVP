@@ -10,4 +10,5 @@ public record IngestSessionResponse(
     string? SessionExternalId,
     string Status,
     IReadOnlyList<IngestTrialResult>? Trials = null,
+    IReadOnlyList<IngestAssetPlaceholderResult>? AssetPlaceholders = null,
     IReadOnlyList<IngestionError>? Errors = null);

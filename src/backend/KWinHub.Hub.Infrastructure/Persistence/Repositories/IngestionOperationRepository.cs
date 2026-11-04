@@ -32,6 +32,18 @@ public class IngestionOperationRepository : IIngestionOperationRepository
                 cancellationToken);
     }
 
+    public async Task<IngestionOperation?> GetBySessionIdAsync(
+        Guid organizationId,
+        Guid sessionId,
+        CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.IngestionOperations
+            .AsNoTracking()
+            .SingleOrDefaultAsync(
+                o => o.OrganizationId == organizationId && o.SessionId == sessionId,
+                cancellationToken);
+    }
+
     public async Task UpdateAsync(IngestionOperation operation, CancellationToken cancellationToken = default)
     {
         _dbContext.IngestionOperations.Update(operation);

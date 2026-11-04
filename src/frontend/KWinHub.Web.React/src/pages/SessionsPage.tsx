@@ -1,19 +1,31 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useApp } from '@/lib/app-context';
 import { t as tr } from '@/lib/i18n';
-import { DEMO_SESSIONS, DEMO_ATHLETES, DEMO_PROTOCOLS, DEMO_DATA_SOURCES, getSport, getProtocol, getDataSource } from '@/lib/demo-data';
-// metric labels handled inline via protocol definitions
+import {
+  DEMO_SESSIONS, DEMO_ATHLETES, DEMO_PROTOCOLS, DEMO_DATA_SOURCES,
+  getSport, getProtocol, getDataSource,
+} from '@/lib/demo-data';
 import { TopBar } from '@/components/layout/TopBar';
 import { DataTable } from '@/components/ui/DataTable';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { WORKSPACE_TABS_BY_VIEW } from '@/lib/navigation';
-import { Upload, Search, Activity, Zap, Waves, TrendingUp, Dumbbell, Shuffle, ChevronRight, CheckCircle, XCircle, RefreshCw, Download, MoreVertical, FileText, BarChart3 } from 'lucide-react';
+import {
+  Upload, Search, Activity, Zap, Waves, TrendingUp, Dumbbell, Shuffle,
+  ChevronRight, CheckCircle, XCircle, RefreshCw, Download, MoreVertical,
+  FileText, BarChart3, AlertCircle, Loader2,
+} from 'lucide-react';
 import type { TestSession, SessionStatus } from '@/lib/types';
 import {
   getSessionScientificInfo,
   getSourceApplication,
   type ScientificFixtureSummaryStatus,
 } from '@/features/science';
+import { sessionsApi, type SessionDto } from '@/lib/api/sessions';
+import { subjectsApi, type SubjectDto } from '@/lib/api/subjects';
+import { protocolsApi, type ProtocolDto } from '@/lib/api/protocols';
+import { resultsApi, type ResultDto } from '@/lib/api/results';
+
+const API_MODE = import.meta.env.VITE_DATA_MODE === 'api';
 
 const SPORT_ICONS: Record<string, typeof Activity> = {
   'sport-cmj': Activity,
@@ -47,6 +59,37 @@ const SCI_STATUS_CONFIG: Record<ScientificFixtureSummaryStatus, { en: string; cn
   failed: { en: 'Failed', cn: '失败', color: 'text-invalid-700', bg: 'bg-invalid-50' },
 };
 
+const API_STATUS_MAP: Record<string, SessionStatus> = {
+  Received: 'RECEIVED',
+  Processing: 'PROCESSING',
+  Analyzed: 'ANALYZED',
+  Published: 'PUBLISHED',
+  Failed: 'PROCESSING_FAILED',
+  Cancelled: 'UPLOAD_FAILED',
+  Pending: 'QUEUED',
+};
+
+function mapApiStatus(status: string): SessionStatus {
+  return API_STATUS_MAP[status] || 'RECEIVED';
+}
+
+interface SessionRowData {
+  id: string;
+  subjectName: string;
+  subjectUnknown: boolean;
+  protocolName: string;
+  protocolVersion: string;
+  protocolUnknown: boolean;
+  sourceLabel: string;
+  sourceId: string | null;
+  status: SessionStatus;
+  date: string;
+  dateTime: string;
+  primaryMetricValue: string;
+  primaryMetricUnknown: boolean;
+  sportId: string;
+}
+
 export function SessionsPage() {
   const { navigate, addToast, lang, canAccess } = useApp();
   const [search, setSearch] = useState('');
@@ -55,9 +98,109 @@ export function SessionsPage() {
   const [sourceFilter, setSourceFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
 
+  const [apiSessions, setApiSessions] = useState<SessionDto[]>([]);
+  const [apiSubjects, setApiSubjects] = useState<SubjectDto[]>([]);
+  const [apiProtocols, setApiProtocols] = useState<ProtocolDto[]>([]);
+  const [apiResults, setApiResults] = useState<ResultDto[]>([]);
+  const [loading, setLoading] = useState(API_MODE);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
   const workspaceTabs = (WORKSPACE_TABS_BY_VIEW['sessions'] ?? []).filter((tab) => canAccess(tab.view));
 
-  const filteredSessions = useMemo(() => {
+  useEffect(() => {
+    if (!API_MODE) return;
+    let cancelled = false;
+    setLoading(true);
+    setLoadError(null);
+
+    Promise.all([
+      sessionsApi.list().catch(() => [] as SessionDto[]),
+      subjectsApi.list().catch(() => [] as SubjectDto[]),
+      protocolsApi.list().catch(() => [] as ProtocolDto[]),
+      resultsApi.list().catch(() => [] as ResultDto[]),
+    ])
+      .then(([sessions, subjects, protocols, results]) => {
+        if (cancelled) return;
+        setApiSessions(sessions);
+        setApiSubjects(subjects);
+        setApiProtocols(protocols);
+        setApiResults(results);
+      })
+      .catch(() => {
+        if (!cancelled) setLoadError(lang === 'cn' ? '加载会话数据失败' : 'Failed to load session data');
+      })
+      .finally(() => { if (!cancelled) setLoading(false); });
+
+    return () => { cancelled = true; };
+  }, [lang]);
+
+  const subjectById = useMemo(() => {
+    const m = new Map<string, SubjectDto>();
+    apiSubjects.forEach((s) => m.set(s.id, s));
+    return m;
+  }, [apiSubjects]);
+
+  const protocolById = useMemo(() => {
+    const m = new Map<string, ProtocolDto>();
+    apiProtocols.forEach((p) => m.set(p.id, p));
+    return m;
+  }, [apiProtocols]);
+
+  const resultBySession = useMemo(() => {
+    const m = new Map<string, ResultDto>();
+    apiResults.forEach((r) => m.set(r.sessionId, r));
+    return m;
+  }, [apiResults]);
+
+  const apiRows: SessionRowData[] = useMemo(() => {
+    return apiSessions.map((s) => {
+      const subject = subjectById.get(s.subjectId);
+      const protocol = protocolById.get(s.protocolId);
+      const result = resultBySession.get(s.id);
+      const primaryMetric = result?.metrics[0] ?? null;
+      const date = s.startedAt || s.createdAt;
+      return {
+        id: s.id,
+        subjectName: subject ? `${subject.lastName} ${subject.firstName}` : '',
+        subjectUnknown: !subject,
+        protocolName: protocol?.name ?? '',
+        protocolVersion: protocol?.version ?? s.protocolVersion,
+        protocolUnknown: !protocol,
+        sourceLabel: s.clientApplication ?? '',
+        sourceId: s.sourceId,
+        status: mapApiStatus(s.status),
+        date,
+        dateTime: date,
+        primaryMetricValue: primaryMetric
+          ? `${primaryMetric.scalarValue?.toFixed(2) ?? '—'} ${primaryMetric.unit}`
+          : '',
+        primaryMetricUnknown: !primaryMetric,
+        sportId: protocol?.sport ?? 'sport-cmj',
+      };
+    }).sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime());
+  }, [apiSessions, subjectById, protocolById, resultBySession]);
+
+  const filteredApiRows = useMemo(() => {
+    return apiRows.filter((r) => {
+      const matchesSearch = r.subjectName.toLowerCase().includes(search.toLowerCase()) ||
+        r.protocolName.toLowerCase().includes(search.toLowerCase());
+      const matchesProtocol = protocolFilter === 'all' || (() => {
+        const s = apiSessions.find((x) => x.id === r.id);
+        return s ? s.protocolId === protocolFilter : false;
+      })();
+      const matchesStatus = statusFilter === 'all' || r.status === statusFilter;
+      const matchesDate = dateFilter === 'all' || (() => {
+        const days = parseInt(dateFilter);
+        const sessionDate = new Date(r.dateTime);
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - days);
+        return sessionDate >= cutoff;
+      })();
+      return matchesSearch && matchesProtocol && matchesStatus && matchesDate;
+    });
+  }, [apiRows, apiSessions, search, protocolFilter, statusFilter, dateFilter]);
+
+  const filteredDemoSessions = useMemo(() => {
     return DEMO_SESSIONS.filter((s) => {
       const athlete = DEMO_ATHLETES.find((a) => a.id === s.athleteId);
       const name = athlete ? `${athlete.lastName} ${athlete.firstName}` : '';
@@ -76,7 +219,7 @@ export function SessionsPage() {
     }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [search, protocolFilter, statusFilter, sourceFilter, dateFilter]);
 
-  const getPrimaryResult = (session: TestSession): string => {
+  const getDemoPrimaryResult = (session: TestSession): string => {
     const protocol = getProtocol(session.protocolId);
     if (!protocol) return '—';
     const primaryMetric = protocol.metrics.find((m) => m.primary);
@@ -100,6 +243,36 @@ export function SessionsPage() {
 
   const sourceOptions = DEMO_DATA_SOURCES.filter((ds) => ds.category === 'APPLICATION' || ds.category === 'DEVICE' || ds.category === 'INTEGRATION');
 
+  if (loading) {
+    return (
+      <div>
+        <TopBar />
+        <div className="px-6 pt-6 pb-6 flex items-center justify-center min-h-[60vh]">
+          <div className="flex items-center gap-3 text-content-secondary">
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <span>{lang === 'cn' ? '加载中...' : 'Loading...'}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div>
+        <TopBar />
+        <div className="px-6 pt-6 pb-6 flex items-center justify-center min-h-[60vh]">
+          <div className="flex items-center gap-3 text-invalid-600">
+            <AlertCircle className="w-5 h-5" />
+            <span>{loadError}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const displayRows = API_MODE ? filteredApiRows : filteredDemoSessions;
+
   return (
     <div>
       <TopBar />
@@ -107,7 +280,7 @@ export function SessionsPage() {
       <div className="px-6 pt-6">
         <div className="flex items-center justify-between gap-4">
           <h2 className="text-xl font-semibold text-content-primary">{tr('nav.workspace.testing', lang)}</h2>
-          <div className="text-sm text-content-secondary">{filteredSessions.length}</div>
+          <div className="text-sm text-content-secondary">{displayRows.length}</div>
         </div>
 
         {workspaceTabs.length > 1 && (
@@ -146,8 +319,8 @@ export function SessionsPage() {
           </div>
           <select value={protocolFilter} onChange={(e) => setProtocolFilter(e.target.value)} className="text-sm bg-white border border-ink-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400 transition-all">
             <option value="all">{tr('sessions.allProtocols', lang)}</option>
-            {DEMO_PROTOCOLS.map((p) => (
-              <option key={p.id} value={p.id}>{lang === 'cn' ? p.nameCn : p.name}</option>
+            {(API_MODE ? apiProtocols : DEMO_PROTOCOLS).map((p) => (
+              <option key={p.id} value={p.id}>{lang === 'cn' ? (p as any).nameCn ?? p.name : p.name}</option>
             ))}
           </select>
           <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="text-sm bg-white border border-ink-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400 transition-all">
@@ -156,12 +329,14 @@ export function SessionsPage() {
               <option key={key} value={key}>{lang === 'cn' ? cfg.cn : cfg.en}</option>
             ))}
           </select>
-          <select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value)} className="text-sm bg-white border border-ink-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400 transition-all">
-            <option value="all">{tr('sessions.allSources', lang)}</option>
-            {sourceOptions.map((s) => (
-              <option key={s.id} value={s.id}>{lang === 'cn' ? s.nameCn : s.name}</option>
-            ))}
-          </select>
+          {!API_MODE && (
+            <select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value)} className="text-sm bg-white border border-ink-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400 transition-all">
+              <option value="all">{tr('sessions.allSources', lang)}</option>
+              {sourceOptions.map((s) => (
+                <option key={s.id} value={s.id}>{lang === 'cn' ? s.nameCn : s.name}</option>
+              ))}
+            </select>
+          )}
           <select value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} className="text-sm bg-white border border-ink-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400 transition-all">
             <option value="all">{tr('common.allTime', lang)}</option>
             <option value="7">{tr('common.last7days', lang)}</option>
@@ -179,144 +354,235 @@ export function SessionsPage() {
         </div>
 
         <div className="bg-white rounded-xl border border-ink-200 overflow-hidden">
-          <DataTable
-            columns={[
-              {
-                key: 'subject',
-                header: tr('sessions.subject', lang),
-                render: (s) => {
-                  const athlete = DEMO_ATHLETES.find((a) => a.id === s.athleteId);
-                  const sport = getSport(s.sportId);
-                  const SportIcon = sport ? SPORT_ICONS[sport.id] || Activity : Activity;
-                  return (
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-ink-100 flex items-center justify-center shrink-0">
-                        <SportIcon className="w-4 h-4 text-ink-500" />
+          {API_MODE ? (
+            <DataTable
+              columns={[
+                {
+                  key: 'subject',
+                  header: tr('sessions.subject', lang),
+                  render: (r: SessionRowData) => {
+                    const sport = getSport(r.sportId);
+                    const SportIcon = sport ? SPORT_ICONS[sport.id] || Activity : Activity;
+                    return (
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-ink-100 flex items-center justify-center shrink-0">
+                          <SportIcon className="w-4 h-4 text-ink-500" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-ink-900 truncate">
+                            {r.subjectName || (lang === 'cn' ? '未知对象' : 'Unknown subject')}
+                          </p>
+                          <p className="text-xs text-ink-500 truncate">{sport ? (lang === 'cn' ? sport.nameCn : sport.name) : ''}</p>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-ink-900 truncate">{athlete ? `${athlete.lastName} ${athlete.firstName}` : '—'}</p>
-                        <p className="text-xs text-ink-500 truncate">{sport ? (lang === 'cn' ? sport.nameCn : sport.name) : ''}</p>
+                    );
+                  },
+                },
+                {
+                  key: 'protocol',
+                  header: tr('sessions.protocol', lang),
+                  render: (r: SessionRowData) => (
+                    <div>
+                      <p className="text-sm font-medium text-ink-900">
+                        {r.protocolName || (lang === 'cn' ? '未知协议' : 'Unknown protocol')}
+                      </p>
+                      <p className="text-xs text-ink-400">v{r.protocolVersion}</p>
+                    </div>
+                  ),
+                },
+                {
+                  key: 'source',
+                  header: tr('sessions.source', lang),
+                  render: (r: SessionRowData) => (
+                    <div>
+                      <p className="text-sm text-ink-700">{r.sourceLabel || (lang === 'cn' ? '未知来源' : 'Unknown source')}</p>
+                      <p className="text-xs text-ink-400">{r.sourceId ? r.sourceId.slice(0, 8) : ''}</p>
+                    </div>
+                  ),
+                },
+                {
+                  key: 'status',
+                  header: tr('sessions.status', lang),
+                  render: (r: SessionRowData) => getSessionStatusDisplay(r.status),
+                },
+                {
+                  key: 'result',
+                  header: tr('sessions.result', lang),
+                  render: (r: SessionRowData) => {
+                    if (r.status !== 'PUBLISHED' && r.status !== 'ANALYZED') return <span className="text-sm text-ink-400">—</span>;
+                    if (r.primaryMetricUnknown) return <span className="text-sm text-ink-400">—</span>;
+                    return <span className="text-sm font-mono font-semibold text-ink-900">{r.primaryMetricValue}</span>;
+                  },
+                },
+                {
+                  key: 'date',
+                  header: tr('sessions.date', lang),
+                  align: 'right',
+                  render: (r: SessionRowData) => {
+                    const date = new Date(r.dateTime);
+                    return (
+                      <div className="text-right">
+                        <p className="text-sm text-ink-700">{date.toLocaleDateString(lang === 'cn' ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric' })}</p>
+                        <p className="text-xs text-ink-400">{date.toLocaleTimeString(lang === 'cn' ? 'zh-CN' : 'en-US', { hour: '2-digit', minute: '2-digit' })}</p>
                       </div>
-                    </div>
-                  );
+                    );
+                  },
                 },
-              },
-              {
-                key: 'protocol',
-                header: tr('sessions.protocol', lang),
-                render: (s) => {
-                  const protocol = getProtocol(s.protocolId);
-                  return (
-                    <div>
-                      <p className="text-sm font-medium text-ink-900">{lang === 'cn' ? protocol?.nameCn || s.protocolName : s.protocolName}</p>
-                      <p className="text-xs text-ink-400">v{protocol?.version || s.processingVersion}</p>
-                    </div>
-                  );
+                {
+                  key: 'action',
+                  header: '',
+                  align: 'right',
+                  render: (r: SessionRowData) => (
+                    <SessionRowActions sessionId={r.id} status={r.status} lang={lang} navigate={navigate} addToast={addToast} />
+                  ),
                 },
-              },
-              {
-                key: 'source',
-                header: tr('sessions.source', lang),
-                render: (s) => {
-                  const ds = getDataSource(s.dataSourceId);
-                  const app = getSourceApplication(s.sportId);
-                  return (
-                    <div>
-                      <p className="text-sm text-ink-700">{ds ? (lang === 'cn' ? ds.nameCn : ds.name) : s.source}</p>
-                      <p className={`text-xs font-medium ${app ? app.color : 'text-ink-400'}`}>{app ? (lang === 'cn' ? app.cn : app.en) : s.deviceSerial}</p>
-                    </div>
-                  );
+              ]}
+              data={filteredApiRows}
+              rowKey={(r) => r.id}
+              onRowClick={(r) => navigate('session-detail', { sessionId: r.id })}
+              emptyMessage={tr('sessions.noMatch', lang)}
+            />
+          ) : (
+            <DataTable
+              columns={[
+                {
+                  key: 'subject',
+                  header: tr('sessions.subject', lang),
+                  render: (s) => {
+                    const athlete = DEMO_ATHLETES.find((a) => a.id === s.athleteId);
+                    const sport = getSport(s.sportId);
+                    const SportIcon = sport ? SPORT_ICONS[sport.id] || Activity : Activity;
+                    return (
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-ink-100 flex items-center justify-center shrink-0">
+                          <SportIcon className="w-4 h-4 text-ink-500" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-ink-900 truncate">{athlete ? `${athlete.lastName} ${athlete.firstName}` : '—'}</p>
+                          <p className="text-xs text-ink-500 truncate">{sport ? (lang === 'cn' ? sport.nameCn : sport.name) : ''}</p>
+                        </div>
+                      </div>
+                    );
+                  },
                 },
-              },
-              {
-                key: 'status',
-                header: tr('sessions.status', lang),
-                render: (s) => getSessionStatusDisplay(s.sessionStatus),
-              },
-              {
-                key: 'result',
-                header: tr('sessions.result', lang),
-                render: (s) => {
-                  if (s.sessionStatus !== 'PUBLISHED' && s.sessionStatus !== 'ANALYZED') return <span className="text-sm text-ink-400">—</span>;
-                  const protocol = getProtocol(s.protocolId);
-                  const primaryMetric = protocol?.metrics.find((m) => m.primary);
-                  if (!primaryMetric) return <span className="text-sm text-ink-400">—</span>;
-                  const value = s.summary[primaryMetric.key];
-                  if (value === undefined) return <span className="text-sm text-ink-400">—</span>;
-                  return <span className="text-sm font-mono font-semibold text-ink-900">{value.toFixed(2)} <span className="text-xs text-ink-400 font-normal">{primaryMetric.unit}</span></span>;
+                {
+                  key: 'protocol',
+                  header: tr('sessions.protocol', lang),
+                  render: (s) => {
+                    const protocol = getProtocol(s.protocolId);
+                    return (
+                      <div>
+                        <p className="text-sm font-medium text-ink-900">{lang === 'cn' ? protocol?.nameCn || s.protocolName : s.protocolName}</p>
+                        <p className="text-xs text-ink-400">v{protocol?.version || s.processingVersion}</p>
+                      </div>
+                    );
+                  },
                 },
-              },
-              {
-                key: 'scientific',
-                header: tr('sessions.scientificStatus', lang),
-                render: (s) => {
-                  const info = getSessionScientificInfo(s.athleteId, s.protocolId);
-                  if (!info) {
-                    return <span className="text-xs text-ink-300">—</span>;
-                  }
-                  const cfg = SCI_STATUS_CONFIG[info.summaryStatus];
-                  const isActive = info.isActive;
-                  return (
-                    <span
-                      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium ${cfg.bg} ${cfg.color} ${isActive ? 'ring-1 ring-teal-400' : ''}`}
-                      title={`${info.publishedTrials}/${info.trialCount} trials published${info.failedTrials > 0 ? `, ${info.failedTrials} failed` : ''}${isActive ? ' (active scenario)' : ''}`}
-                    >
-                      {isActive && <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse" />}
-                      {lang === 'cn' ? cfg.cn : cfg.en}
-                    </span>
-                  );
+                {
+                  key: 'source',
+                  header: tr('sessions.source', lang),
+                  render: (s) => {
+                    const ds = getDataSource(s.dataSourceId);
+                    const app = getSourceApplication(s.sportId);
+                    return (
+                      <div>
+                        <p className="text-sm text-ink-700">{ds ? (lang === 'cn' ? ds.nameCn : ds.name) : s.source}</p>
+                        <p className={`text-xs font-medium ${app ? app.color : 'text-ink-400'}`}>{app ? (lang === 'cn' ? app.cn : app.en) : s.deviceSerial}</p>
+                      </div>
+                    );
+                  },
                 },
-              },
-              {
-                key: 'date',
-                header: tr('sessions.date', lang),
-                align: 'right',
-                render: (s) => {
-                  const date = new Date(s.date);
-                  return (
-                    <div className="text-right">
-                      <p className="text-sm text-ink-700">{date.toLocaleDateString(lang === 'cn' ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric' })}</p>
-                      <p className="text-xs text-ink-400">{date.toLocaleTimeString(lang === 'cn' ? 'zh-CN' : 'en-US', { hour: '2-digit', minute: '2-digit' })}</p>
-                    </div>
-                  );
+                {
+                  key: 'status',
+                  header: tr('sessions.status', lang),
+                  render: (s) => getSessionStatusDisplay(s.sessionStatus),
                 },
-              },
-              {
-                key: 'action',
-                header: '',
-                align: 'right',
-                render: (s) => (
-                  <SessionRowActions session={s} lang={lang} navigate={navigate} addToast={addToast} />
-                ),
-              },
-            ]}
-            data={filteredSessions}
-            rowKey={(s) => s.id}
-            onRowClick={(s) => navigate('session-detail', { sessionId: s.id })}
-            emptyMessage={tr('sessions.noMatch', lang)}
-          />
+                {
+                  key: 'result',
+                  header: tr('sessions.result', lang),
+                  render: (s) => {
+                    if (s.sessionStatus !== 'PUBLISHED' && s.sessionStatus !== 'ANALYZED') return <span className="text-sm text-ink-400">—</span>;
+                    const protocol = getProtocol(s.protocolId);
+                    const primaryMetric = protocol?.metrics.find((m) => m.primary);
+                    if (!primaryMetric) return <span className="text-sm text-ink-400">—</span>;
+                    const value = s.summary[primaryMetric.key];
+                    if (value === undefined) return <span className="text-sm text-ink-400">—</span>;
+                    return <span className="text-sm font-mono font-semibold text-ink-900">{value.toFixed(2)} <span className="text-xs text-ink-400 font-normal">{primaryMetric.unit}</span></span>;
+                  },
+                },
+                {
+                  key: 'scientific',
+                  header: tr('sessions.scientificStatus', lang),
+                  render: (s) => {
+                    const info = getSessionScientificInfo(s.athleteId, s.protocolId);
+                    if (!info) {
+                      return <span className="text-xs text-ink-300">—</span>;
+                    }
+                    const cfg = SCI_STATUS_CONFIG[info.summaryStatus];
+                    const isActive = info.isActive;
+                    return (
+                      <span
+                        className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium ${cfg.bg} ${cfg.color} ${isActive ? 'ring-1 ring-teal-400' : ''}`}
+                        title={`${info.publishedTrials}/${info.trialCount} trials published${info.failedTrials > 0 ? `, ${info.failedTrials} failed` : ''}${isActive ? ' (active scenario)' : ''}`}
+                      >
+                        {isActive && <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse" />}
+                        {lang === 'cn' ? cfg.cn : cfg.en}
+                      </span>
+                    );
+                  },
+                },
+                {
+                  key: 'date',
+                  header: tr('sessions.date', lang),
+                  align: 'right',
+                  render: (s) => {
+                    const date = new Date(s.date);
+                    return (
+                      <div className="text-right">
+                        <p className="text-sm text-ink-700">{date.toLocaleDateString(lang === 'cn' ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric' })}</p>
+                        <p className="text-xs text-ink-400">{date.toLocaleTimeString(lang === 'cn' ? 'zh-CN' : 'en-US', { hour: '2-digit', minute: '2-digit' })}</p>
+                      </div>
+                    );
+                  },
+                },
+                {
+                  key: 'action',
+                  header: '',
+                  align: 'right',
+                  render: (s) => (
+                    <SessionRowActions sessionId={s.id} status={s.sessionStatus} lang={lang} navigate={navigate} addToast={addToast} />
+                  ),
+                },
+              ]}
+              data={filteredDemoSessions}
+              rowKey={(s) => s.id}
+              onRowClick={(s) => navigate('session-detail', { sessionId: s.id })}
+              emptyMessage={tr('sessions.noMatch', lang)}
+            />
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-function SessionRowActions({ session, lang, navigate, addToast }: {
-  session: TestSession;
+function SessionRowActions({ sessionId, status, lang, navigate, addToast }: {
+  sessionId: string;
+  status: SessionStatus;
   lang: 'en' | 'cn';
   navigate: (view: string, params?: Record<string, string>) => void;
   addToast: (msg: string, type?: 'success' | 'warning' | 'attention' | 'info') => void;
 }) {
   const [open, setOpen] = useState(false);
-  const isFailed = session.sessionStatus.includes('FAILED');
-  const isPublished = session.sessionStatus === 'PUBLISHED' || session.sessionStatus === 'ANALYZED';
+  const isFailed = status.includes('FAILED');
+  const isPublished = status === 'PUBLISHED' || status === 'ANALYZED';
 
   const actions = [
-    { icon: ChevronRight, label: tr('common.viewSession', lang), onClick: () => navigate('session-detail', { sessionId: session.id }) },
+    { icon: ChevronRight, label: tr('common.viewSession', lang), onClick: () => navigate('session-detail', { sessionId }) },
     { icon: Download, label: tr('common.download', lang), onClick: () => addToast(lang === 'cn' ? '下载（演示）' : 'Download (demo)', 'info') },
     ...(isFailed ? [{ icon: RefreshCw, label: tr('common.retryProcessing', lang), onClick: () => addToast(lang === 'cn' ? '重试处理（演示）' : 'Retry processing (demo)', 'info') }] : []),
     { icon: Activity, label: tr('common.viewRawData', lang), onClick: () => navigate('raw-data') },
-    ...(isPublished ? [{ icon: BarChart3, label: tr('common.viewAnalysis', lang), onClick: () => navigate('result-detail', { sessionId: session.id }) }] : []),
+    ...(isPublished ? [{ icon: BarChart3, label: tr('common.viewAnalysis', lang), onClick: () => navigate('result-detail', { sessionId }) }] : []),
     ...(isPublished ? [{ icon: FileText, label: tr('common.generateReport', lang), onClick: () => navigate('reports') }] : []),
   ];
 

@@ -11,5 +11,10 @@ public interface IIngestionOperationRepository
         string clientOperationId,
         CancellationToken cancellationToken = default);
 
+    Task<IngestionOperation?> GetBySessionIdAsync(
+        Guid organizationId,
+        Guid sessionId,
+        CancellationToken cancellationToken = default);
+
     Task UpdateAsync(IngestionOperation operation, CancellationToken cancellationToken = default);
 }

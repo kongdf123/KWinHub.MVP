@@ -13,5 +13,6 @@ public record IngestSessionRequest(
     string? Timezone = null,
     string? ClientApplication = null,
     string? ClientVersion = null,
+    bool IsCorrection = false,
     IReadOnlyList<IngestTrialRequest>? Trials = null,
     IReadOnlyList<IngestAssetPlaceholderRequest>? AssetPlaceholders = null);

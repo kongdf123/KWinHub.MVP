@@ -70,4 +70,10 @@ public class MeasurementSession : BaseEntity<Guid>
             CompletedAt = DateTimeOffset.UtcNow;
         }
     }
+
+    public void SetStartedAt(DateTimeOffset startedAt)
+    {
+        StartedAt = startedAt;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
 }

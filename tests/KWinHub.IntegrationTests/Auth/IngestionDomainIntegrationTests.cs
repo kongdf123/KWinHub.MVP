@@ -5,15 +5,16 @@ using KWinHub.Hub.Infrastructure.Persistence;
 using KWinHub.Hub.Organizations;
 using KWinHub.Hub.Protocols;
 using KWinHub.Hub.Sessions;
+using KWinHub.Hub.Subjects;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace KWinHub.IntegrationTests.Auth;
 
-public class IngestionDomainIntegrationTests : IClassFixture<HubApiFactory>
+public class IngestionDomainIntegrationTests : IClassFixture<HubApiSqliteFactory>
 {
-    private readonly HubApiFactory _factory;
+    private readonly HubApiSqliteFactory _factory;
 
-    public IngestionDomainIntegrationTests(HubApiFactory factory)
+    public IngestionDomainIntegrationTests(HubApiSqliteFactory factory)
     {
         _factory = factory;
     }
@@ -22,6 +23,7 @@ public class IngestionDomainIntegrationTests : IClassFixture<HubApiFactory>
     {
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<HubDbContext>();
+        await db.Database.EnsureCreatedAsync();
         seed(db);
         await db.SaveChangesAsync();
     }
@@ -44,6 +46,15 @@ public class IngestionDomainIntegrationTests : IClassFixture<HubApiFactory>
         membership.AcceptInvite();
         db.OrganizationMemberships.Add(membership);
         db.OrganizationStatuses.Add(new OrganizationStatus(orgId, "Active", 1));
+    }
+
+    private static (Guid SubjectId, Guid ProtocolId) SeedSubjectAndProtocol(HubDbContext db, Guid orgId)
+    {
+        var subject = new Subject(orgId, "Test", "Athlete", SubjectType.Athlete);
+        var protocol = new Protocol(orgId, "Jump Test", "JUMP", "1.0");
+        db.Subjects.Add(subject);
+        db.Protocols.Add(protocol);
+        return (subject.Id, protocol.Id);
     }
 
     private static Guid SeedSession(HubDbContext db, Guid orgId, Guid subjectId, Guid protocolId)
@@ -467,6 +478,616 @@ public class IngestionDomainIntegrationTests : IClassFixture<HubApiFactory>
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    [Fact]
+    public async Task IngestSession_ValidRequest_ReturnsAcceptedWithSessionAndTrials()
+    {
+        var userId = Guid.NewGuid();
+        var orgId = Guid.NewGuid();
+        Guid subjectId = Guid.Empty;
+        Guid protocolId = Guid.Empty;
+
+        await SeedAsync(db =>
+        {
+            SeedActiveMembership(db, userId, orgId, OrganizationRoles.Admin);
+            (subjectId, protocolId) = SeedSubjectAndProtocol(db, orgId);
+            db.MetricDefinitions.Add(new MetricDefinition(orgId, "jump_height", "Jump Height", MetricValueType.Scalar, "cm"));
+        });
+
+        var client = CreateAuthorizedClient(userId, orgId);
+
+        var response = await client.PostAsJsonAsync("/api/v1/ingestion/sessions", new
+        {
+            version = "1.0",
+            clientOperationId = "op-valid-001",
+            subjectId = subjectId,
+            protocolId = protocolId,
+            protocolVersion = "1.0",
+            externalId = "sess-valid-001",
+            trials = new[]
+            {
+                new
+                {
+                    trialIndex = 1,
+                    externalId = "trial-001",
+                    metrics = new[]
+                    {
+                        new
+                        {
+                            metricDefinitionCode = "jump_height",
+                            valueType = "Scalar",
+                            scalarValue = 45.5,
+                            unit = "cm"
+                        }
+                    }
+                }
+            }
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<IngestSessionResponseDto>();
+        Assert.NotNull(result);
+        Assert.Equal("Accepted", result.Status);
+        Assert.NotEqual(Guid.Empty, result.SessionId);
+        Assert.Equal("sess-valid-001", result.SessionExternalId);
+        Assert.Single(result.Trials!);
+        Assert.Equal(1, result.Trials![0].TrialIndex);
+        Assert.Equal("Accepted", result.Trials![0].Status);
+    }
+
+    [Fact]
+    public async Task IngestSession_UnknownSubject_ReturnsUnprocessableEntity()
+    {
+        var userId = Guid.NewGuid();
+        var orgId = Guid.NewGuid();
+        var protocolId = Guid.NewGuid();
+
+        await SeedAsync(db =>
+        {
+            SeedActiveMembership(db, userId, orgId, OrganizationRoles.Admin);
+            db.Protocols.Add(new Protocol(orgId, "Jump Test", "JUMP", "1.0"));
+        });
+
+        var client = CreateAuthorizedClient(userId, orgId);
+
+        var response = await client.PostAsJsonAsync("/api/v1/ingestion/sessions", new
+        {
+            version = "1.0",
+            clientOperationId = "op-unknown-subject",
+            subjectId = Guid.NewGuid(),
+            protocolId = protocolId,
+            protocolVersion = "1.0"
+        });
+
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<IngestSessionResponseDto>();
+        Assert.NotNull(result);
+        Assert.Equal("Failed", result.Status);
+        Assert.Contains(result.Errors!, e => e.Code == "unknown_subject");
+    }
+
+    [Fact]
+    public async Task IngestSession_InvalidProtocolVersion_ReturnsUnprocessableEntity()
+    {
+        var userId = Guid.NewGuid();
+        var orgId = Guid.NewGuid();
+        Guid subjectId = Guid.Empty;
+        Guid protocolId = Guid.Empty;
+
+        await SeedAsync(db =>
+        {
+            SeedActiveMembership(db, userId, orgId, OrganizationRoles.Admin);
+            (subjectId, protocolId) = SeedSubjectAndProtocol(db, orgId);
+        });
+
+        var client = CreateAuthorizedClient(userId, orgId);
+
+        var response = await client.PostAsJsonAsync("/api/v1/ingestion/sessions", new
+        {
+            version = "1.0",
+            clientOperationId = "op-bad-proto-ver",
+            subjectId = subjectId,
+            protocolId = protocolId,
+            protocolVersion = "2.0"
+        });
+
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<IngestSessionResponseDto>();
+        Assert.NotNull(result);
+        Assert.Contains(result.Errors!, e => e.Code == "invalid_protocol_version");
+    }
+
+    [Fact]
+    public async Task IngestSession_UnsupportedMetric_ReturnsUnprocessableEntity()
+    {
+        var userId = Guid.NewGuid();
+        var orgId = Guid.NewGuid();
+        Guid subjectId = Guid.Empty;
+        Guid protocolId = Guid.Empty;
+
+        await SeedAsync(db =>
+        {
+            SeedActiveMembership(db, userId, orgId, OrganizationRoles.Admin);
+            (subjectId, protocolId) = SeedSubjectAndProtocol(db, orgId);
+        });
+
+        var client = CreateAuthorizedClient(userId, orgId);
+
+        var response = await client.PostAsJsonAsync("/api/v1/ingestion/sessions", new
+        {
+            version = "1.0",
+            clientOperationId = "op-unknown-metric",
+            subjectId = subjectId,
+            protocolId = protocolId,
+            protocolVersion = "1.0",
+            trials = new[]
+            {
+                new
+                {
+                    trialIndex = 1,
+                    metrics = new[]
+                    {
+                        new { metricDefinitionCode = "nonexistent", valueType = "Scalar", scalarValue = 1.0 }
+                    }
+                }
+            }
+        });
+
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<IngestSessionResponseDto>();
+        Assert.NotNull(result);
+        Assert.Contains(result.Errors!, e => e.Code == "unsupported_metric");
+    }
+
+    [Fact]
+    public async Task IngestSession_UnitMismatch_ReturnsUnprocessableEntity()
+    {
+        var userId = Guid.NewGuid();
+        var orgId = Guid.NewGuid();
+        Guid subjectId = Guid.Empty;
+        Guid protocolId = Guid.Empty;
+
+        await SeedAsync(db =>
+        {
+            SeedActiveMembership(db, userId, orgId, OrganizationRoles.Admin);
+            (subjectId, protocolId) = SeedSubjectAndProtocol(db, orgId);
+            db.MetricDefinitions.Add(new MetricDefinition(orgId, "jump_height", "Jump Height", MetricValueType.Scalar, "cm"));
+        });
+
+        var client = CreateAuthorizedClient(userId, orgId);
+
+        var response = await client.PostAsJsonAsync("/api/v1/ingestion/sessions", new
+        {
+            version = "1.0",
+            clientOperationId = "op-unit-mismatch",
+            subjectId = subjectId,
+            protocolId = protocolId,
+            protocolVersion = "1.0",
+            trials = new[]
+            {
+                new
+                {
+                    trialIndex = 1,
+                    metrics = new[]
+                    {
+                        new { metricDefinitionCode = "jump_height", valueType = "Scalar", scalarValue = 45.5, unit = "m" }
+                    }
+                }
+            }
+        });
+
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<IngestSessionResponseDto>();
+        Assert.NotNull(result);
+        Assert.Contains(result.Errors!, e => e.Code == "unit_mismatch");
+    }
+
+    [Fact]
+    public async Task IngestSession_DuplicateClientOperationId_SameContent_ReturnsAccepted()
+    {
+        var userId = Guid.NewGuid();
+        var orgId = Guid.NewGuid();
+        Guid subjectId = Guid.Empty;
+        Guid protocolId = Guid.Empty;
+
+        await SeedAsync(db =>
+        {
+            SeedActiveMembership(db, userId, orgId, OrganizationRoles.Admin);
+            (subjectId, protocolId) = SeedSubjectAndProtocol(db, orgId);
+            db.MetricDefinitions.Add(new MetricDefinition(orgId, "jump_height", "Jump Height", MetricValueType.Scalar, "cm"));
+        });
+
+        var client = CreateAuthorizedClient(userId, orgId);
+
+        var payload = new
+        {
+            version = "1.0",
+            clientOperationId = "op-idempotent-001",
+            subjectId = subjectId,
+            protocolId = protocolId,
+            protocolVersion = "1.0",
+            externalId = "sess-idempotent-001",
+            trials = new[]
+            {
+                new
+                {
+                    trialIndex = 1,
+                    metrics = new[]
+                    {
+                        new { metricDefinitionCode = "jump_height", valueType = "Scalar", scalarValue = 45.5, unit = "cm" }
+                    }
+                }
+            }
+        };
+
+        var first = await client.PostAsJsonAsync("/api/v1/ingestion/sessions", payload);
+        var second = await client.PostAsJsonAsync("/api/v1/ingestion/sessions", payload);
+
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, second.StatusCode);
+
+        var firstResult = await first.Content.ReadFromJsonAsync<IngestSessionResponseDto>();
+        var secondResult = await second.Content.ReadFromJsonAsync<IngestSessionResponseDto>();
+        Assert.Equal(firstResult!.SessionId, secondResult!.SessionId);
+    }
+
+    [Fact]
+    public async Task IngestSession_DuplicateClientOperationId_DifferentContent_ReturnsConflict()
+    {
+        var userId = Guid.NewGuid();
+        var orgId = Guid.NewGuid();
+        Guid subjectId = Guid.Empty;
+        Guid protocolId = Guid.Empty;
+
+        await SeedAsync(db =>
+        {
+            SeedActiveMembership(db, userId, orgId, OrganizationRoles.Admin);
+            (subjectId, protocolId) = SeedSubjectAndProtocol(db, orgId);
+            db.MetricDefinitions.Add(new MetricDefinition(orgId, "jump_height", "Jump Height", MetricValueType.Scalar, "cm"));
+        });
+
+        var client = CreateAuthorizedClient(userId, orgId);
+
+        var firstPayload = new
+        {
+            version = "1.0",
+            clientOperationId = "op-conflict-001",
+            subjectId = subjectId,
+            protocolId = protocolId,
+            protocolVersion = "1.0",
+            externalId = "sess-conflict-001",
+            trials = new[]
+            {
+                new
+                {
+                    trialIndex = 1,
+                    metrics = new[]
+                    {
+                        new { metricDefinitionCode = "jump_height", valueType = "Scalar", scalarValue = 45.5, unit = "cm" }
+                    }
+                }
+            }
+        };
+
+        var secondPayload = new
+        {
+            version = "1.0",
+            clientOperationId = "op-conflict-001",
+            subjectId = subjectId,
+            protocolId = protocolId,
+            protocolVersion = "1.0",
+            externalId = "sess-conflict-001",
+            trials = new[]
+            {
+                new
+                {
+                    trialIndex = 1,
+                    metrics = new[]
+                    {
+                        new { metricDefinitionCode = "jump_height", valueType = "Scalar", scalarValue = 99.9, unit = "cm" }
+                    }
+                }
+            }
+        };
+
+        var first = await client.PostAsJsonAsync("/api/v1/ingestion/sessions", firstPayload);
+        var second = await client.PostAsJsonAsync("/api/v1/ingestion/sessions", secondPayload);
+
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, second.StatusCode);
+
+        var result = await second.Content.ReadFromJsonAsync<IngestSessionResponseDto>();
+        Assert.NotNull(result);
+        Assert.Contains(result.Errors!, e => e.Code == "conflict");
+    }
+
+    [Fact]
+    public async Task IngestSession_DuplicateExternalId_ReturnsDuplicateSessionError()
+    {
+        var userId = Guid.NewGuid();
+        var orgId = Guid.NewGuid();
+        Guid subjectId = Guid.Empty;
+        Guid protocolId = Guid.Empty;
+
+        await SeedAsync(db =>
+        {
+            SeedActiveMembership(db, userId, orgId, OrganizationRoles.Admin);
+            (subjectId, protocolId) = SeedSubjectAndProtocol(db, orgId);
+        });
+
+        var client = CreateAuthorizedClient(userId, orgId);
+
+        var firstPayload = new
+        {
+            version = "1.0",
+            clientOperationId = "op-dup-ext-1",
+            subjectId = subjectId,
+            protocolId = protocolId,
+            protocolVersion = "1.0",
+            externalId = "sess-dup-ext"
+        };
+
+        var secondPayload = new
+        {
+            version = "1.0",
+            clientOperationId = "op-dup-ext-2",
+            subjectId = subjectId,
+            protocolId = protocolId,
+            protocolVersion = "1.0",
+            externalId = "sess-dup-ext"
+        };
+
+        await client.PostAsJsonAsync("/api/v1/ingestion/sessions", firstPayload);
+        var second = await client.PostAsJsonAsync("/api/v1/ingestion/sessions", secondPayload);
+
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, second.StatusCode);
+        var result = await second.Content.ReadFromJsonAsync<IngestSessionResponseDto>();
+        Assert.NotNull(result);
+        Assert.Contains(result.Errors!, e => e.Code == "duplicate_session");
+    }
+
+    [Fact]
+    public async Task IngestSession_Correction_ExistingExternalId_ReturnsAccepted()
+    {
+        var userId = Guid.NewGuid();
+        var orgId = Guid.NewGuid();
+        Guid subjectId = Guid.Empty;
+        Guid protocolId = Guid.Empty;
+
+        await SeedAsync(db =>
+        {
+            SeedActiveMembership(db, userId, orgId, OrganizationRoles.Admin);
+            (subjectId, protocolId) = SeedSubjectAndProtocol(db, orgId);
+            db.MetricDefinitions.Add(new MetricDefinition(orgId, "jump_height", "Jump Height", MetricValueType.Scalar, "cm"));
+        });
+
+        var client = CreateAuthorizedClient(userId, orgId);
+
+        var firstPayload = new
+        {
+            version = "1.0",
+            clientOperationId = "op-correction-1",
+            subjectId = subjectId,
+            protocolId = protocolId,
+            protocolVersion = "1.0",
+            externalId = "sess-correction"
+        };
+
+        var correctionPayload = new
+        {
+            version = "1.0",
+            clientOperationId = "op-correction-2",
+            subjectId = subjectId,
+            protocolId = protocolId,
+            protocolVersion = "1.0",
+            externalId = "sess-correction",
+            isCorrection = true,
+            trials = new[]
+            {
+                new
+                {
+                    trialIndex = 1,
+                    metrics = new[]
+                    {
+                        new { metricDefinitionCode = "jump_height", valueType = "Scalar", scalarValue = 50.0, unit = "cm" }
+                    }
+                }
+            }
+        };
+
+        var first = await client.PostAsJsonAsync("/api/v1/ingestion/sessions", firstPayload);
+        var second = await client.PostAsJsonAsync("/api/v1/ingestion/sessions", correctionPayload);
+
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, second.StatusCode);
+
+        var firstResult = await first.Content.ReadFromJsonAsync<IngestSessionResponseDto>();
+        var secondResult = await second.Content.ReadFromJsonAsync<IngestSessionResponseDto>();
+        Assert.Equal(firstResult!.SessionId, secondResult!.SessionId);
+    }
+
+    [Fact]
+    public async Task IngestSession_WithAssetPlaceholders_ReturnsPendingUpload()
+    {
+        var userId = Guid.NewGuid();
+        var orgId = Guid.NewGuid();
+        Guid subjectId = Guid.Empty;
+        Guid protocolId = Guid.Empty;
+
+        await SeedAsync(db =>
+        {
+            SeedActiveMembership(db, userId, orgId, OrganizationRoles.Admin);
+            (subjectId, protocolId) = SeedSubjectAndProtocol(db, orgId);
+        });
+
+        var client = CreateAuthorizedClient(userId, orgId);
+
+        var response = await client.PostAsJsonAsync("/api/v1/ingestion/sessions", new
+        {
+            version = "1.0",
+            clientOperationId = "op-assets-001",
+            subjectId = subjectId,
+            protocolId = protocolId,
+            protocolVersion = "1.0",
+            assetPlaceholders = new[]
+            {
+                new { assetType = "Video", externalId = "vid-001", size = 1024000L, mimeType = "video/mp4" },
+                new { assetType = "Image", externalId = "img-001", size = 512000L, mimeType = "image/png" }
+            }
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<IngestSessionResponseDto>();
+        Assert.NotNull(result);
+        Assert.Equal("Accepted", result.Status);
+        Assert.Equal(2, result.AssetPlaceholders!.Count);
+        Assert.All(result.AssetPlaceholders!, a => Assert.Equal("PendingUpload", a.Status));
+    }
+
+    [Fact]
+    public async Task IngestSession_InvalidContractVersion_ReturnsValidationFailed()
+    {
+        var userId = Guid.NewGuid();
+        var orgId = Guid.NewGuid();
+
+        await SeedAsync(db =>
+        {
+            SeedActiveMembership(db, userId, orgId, OrganizationRoles.Admin);
+        });
+
+        var client = CreateAuthorizedClient(userId, orgId);
+
+        var response = await client.PostAsJsonAsync("/api/v1/ingestion/sessions", new
+        {
+            version = "9.9",
+            clientOperationId = "op-bad-version",
+            subjectId = Guid.NewGuid(),
+            protocolId = Guid.NewGuid(),
+            protocolVersion = "1.0"
+        });
+
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<IngestSessionResponseDto>();
+        Assert.NotNull(result);
+        Assert.Contains(result.Errors!, e => e.Code == "validation_failed");
+    }
+
+    [Fact]
+    public async Task GetOperationStatus_ExistingOperation_ReturnsStatus()
+    {
+        var userId = Guid.NewGuid();
+        var orgId = Guid.NewGuid();
+        Guid subjectId = Guid.Empty;
+        Guid protocolId = Guid.Empty;
+        const string clientOpId = "op-status-001";
+
+        await SeedAsync(db =>
+        {
+            SeedActiveMembership(db, userId, orgId, OrganizationRoles.Admin);
+            (subjectId, protocolId) = SeedSubjectAndProtocol(db, orgId);
+        });
+
+        var client = CreateAuthorizedClient(userId, orgId);
+
+        await client.PostAsJsonAsync("/api/v1/ingestion/sessions", new
+        {
+            version = "1.0",
+            clientOperationId = clientOpId,
+            subjectId = subjectId,
+            protocolId = protocolId,
+            protocolVersion = "1.0"
+        });
+
+        var response = await client.GetAsync($"/api/v1/ingestion/operations/{clientOpId}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var status = await response.Content.ReadFromJsonAsync<OperationStatusResponseDto>();
+        Assert.NotNull(status);
+        Assert.Equal(clientOpId, status.ClientOperationId);
+        Assert.Equal("Accepted", status.Status);
+    }
+
+    [Fact]
+    public async Task GetSessionStatus_ExistingSession_ReturnsStatus()
+    {
+        var userId = Guid.NewGuid();
+        var orgId = Guid.NewGuid();
+        Guid subjectId = Guid.Empty;
+        Guid protocolId = Guid.Empty;
+
+        await SeedAsync(db =>
+        {
+            SeedActiveMembership(db, userId, orgId, OrganizationRoles.Admin);
+            (subjectId, protocolId) = SeedSubjectAndProtocol(db, orgId);
+        });
+
+        var client = CreateAuthorizedClient(userId, orgId);
+
+        var ingest = await client.PostAsJsonAsync("/api/v1/ingestion/sessions", new
+        {
+            version = "1.0",
+            clientOperationId = "op-session-status-001",
+            subjectId = subjectId,
+            protocolId = protocolId,
+            protocolVersion = "1.0"
+        });
+
+        var ingestResult = await ingest.Content.ReadFromJsonAsync<IngestSessionResponseDto>();
+        var sessionId = ingestResult!.SessionId;
+
+        var response = await client.GetAsync($"/api/v1/ingestion/sessions/{sessionId}/status");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var status = await response.Content.ReadFromJsonAsync<OperationStatusResponseDto>();
+        Assert.NotNull(status);
+        Assert.Equal(sessionId, status.SessionId);
+        Assert.Equal("Accepted", status.Status);
+    }
+
+    [Fact]
+    public async Task IngestSession_ValidationFailure_RollsBackTransaction()
+    {
+        var userId = Guid.NewGuid();
+        var orgId = Guid.NewGuid();
+        Guid subjectId = Guid.Empty;
+        Guid protocolId = Guid.Empty;
+
+        await SeedAsync(db =>
+        {
+            SeedActiveMembership(db, userId, orgId, OrganizationRoles.Admin);
+            (subjectId, protocolId) = SeedSubjectAndProtocol(db, orgId);
+        });
+
+        var client = CreateAuthorizedClient(userId, orgId);
+
+        var response = await client.PostAsJsonAsync("/api/v1/ingestion/sessions", new
+        {
+            version = "1.0",
+            clientOperationId = "op-rollback-001",
+            subjectId = subjectId,
+            protocolId = protocolId,
+            protocolVersion = "1.0",
+            externalId = "sess-rollback",
+            trials = new[]
+            {
+                new
+                {
+                    trialIndex = 1,
+                    metrics = new[]
+                    {
+                        new { metricDefinitionCode = "nonexistent", valueType = "Scalar", scalarValue = 1.0 }
+                    }
+                }
+            }
+        });
+
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<HubDbContext>();
+        var sessionCount = db.MeasurementSessions.Count(s => s.ExternalId == "sess-rollback");
+        Assert.Equal(0, sessionCount);
+    }
+
     private record TrialResponseDto(
         Guid Id,
         Guid OrganizationId,
@@ -519,4 +1140,38 @@ public class IngestionDomainIntegrationTests : IClassFixture<HubApiFactory>
         string Status,
         DateTimeOffset CreatedAt,
         DateTimeOffset? UpdatedAt);
+
+    private record IngestTrialResultDto(
+        int TrialIndex,
+        Guid TrialId,
+        string Status);
+
+    private record IngestAssetPlaceholderResultDto(
+        string AssetType,
+        string ExternalId,
+        long Size,
+        string Status);
+
+    private record IngestionErrorDto(
+        string Code,
+        string Message,
+        string? Field = null);
+
+    private record IngestSessionResponseDto(
+        Guid SessionId,
+        string? SessionExternalId,
+        string Status,
+        IReadOnlyList<IngestTrialResultDto>? Trials = null,
+        IReadOnlyList<IngestAssetPlaceholderResultDto>? AssetPlaceholders = null,
+        IReadOnlyList<IngestionErrorDto>? Errors = null);
+
+    private record OperationStatusResponseDto(
+        Guid OperationId,
+        string ClientOperationId,
+        string Status,
+        Guid? SessionId = null,
+        string? SessionExternalId = null,
+        string? ErrorCode = null,
+        string? ErrorDetail = null,
+        DateTimeOffset CompletedAt = default);
 }

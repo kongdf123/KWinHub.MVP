@@ -6,7 +6,7 @@ public class IngestionOperation : BaseEntity<Guid>
 {
     public Guid OrganizationId { get; private set; }
 
-    public string ClientOperationId { get; private set; }
+    public string ClientOperationId { get; private set; } = string.Empty;
 
     public Guid? SessionId { get; private set; }
 
@@ -18,19 +18,21 @@ public class IngestionOperation : BaseEntity<Guid>
 
     public string? ErrorDetail { get; private set; }
 
+    public string? ContentHash { get; private set; }
+
     public DateTimeOffset CompletedAt { get; private set; }
 
     private IngestionOperation()
     {
     }
 
-    public IngestionOperation(Guid organizationId, string clientOperationId)
+    public IngestionOperation(Guid organizationId, string clientOperationId, string? contentHash = null)
     {
         Id = Guid.NewGuid();
         OrganizationId = organizationId;
         ClientOperationId = clientOperationId;
-        Status = IngestionOperationStatus.Accepted;
-        CompletedAt = DateTimeOffset.UtcNow;
+        ContentHash = contentHash;
+        Status = IngestionOperationStatus.Pending;
     }
 
     public void MarkAccepted(Guid sessionId, string? sessionExternalId)

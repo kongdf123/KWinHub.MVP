@@ -25,7 +25,8 @@ public class IngestionController : ControllerBase
 
     [HttpPost("sessions")]
     [ProducesResponseType(typeof(IngestSessionResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status422UnprocessableEntity)]
+    [ProducesResponseType(typeof(IngestSessionResponse), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(IngestSessionResponse), StatusCodes.Status422UnprocessableEntity)]
     public async Task<ActionResult<IngestSessionResponse>> IngestSession(
         [FromBody] IngestSessionRequest request,
         CancellationToken cancellationToken)
@@ -44,12 +45,17 @@ public class IngestionController : ControllerBase
             {
                 new(ex.ErrorCode, ex.Message, ex.Field)
             };
-            return UnprocessableEntity(new IngestSessionResponse(
+            var failedResponse = new IngestSessionResponse(
                 SessionId: Guid.Empty,
                 SessionExternalId: null,
                 Status: "Failed",
                 Trials: null,
-                Errors: errors));
+                AssetPlaceholders: null,
+                Errors: errors);
+
+            return ex.ErrorCode == IngestionErrorCodes.Conflict
+                ? Conflict(failedResponse)
+                : UnprocessableEntity(failedResponse);
         }
     }
 
@@ -63,6 +69,20 @@ public class IngestionController : ControllerBase
         var status = await _ingestionService.GetOperationStatusAsync(
             _currentUser.OrganizationId,
             clientOperationId,
+            cancellationToken);
+        return status is null ? NotFound() : Ok(status);
+    }
+
+    [HttpGet("sessions/{sessionId:guid}/status")]
+    [ProducesResponseType(typeof(IngestionOperationStatusResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<IngestionOperationStatusResponse>> GetSessionStatus(
+        Guid sessionId,
+        CancellationToken cancellationToken)
+    {
+        var status = await _ingestionService.GetSessionStatusAsync(
+            _currentUser.OrganizationId,
+            sessionId,
             cancellationToken);
         return status is null ? NotFound() : Ok(status);
     }

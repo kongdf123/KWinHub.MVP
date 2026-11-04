@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useApp } from '@/lib/app-context';
 import { t as tr } from '@/lib/i18n';
-import { DEMO_SESSIONS, DEMO_ATHLETES, getSport, getProtocol, getDataSource, getResultForSession, DEMO_RAW_MEASUREMENTS, DEMO_PROCESSED_MEASUREMENTS } from '@/lib/demo-data';
+import { DEMO_SESSIONS, DEMO_ATHLETES, getSport, getProtocol, getResultForSession, DEMO_RAW_MEASUREMENTS, DEMO_PROCESSED_MEASUREMENTS } from '@/lib/demo-data';
 import { TopBar } from '@/components/layout/TopBar';
 import { ForceTimeCurve } from '@/components/ui/ForceTimeCurve';
 import { MetricCard } from '@/components/ui/MetricCard';
@@ -9,9 +9,33 @@ import { BarChart } from '@/components/ui/BarChart';
 import {
   ArrowLeft, Download, CheckCircle, XCircle, Activity, Info, Zap, Waves,
   TrendingUp, Dumbbell, Shuffle, RefreshCw, Database, FileJson, Clock,
-  Server, FileText, AlertCircle, Cpu, BarChart3, type LucideIcon,
+  Server, FileText, AlertCircle, Cpu, BarChart3, Loader2, type LucideIcon,
 } from 'lucide-react';
 import type { SessionStatus } from '@/lib/types';
+import { sessionsApi, type SessionDto } from '@/lib/api/sessions';
+import { trialsApi, type TrialDto } from '@/lib/api/trials';
+import { resultsApi, type ResultDto } from '@/lib/api/results';
+import { protocolsApi, type ProtocolDto } from '@/lib/api/protocols';
+import { subjectsApi, type SubjectDto } from '@/lib/api/subjects';
+
+const API_MODE = import.meta.env.VITE_DATA_MODE === 'api';
+
+const API_STATUS_MAP: Record<string, SessionStatus> = {
+  Received: 'RECEIVED',
+  Validating: 'VALIDATING',
+  Validated: 'PROCESSING',
+  Queued: 'QUEUED',
+  Processing: 'PROCESSING',
+  Analyzing: 'PROCESSING',
+  Published: 'PUBLISHED',
+  ValidationFailed: 'VALIDATION_FAILED',
+  ProcessingFailed: 'PROCESSING_FAILED',
+  AnalysisFailed: 'PROCESSING_FAILED',
+};
+
+function mapApiStatus(status: string): SessionStatus {
+  return API_STATUS_MAP[status] || 'RECEIVED';
+}
 
 const SPORT_ICONS: Record<string, LucideIcon> = {
   'sport-cmj': Activity, 'sport-sprint': Zap, 'sport-swim': Waves,
@@ -59,18 +83,80 @@ const TABS: { key: Tab; labelKey: string; icon: LucideIcon }[] = [
 // gate only — the API must enforce the same authorization server-side.
 const ADVANCED_TABS = new Set<Tab>(['rawData', 'processing', 'dataQuality']);
 
+interface SessionDetailView {
+  id: string;
+  protocolId: string;
+  protocolName: string;
+  protocolVersion: string;
+  sportId: string;
+  subjectName: string;
+  subjectWeight: number;
+  date: string;
+  deviceSerial: string;
+  operatorName: string;
+  clientApplication: string | null;
+  processingVersion: string;
+  sessionStatus: SessionStatus;
+  trials: { number: number; status: 'valid' | 'invalid'; reason?: string; values: Record<string, number>; forceTimeData?: number[] }[];
+  dataQuality: { status: string; issues: string[]; validationPassed: boolean };
+  qualityFlag: string;
+  sourceId: string;
+  dataSourceId: string;
+  idempotencyKey: string;
+  statusUrl: string;
+  resultMetrics: { key: string; name: string; nameCn: string; unit: string; value: number | null; primary: boolean; comparison?: { baseline?: number; personalBest?: number; deltaFromBaseline?: number } }[];
+  analysisNotes: string[];
+  rawDataRef: { measurementIds: string[]; datasetId: string | null };
+  hasResult: boolean;
+}
+
 export function SessionDetailPage() {
   const { viewParams, navigate, addToast, lang, canAccess } = useApp();
   const sessionId = viewParams.sessionId || 's-1';
-  const session = DEMO_SESSIONS.find((s) => s.id === sessionId) || DEMO_SESSIONS[0];
-  const athlete = DEMO_ATHLETES.find((a) => a.id === session.athleteId);
-  const sport = getSport(session.sportId);
-  const protocol = getProtocol(session.protocolId);
-  const dataSource = getDataSource(session.dataSourceId);
-  const result = getResultForSession(session.id);
-  const SportIcon = sport ? SPORT_ICONS[sport.id] || Activity : Activity;
   const [tab, setTab] = useState<Tab>('overview');
   const [selectedTrial, setSelectedTrial] = useState(0);
+
+  const [apiSession, setApiSession] = useState<SessionDto | null>(null);
+  const [apiTrials, setApiTrials] = useState<TrialDto[]>([]);
+  const [apiResult, setApiResult] = useState<ResultDto | null>(null);
+  const [apiProtocol, setApiProtocol] = useState<ProtocolDto | null>(null);
+  const [apiSubject, setApiSubject] = useState<SubjectDto | null>(null);
+  const [loading, setLoading] = useState(API_MODE);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!API_MODE) return;
+    let cancelled = false;
+    setLoading(true);
+    setLoadError(null);
+
+    Promise.all([
+      sessionsApi.getById(sessionId).catch(() => null),
+      trialsApi.listBySession(sessionId).catch(() => []),
+      resultsApi.getBySession(sessionId).catch(() => null),
+    ])
+      .then(async ([session, trials, result]) => {
+        if (cancelled) return;
+        setApiSession(session);
+        setApiTrials(trials);
+        setApiResult(result);
+        if (session) {
+          const [protocol, subject] = await Promise.all([
+            protocolsApi.getById(session.protocolId).catch(() => null),
+            subjectsApi.getById(session.subjectId).catch(() => null),
+          ]);
+          if (cancelled) return;
+          setApiProtocol(protocol);
+          setApiSubject(subject);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setLoadError(lang === 'cn' ? '加载会话详情失败' : 'Failed to load session detail');
+      })
+      .finally(() => { if (!cancelled) setLoading(false); });
+
+    return () => { cancelled = true; };
+  }, [sessionId, lang]);
 
   const canViewAdvanced = canAccess('raw-data');
   const visibleTabs = useMemo(
@@ -78,29 +164,135 @@ export function SessionDetailPage() {
     [canViewAdvanced],
   );
 
-  // If the active role loses advanced access while an advanced tab is selected,
-  // fall back to the overview tab.
   useEffect(() => {
     if (!canViewAdvanced && ADVANCED_TABS.has(tab)) setTab('overview');
   }, [canViewAdvanced, tab]);
 
-  const trial = session.trials[selectedTrial];
-  const date = new Date(session.date);
+  const demoSession = DEMO_SESSIONS.find((s) => s.id === sessionId) || DEMO_SESSIONS[0];
+  const demoAthlete = DEMO_ATHLETES.find((a) => a.id === demoSession.athleteId);
+  const demoProtocol = getProtocol(demoSession.protocolId);
+  const demoResult = getResultForSession(demoSession.id);
+
+  const view: SessionDetailView | null = useMemo(() => {
+    if (API_MODE) {
+      if (!apiSession) return null;
+      const resultMetrics = (apiResult?.metrics ?? []).map((m) => ({
+        key: m.metricCode,
+        name: m.metricName,
+        nameCn: m.metricName,
+        unit: m.unit,
+        value: m.scalarValue,
+        primary: false,
+        comparison: undefined,
+      }));
+      return {
+        id: apiSession.id,
+        protocolId: apiSession.protocolId,
+        protocolName: apiProtocol?.name ?? '',
+        protocolVersion: apiProtocol?.version ?? apiSession.protocolVersion,
+        sportId: apiProtocol?.sport ?? 'sport-cmj',
+        subjectName: apiSubject ? `${apiSubject.lastName} ${apiSubject.firstName}` : '',
+        subjectWeight: 0,
+        date: apiSession.startedAt || apiSession.createdAt,
+        deviceSerial: '',
+        operatorName: '',
+        clientApplication: apiSession.clientApplication,
+        processingVersion: apiResult?.algorithmVersion ?? '1',
+        sessionStatus: mapApiStatus(apiSession.status),
+        trials: apiTrials.map((t) => ({
+          number: t.trialIndex,
+          status: t.status === 'Completed' ? 'valid' : 'invalid',
+          reason: t.notes ?? undefined,
+          values: {},
+        })),
+        dataQuality: { status: apiResult?.qualityStatus ?? 'unknown', issues: [], validationPassed: !!apiResult },
+        qualityFlag: apiResult ? 'valid' : 'unknown',
+        sourceId: apiSession.sourceId ?? '',
+        dataSourceId: apiSession.sourceId ?? '',
+        idempotencyKey: apiSession.externalId ?? '',
+        statusUrl: '',
+        resultMetrics,
+        analysisNotes: [],
+        rawDataRef: { measurementIds: [], datasetId: null },
+        hasResult: !!apiResult,
+      };
+    }
+    const result = demoResult;
+    return {
+      id: demoSession.id,
+      protocolId: demoSession.protocolId,
+      protocolName: demoSession.protocolName,
+      protocolVersion: demoProtocol?.version ?? demoSession.processingVersion,
+      sportId: demoSession.sportId,
+      subjectName: demoAthlete ? `${demoAthlete.lastName} ${demoAthlete.firstName}` : '',
+      subjectWeight: demoAthlete?.weight ?? 80,
+      date: demoSession.date,
+      deviceSerial: demoSession.deviceSerial,
+      operatorName: demoSession.operatorName,
+      clientApplication: null,
+      processingVersion: demoSession.processingVersion,
+      sessionStatus: demoSession.sessionStatus,
+      trials: demoSession.trials,
+      dataQuality: demoSession.dataQuality,
+      qualityFlag: demoSession.qualityFlag,
+      sourceId: demoSession.sourceId,
+      dataSourceId: demoSession.dataSourceId,
+      idempotencyKey: demoSession.idempotencyKey,
+      statusUrl: demoSession.statusUrl,
+      resultMetrics: result?.metrics ?? [],
+      analysisNotes: result?.analysisNotes ?? [],
+      rawDataRef: result?.rawDataRef ?? { measurementIds: [], datasetId: null },
+      hasResult: !!result,
+    };
+  }, [API_MODE, apiSession, apiTrials, apiResult, apiProtocol, apiSubject, demoSession, demoAthlete, demoProtocol, demoResult]);
+
+  if (loading) {
+    return (
+      <div>
+        <TopBar title={lang === 'cn' ? '测试记录详情' : 'Session Detail'} />
+        <div className="px-6 pt-6 pb-6 flex items-center justify-center min-h-[60vh]">
+          <div className="flex items-center gap-3 text-content-secondary">
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <span>{lang === 'cn' ? '加载中...' : 'Loading...'}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError || !view) {
+    return (
+      <div>
+        <TopBar title={lang === 'cn' ? '测试记录详情' : 'Session Detail'} />
+        <div className="px-6 pt-6 pb-6 flex items-center justify-center min-h-[60vh]">
+          <div className="flex items-center gap-3 text-invalid-600">
+            <AlertCircle className="w-5 h-5" />
+            <span>{loadError || (lang === 'cn' ? '未找到会话' : 'Session not found')}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const sport = getSport(view.sportId);
+  const SportIcon = sport ? SPORT_ICONS[sport.id] || Activity : Activity;
+  const trial = view.trials[selectedTrial];
+  const date = new Date(view.date);
   const locale = lang === 'cn' ? 'zh-CN' : 'en-US';
   const dateStr = date.toLocaleDateString(locale, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   const timeStr = date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
 
-  const rawMeasurements = DEMO_RAW_MEASUREMENTS.filter((m) => m.sessionId === session.id);
-  const processedMeasurements = DEMO_PROCESSED_MEASUREMENTS.filter((m) => m.sessionId === session.id);
+  const rawMeasurements = DEMO_RAW_MEASUREMENTS.filter((m) => m.sessionId === view.id);
+  const processedMeasurements = DEMO_PROCESSED_MEASUREMENTS.filter((m) => m.sessionId === view.id);
 
-  const statusCfg = SESSION_STATUS_CONFIG[session.sessionStatus] || SESSION_STATUS_CONFIG.RECEIVED;
-  const isProcessing = session.sessionStatus === 'PROCESSING' || session.sessionStatus === 'VALIDATING';
-  const isFailed = session.sessionStatus.includes('FAILED');
-  const isPublished = session.sessionStatus === 'PUBLISHED' || session.sessionStatus === 'ANALYZED';
+  const statusCfg = SESSION_STATUS_CONFIG[view.sessionStatus] || SESSION_STATUS_CONFIG.RECEIVED;
+  const isProcessing = view.sessionStatus === 'PROCESSING' || view.sessionStatus === 'VALIDATING';
+  const isFailed = view.sessionStatus.includes('FAILED');
+  const isPublished = view.sessionStatus === 'PUBLISHED' || view.sessionStatus === 'ANALYZED';
 
-  const trialBarData = session.trials.map((t, i) => {
-    const primaryMetric = protocol?.metrics.find((m) => m.primary);
-    const val = primaryMetric ? t.values[primaryMetric.key] : Object.values(t.values)[0];
+  const primaryMetricKey = demoProtocol?.metrics.find((m) => m.primary)?.key;
+  const trialBarData = view.trials.map((t, i) => {
+    const val = primaryMetricKey ? t.values[primaryMetricKey] : Object.values(t.values)[0];
     return {
       label: `T${i + 1}`,
       value: t.status === 'valid' ? (val || 0) : 0,
@@ -108,7 +300,7 @@ export function SessionDetailPage() {
     };
   });
 
-  const currentLifecycleIdx = LIFECYCLE_STEPS.findIndex((s) => s.status === session.sessionStatus);
+  const currentLifecycleIdx = LIFECYCLE_STEPS.findIndex((s) => s.status === view.sessionStatus);
 
   const renderTab = () => {
     switch (tab) {
@@ -116,21 +308,21 @@ export function SessionDetailPage() {
         return (
           <div className="space-y-6">
             <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-              <InfoCell label={tr('sessions.subject', lang)} value={athlete ? `${athlete.lastName} ${athlete.firstName}` : '—'} />
+              <InfoCell label={tr('sessions.subject', lang)} value={view.subjectName || '—'} />
               <InfoCell label={tr('sessions.date', lang)} value={dateStr} sub={timeStr} />
-              <InfoCell label={tr('sessions.source', lang)} value={dataSource ? (lang === 'cn' ? dataSource.nameCn : dataSource.name) : session.source} />
-              <InfoCell label={tr('sessions.device', lang)} value={session.deviceSerial} />
-              <InfoCell label={lang === 'cn' ? '操作员' : 'Operator'} value={session.operatorName} />
-              <InfoCell label={tr('sessions.processingVersion', lang)} value={`v${session.processingVersion}`} />
+              <InfoCell label={tr('sessions.source', lang)} value={view.clientApplication || (lang === 'cn' ? '未知来源' : 'Unknown source')} />
+              <InfoCell label={tr('sessions.device', lang)} value={view.deviceSerial || '—'} />
+              <InfoCell label={lang === 'cn' ? '操作员' : 'Operator'} value={view.operatorName || '—'} />
+              <InfoCell label={tr('sessions.processingVersion', lang)} value={`v${view.processingVersion}`} />
             </div>
 
-            {isPublished && result && (
+            {isPublished && view.hasResult && (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {result.metrics.filter((m) => m.primary).slice(0, 4).map((metric) => (
+                {view.resultMetrics.slice(0, 4).map((metric) => (
                   <MetricCard
                     key={metric.key}
                     label={lang === 'cn' ? metric.nameCn : metric.name}
-                    value={metric.value}
+                    value={metric.value !== null ? metric.value : '—'}
                     unit={metric.unit}
                     delta={metric.comparison?.deltaFromBaseline}
                     deltaLabel={metric.comparison?.baseline !== undefined ? `${lang === 'cn' ? '基线' : 'baseline'}: ${metric.comparison.baseline.toFixed(1)}` : undefined}
@@ -152,14 +344,14 @@ export function SessionDetailPage() {
               </div>
             )}
 
-            {session.dataQuality.issues.length > 0 && (
+            {view.dataQuality.issues.length > 0 && (
               <div className="p-3 bg-warning-50 rounded-lg border border-warning-200">
                 <div className="flex items-start gap-2">
                   <Info className="w-4 h-4 text-warning-600 mt-0.5 shrink-0" />
                   <div>
                     <p className="text-sm font-medium text-warning-800">{lang === 'cn' ? '数据质量提示' : 'Data Quality Notes'}</p>
                     <ul className="mt-1 space-y-0.5">
-                      {session.dataQuality.issues.map((issue, i) => (
+                      {view.dataQuality.issues.map((issue, i) => (
                         <li key={i} className="text-xs text-warning-700">{issue}</li>
                       ))}
                     </ul>
@@ -175,7 +367,7 @@ export function SessionDetailPage() {
           <div className="space-y-4">
             <div className="bg-white rounded-xl border border-ink-200 p-5">
               <div className="flex items-center gap-2 mb-4">
-                {session.trials.map((t, i) => (
+                {view.trials.map((t, i) => (
                   <button key={i} onClick={() => setSelectedTrial(i)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${selectedTrial === i ? 'bg-teal-600 text-white' : t.status === 'valid' ? 'bg-ink-100 text-ink-700 hover:bg-ink-200' : 'bg-invalid-50 text-invalid-600 hover:bg-invalid-100'}`}>
                     {t.status === 'valid' ? <CheckCircle className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
                     {tr('sessions.trial', lang)} {i + 1}
@@ -187,9 +379,12 @@ export function SessionDetailPage() {
                   <InfoCell label={lang === 'cn' ? '状态' : 'Status'} value={trial.status === 'valid' ? (lang === 'cn' ? '有效' : 'Valid') : (lang === 'cn' ? '无效' : 'Invalid')} />
                   {trial.reason && <InfoCell label={lang === 'cn' ? '原因' : 'Reason'} value={trial.reason} />}
                   {Object.entries(trial.values).slice(0, 3).map(([k, v]) => {
-                    const metric = protocol?.metrics.find((m) => m.key === k);
+                    const metric = demoProtocol?.metrics.find((m) => m.key === k);
                     return <InfoCell key={k} label={metric ? (lang === 'cn' ? metric.nameCn : metric.name) : k} value={v.toFixed(2)} unit={metric?.unit} />;
                   })}
+                  {Object.keys(trial.values).length === 0 && (
+                    <InfoCell label={lang === 'cn' ? '指标' : 'Metrics'} value={lang === 'cn' ? '暂无指标数据' : 'No metric data'} />
+                  )}
                 </div>
               )}
             </div>
@@ -204,9 +399,9 @@ export function SessionDetailPage() {
         return (
           <div className="bg-white rounded-xl border border-ink-200 overflow-hidden">
             <h4 className="text-sm font-semibold text-ink-900 px-5 py-4 border-b border-ink-100">{lang === 'cn' ? '全部指标' : 'All Metrics'}</h4>
-            {result && isPublished ? (
+            {view.hasResult && isPublished ? (
               <div className="divide-y divide-ink-50">
-                {result.metrics.map((metric) => (
+                {view.resultMetrics.map((metric) => (
                   <div key={metric.key} className="flex items-center gap-4 px-5 py-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
@@ -216,7 +411,7 @@ export function SessionDetailPage() {
                       <p className="text-xs text-ink-500">{metric.key}</p>
                     </div>
                     <div className="text-right w-28">
-                      <p className="text-sm font-mono font-semibold text-ink-900">{metric.value.toFixed(2)}</p>
+                      <p className="text-sm font-mono font-semibold text-ink-900">{metric.value !== null ? metric.value.toFixed(2) : '—'}</p>
                       <p className="text-xs text-ink-400">{metric.unit}</p>
                     </div>
                     {metric.comparison?.baseline !== undefined && (
@@ -254,23 +449,23 @@ export function SessionDetailPage() {
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h4 className="text-sm font-semibold text-ink-900">
-                    {protocol?.visualization.find((v) => v.type === 'force_time_curve')
-                      ? (lang === 'cn' ? protocol.visualization.find((v) => v.type === 'force_time_curve')!.titleCn : protocol.visualization.find((v) => v.type === 'force_time_curve')!.title)
+                    {demoProtocol?.visualization.find((v) => v.type === 'force_time_curve')
+                      ? (lang === 'cn' ? demoProtocol.visualization.find((v) => v.type === 'force_time_curve')!.titleCn : demoProtocol.visualization.find((v) => v.type === 'force_time_curve')!.title)
                       : (lang === 'cn' ? '可视化' : 'Visualization')}
                   </h4>
-                  <p className="text-xs text-ink-500">{tr('sessions.trial', lang)} {selectedTrial + 1} / {session.trials.length}</p>
+                  <p className="text-xs text-ink-500">{tr('sessions.trial', lang)} {selectedTrial + 1} / {view.trials.length}</p>
                 </div>
                 <Activity className="w-5 h-5 text-teal-600" />
               </div>
               {trial && trial.forceTimeData ? (
-                <ForceTimeCurve data={trial.forceTimeData} bodyWeight={athlete ? athlete.weight * 9.81 : 780} height={300} />
+                <ForceTimeCurve data={trial.forceTimeData} bodyWeight={view.subjectWeight > 0 ? view.subjectWeight * 9.81 : 780} height={300} />
               ) : (
                 <div className="h-[300px] flex items-center justify-center text-ink-400 text-sm">
                   {lang === 'cn' ? '该协议无力-时曲线数据' : 'No force-time data for this protocol'}
                 </div>
               )}
               <div className="flex items-center gap-2 mt-4">
-                {session.trials.map((t, i) => (
+                {view.trials.map((t, i) => (
                   <button key={i} onClick={() => setSelectedTrial(i)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${selectedTrial === i ? 'bg-teal-600 text-white' : t.status === 'valid' ? 'bg-ink-100 text-ink-700 hover:bg-ink-200' : 'bg-invalid-50 text-invalid-600 hover:bg-invalid-100'}`}>
                     {t.status === 'valid' ? <CheckCircle className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
                     {tr('sessions.trial', lang)} {i + 1}
@@ -289,9 +484,9 @@ export function SessionDetailPage() {
         return (
           <div className="bg-white rounded-xl border border-ink-200 p-5">
             <h4 className="text-sm font-semibold text-ink-900 mb-4">{lang === 'cn' ? '分析备注' : 'Analysis Notes'}</h4>
-            {result && result.analysisNotes.length > 0 ? (
+            {view.hasResult && view.analysisNotes.length > 0 ? (
               <div className="space-y-2">
-                {result.analysisNotes.map((note, i) => (
+                {view.analysisNotes.map((note, i) => (
                   <div key={i} className="flex items-start gap-2 p-3 rounded-lg bg-ink-50">
                     <Info className="w-4 h-4 text-teal-600 mt-0.5 shrink-0" />
                     <span className="text-sm text-ink-700">{note}</span>
@@ -301,11 +496,11 @@ export function SessionDetailPage() {
             ) : (
               <p className="text-sm text-ink-400 text-center py-6">{lang === 'cn' ? '暂无分析备注' : 'No analysis notes available'}</p>
             )}
-            {result && (
+            {view.hasResult && view.rawDataRef && (
               <div className="mt-4 pt-4 border-t border-ink-100">
                 <h4 className="text-sm font-semibold text-ink-900 mb-2">{lang === 'cn' ? '原始数据引用' : 'Raw Data References'}</h4>
-                <p className="text-xs text-ink-500">Dataset: {result.rawDataRef.datasetId || '—'}</p>
-                <p className="text-xs text-ink-500">Measurements: {result.rawDataRef.measurementIds.join(', ') || '—'}</p>
+                <p className="text-xs text-ink-500">Dataset: {view.rawDataRef.datasetId || '—'}</p>
+                <p className="text-xs text-ink-500">Measurements: {view.rawDataRef.measurementIds.join(', ') || '—'}</p>
               </div>
             )}
           </div>
@@ -373,7 +568,7 @@ export function SessionDetailPage() {
               <div className="flex items-center gap-1">
                 {LIFECYCLE_STEPS.map((step, i) => {
                   const isDone = currentLifecycleIdx > i;
-                  const isCurrent = session.sessionStatus === step.status;
+                  const isCurrent = view.sessionStatus === step.status;
                   const isFailedStep = isFailed && i === currentLifecycleIdx;
                   return (
                     <div key={i} className="flex items-center flex-1">
@@ -399,8 +594,8 @@ export function SessionDetailPage() {
                   <div>
                     <p className="text-sm font-medium text-invalid-800">{lang === 'cn' ? '处理失败详情' : 'Processing Failure Details'}</p>
                     <p className="text-xs text-invalid-700 mt-0.5">
-                      {session.sessionStatus === 'UPLOAD_FAILED' ? (lang === 'cn' ? '上传过程中发生错误。' : 'Error occurred during upload.') :
-                       session.sessionStatus === 'VALIDATION_FAILED' ? (lang === 'cn' ? '数据验证未通过。' : 'Data validation failed.') :
+                      {view.sessionStatus === 'UPLOAD_FAILED' ? (lang === 'cn' ? '上传过程中发生错误。' : 'Error occurred during upload.') :
+                       view.sessionStatus === 'VALIDATION_FAILED' ? (lang === 'cn' ? '数据验证未通过。' : 'Data validation failed.') :
                        (lang === 'cn' ? '处理过程中发生错误。' : 'Error occurred during processing.')}
                     </p>
                     <button onClick={() => addToast(lang === 'cn' ? '重试处理（演示）' : 'Retry processing (demo)', 'info')} className="mt-2 flex items-center gap-1.5 px-3 py-1.5 bg-invalid-600 hover:bg-invalid-700 text-white text-sm font-medium rounded-lg transition-colors">
@@ -414,10 +609,10 @@ export function SessionDetailPage() {
             <div className="bg-white rounded-xl border border-ink-200 p-5">
               <h4 className="text-sm font-semibold text-ink-900 mb-4">{lang === 'cn' ? 'API 元数据' : 'API Metadata'}</h4>
               <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs"><span className="text-ink-500">{tr('sessions.idempotencyKey', lang)}</span><span className="font-mono text-ink-700">{session.idempotencyKey}</span></div>
-                <div className="flex items-center justify-between text-xs"><span className="text-ink-500">Status URL</span><span className="font-mono text-ink-700 truncate ml-2">{session.statusUrl}</span></div>
-                <div className="flex items-center justify-between text-xs"><span className="text-ink-500">{tr('sessionDetail.algorithmVersion', lang)}</span><span className="font-mono text-ink-700">v{session.processingVersion}</span></div>
-                <div className="flex items-center justify-between text-xs"><span className="text-ink-500">{lang === 'cn' ? '协议版本' : 'Protocol Version'}</span><span className="font-mono text-ink-700">v{protocol?.version || '—'}</span></div>
+                <div className="flex items-center justify-between text-xs"><span className="text-ink-500">{tr('sessions.idempotencyKey', lang)}</span><span className="font-mono text-ink-700">{view.idempotencyKey || '—'}</span></div>
+                <div className="flex items-center justify-between text-xs"><span className="text-ink-500">Status URL</span><span className="font-mono text-ink-700 truncate ml-2">{view.statusUrl || '—'}</span></div>
+                <div className="flex items-center justify-between text-xs"><span className="text-ink-500">{tr('sessionDetail.algorithmVersion', lang)}</span><span className="font-mono text-ink-700">v{view.processingVersion}</span></div>
+                <div className="flex items-center justify-between text-xs"><span className="text-ink-500">{lang === 'cn' ? '协议版本' : 'Protocol Version'}</span><span className="font-mono text-ink-700">v{demoProtocol?.version || '—'}</span></div>
               </div>
             </div>
           </div>
@@ -429,17 +624,17 @@ export function SessionDetailPage() {
             <div className="bg-white rounded-xl border border-ink-200 p-5">
               <h4 className="text-sm font-semibold text-ink-900 mb-4">{tr('sessions.quality', lang)}</h4>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <InfoCell label={lang === 'cn' ? '质量状态' : 'Quality Status'} value={session.dataQuality.status === 'complete' ? (lang === 'cn' ? '完整' : 'Complete') : session.dataQuality.status === 'warning' ? (lang === 'cn' ? '警告' : 'Warning') : session.dataQuality.status === 'invalid' ? (lang === 'cn' ? '无效' : 'Invalid') : (lang === 'cn' ? '错误' : 'Error')} />
-                <InfoCell label={lang === 'cn' ? '验证通过' : 'Validation Passed'} value={session.dataQuality.validationPassed ? (lang === 'cn' ? '是' : 'Yes') : (lang === 'cn' ? '否' : 'No')} />
-                <InfoCell label={lang === 'cn' ? '质量标记' : 'Quality Flag'} value={session.qualityFlag} />
-                <InfoCell label={tr('sessions.validTrials', lang)} value={`${session.trials.filter((t) => t.status === 'valid').length} / ${session.trials.length}`} />
+                <InfoCell label={lang === 'cn' ? '质量状态' : 'Quality Status'} value={view.dataQuality.status === 'complete' ? (lang === 'cn' ? '完整' : 'Complete') : view.dataQuality.status === 'warning' ? (lang === 'cn' ? '警告' : 'Warning') : view.dataQuality.status === 'invalid' ? (lang === 'cn' ? '无效' : 'Invalid') : view.dataQuality.status === 'unknown' ? (lang === 'cn' ? '未知' : 'Unknown') : (lang === 'cn' ? '错误' : 'Error')} />
+                <InfoCell label={lang === 'cn' ? '验证通过' : 'Validation Passed'} value={view.dataQuality.validationPassed ? (lang === 'cn' ? '是' : 'Yes') : (lang === 'cn' ? '否/未知' : 'No/Unknown')} />
+                <InfoCell label={lang === 'cn' ? '质量标记' : 'Quality Flag'} value={view.qualityFlag} />
+                <InfoCell label={tr('sessions.validTrials', lang)} value={`${view.trials.filter((t) => t.status === 'valid').length} / ${view.trials.length}`} />
               </div>
             </div>
-            {session.dataQuality.issues.length > 0 && (
+            {view.dataQuality.issues.length > 0 && (
               <div className="bg-white rounded-xl border border-ink-200 p-5">
                 <h4 className="text-sm font-semibold text-ink-900 mb-3">{lang === 'cn' ? '问题列表' : 'Issues'}</h4>
                 <div className="space-y-2">
-                  {session.dataQuality.issues.map((issue, i) => (
+                  {view.dataQuality.issues.map((issue, i) => (
                     <div key={i} className="flex items-start gap-2 p-3 rounded-lg bg-warning-50">
                       <AlertCircle className="w-4 h-4 text-warning-600 mt-0.5 shrink-0" />
                       <span className="text-sm text-warning-800">{issue}</span>
@@ -471,7 +666,7 @@ export function SessionDetailPage() {
     <div>
       <TopBar
         title={lang === 'cn' ? '测试记录详情' : 'Session Detail'}
-        subtitle={`${lang === 'cn' ? protocol?.nameCn || session.protocolName : session.protocolName} · ${athlete?.lastName} ${athlete?.firstName}`}
+        subtitle={`${lang === 'cn' ? demoProtocol?.nameCn || view.protocolName : view.protocolName} · ${view.subjectName || (lang === 'cn' ? '未知运动员' : 'Unknown')}`}
         actions={
           <>
             <button onClick={() => navigate('sessions')} className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-ink-700 bg-white border border-ink-200 hover:bg-ink-50 rounded-lg transition-colors">
@@ -492,7 +687,7 @@ export function SessionDetailPage() {
                 <SportIcon className="w-5 h-5 text-ink-500" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-ink-900">{lang === 'cn' ? protocol?.nameCn || session.protocolName : session.protocolName}</h3>
+                <h3 className="text-lg font-semibold text-ink-900">{lang === 'cn' ? demoProtocol?.nameCn || view.protocolName : view.protocolName}</h3>
                 <span className={`inline-flex items-center gap-1.5 text-sm font-medium ${statusCfg.color}`}>
                   {isProcessing && <RefreshCw className="w-3.5 h-3.5 animate-sync-spin" />}
                   {lang === 'cn' ? statusCfg.cn : statusCfg.en}
@@ -500,10 +695,10 @@ export function SessionDetailPage() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <div className={`px-3 py-1.5 rounded-lg text-sm font-medium ${session.dataQuality.status === 'complete' ? 'bg-success-50 text-success-700' : session.dataQuality.status === 'warning' ? 'bg-warning-50 text-warning-700' : 'bg-invalid-50 text-invalid-700'}`}>
-                {tr('sessions.quality', lang)}: {session.dataQuality.status === 'complete' ? (lang === 'cn' ? '良好' : 'Good') : session.dataQuality.status === 'warning' ? (lang === 'cn' ? '警告' : 'Warning') : (lang === 'cn' ? '无效' : 'Invalid')}
+              <div className={`px-3 py-1.5 rounded-lg text-sm font-medium ${view.dataQuality.status === 'complete' ? 'bg-success-50 text-success-700' : view.dataQuality.status === 'warning' ? 'bg-warning-50 text-warning-700' : view.dataQuality.status === 'unknown' ? 'bg-ink-100 text-ink-600' : 'bg-invalid-50 text-invalid-700'}`}>
+                {tr('sessions.quality', lang)}: {view.dataQuality.status === 'complete' ? (lang === 'cn' ? '良好' : 'Good') : view.dataQuality.status === 'warning' ? (lang === 'cn' ? '警告' : 'Warning') : view.dataQuality.status === 'unknown' ? (lang === 'cn' ? '未知' : 'Unknown') : (lang === 'cn' ? '无效' : 'Invalid')}
               </div>
-              <div className="px-3 py-1.5 rounded-lg bg-ink-100 text-sm font-medium text-ink-600">v{session.processingVersion}</div>
+              <div className="px-3 py-1.5 rounded-lg bg-ink-100 text-sm font-medium text-ink-600">v{view.processingVersion}</div>
             </div>
           </div>
         </div>
