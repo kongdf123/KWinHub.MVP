@@ -1180,6 +1180,11 @@ namespace KWinHub.Hub.Infrastructure.Persistence.Migrations
                     b.Property<string>("PayloadJson")
                         .HasColumnType("jsonb");
 
+                    b.Property<string>("QueueName")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
                     b.Property<string>("ResultJson")
                         .HasColumnType("jsonb");
 
@@ -1197,7 +1202,11 @@ namespace KWinHub.Hub.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("OrganizationId");
 
+                    b.HasIndex("AssetId", "JobType");
+
                     b.HasIndex("Status", "CreatedAt");
+
+                    b.HasIndex("QueueName", "Status", "CreatedAt");
 
                     b.ToTable("worker_jobs", "hub");
                 });

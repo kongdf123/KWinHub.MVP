@@ -30,6 +30,12 @@ public record AssetResponse(
     string? PlaybackUrl = null,
     DateTimeOffset? ProcessedAt = null);
 
+public record PlaybackCredentialResponse(
+    Guid AssetId,
+    string DownloadUrl,
+    DateTimeOffset ExpiresAt,
+    string? MimeType);
+
 public interface IAssetService
 {
     Task<IReadOnlyList<AssetResponse>> ListBySessionAsync(Guid organizationId, Guid sessionId, CancellationToken cancellationToken = default);
@@ -39,4 +45,6 @@ public interface IAssetService
     Task<AssetResponse> CompleteUploadAsync(Guid organizationId, AssetCompletionRequest request, CancellationToken cancellationToken = default);
 
     Task<AssetResponse?> GetByIdAsync(Guid organizationId, Guid assetId, CancellationToken cancellationToken = default);
+
+    Task<PlaybackCredentialResponse> RequestPlaybackCredentialAsync(Guid organizationId, Guid assetId, CancellationToken cancellationToken = default);
 }

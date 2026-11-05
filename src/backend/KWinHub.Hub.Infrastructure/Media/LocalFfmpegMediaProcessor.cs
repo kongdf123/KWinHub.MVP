@@ -109,4 +109,11 @@ public class LocalFfmpegMediaProcessor : IMediaProcessor
                 Error: ex.Message);
         }
     }
+
+    public Task<MediaStatusQueryResult> QueryStatusAsync(
+        string providerJobId,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(new MediaStatusQueryResult(MediaProviderState.Unknown));
+    }
 }

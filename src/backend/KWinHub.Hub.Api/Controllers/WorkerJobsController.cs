@@ -27,6 +27,7 @@ public class WorkerJobsController : ControllerBase
     [ProducesResponseType(typeof(IReadOnlyList<WorkerJobResponse>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<WorkerJobResponse>>> List(
         [FromQuery] string? status = null,
+        [FromQuery] string? queue = null,
         [FromQuery] int limit = 100,
         CancellationToken cancellationToken = default)
     {
@@ -38,6 +39,7 @@ public class WorkerJobsController : ControllerBase
         var jobs = await _workerJobRepository.GetByOrganizationIdAsync(
             _currentUser.OrganizationId,
             status,
+            queue,
             limit,
             cancellationToken);
 
@@ -108,6 +110,7 @@ public class WorkerJobsController : ControllerBase
         job.Id,
         job.AssetId,
         job.OrganizationId,
+        job.QueueName,
         job.JobType,
         job.Status,
         job.Attempt,

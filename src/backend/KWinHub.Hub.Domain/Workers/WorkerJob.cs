@@ -16,11 +16,19 @@ public static class WorkerJobType
     public const string TranscodeVideo = "TranscodeVideo";
 }
 
+public static class WorkerQueueName
+{
+    public const string Media = "media";
+    public const string Report = "report";
+}
+
 public class WorkerJob : BaseEntity<Guid>
 {
     public Guid AssetId { get; private set; }
 
     public Guid OrganizationId { get; private set; }
+
+    public string QueueName { get; private set; } = WorkerQueueName.Media;
 
     public string JobType { get; private set; } = string.Empty;
 
@@ -49,11 +57,13 @@ public class WorkerJob : BaseEntity<Guid>
         Guid organizationId,
         string jobType,
         string? payloadJson = null,
-        int maxAttempts = 3)
+        int maxAttempts = 3,
+        string queueName = WorkerQueueName.Media)
     {
         Id = Guid.NewGuid();
         AssetId = assetId;
         OrganizationId = organizationId;
+        QueueName = queueName;
         JobType = jobType;
         PayloadJson = payloadJson;
         MaxAttempts = maxAttempts;
@@ -109,6 +119,12 @@ public class WorkerJob : BaseEntity<Guid>
     {
         Status = WorkerJobStatus.Pending;
         LeaseExpiresAt = null;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    public void RenewLease(TimeSpan leaseDuration)
+    {
+        LeaseExpiresAt = DateTimeOffset.UtcNow.Add(leaseDuration);
         UpdatedAt = DateTimeOffset.UtcNow;
     }
 

@@ -7,6 +7,12 @@ public record PresignedUploadGrant(
     DateTimeOffset ExpiresAt,
     IReadOnlyDictionary<string, string> Headers);
 
+public record PresignedDownloadGrant(
+    string DownloadUrl,
+    string StorageKey,
+    string Bucket,
+    DateTimeOffset ExpiresAt);
+
 public record ObjectStorageObject(
     string Key,
     string Bucket,
@@ -22,6 +28,12 @@ public interface IObjectStorage
         string key,
         string contentType,
         long contentLength,
+        TimeSpan expiry,
+        CancellationToken cancellationToken = default);
+
+    Task<PresignedDownloadGrant> CreateDownloadGrantAsync(
+        string bucket,
+        string key,
         TimeSpan expiry,
         CancellationToken cancellationToken = default);
 

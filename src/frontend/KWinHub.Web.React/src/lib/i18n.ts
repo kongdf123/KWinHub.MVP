@@ -386,6 +386,7 @@ export const STRINGS: Record<string, { en: string; cn: string }> = {
   'sessionDetail.tab.trials': { en: 'Trials', cn: '试次' },
   'sessionDetail.tab.metrics': { en: 'Metrics', cn: '指标' },
   'sessionDetail.tab.visualization': { en: 'Visualization', cn: '可视化' },
+  'sessionDetail.tab.media': { en: 'Media', cn: '媒体' },
   'sessionDetail.tab.analysis': { en: 'Analysis', cn: '分析' },
   'sessionDetail.tab.rawData': { en: 'Raw Data', cn: '原始数据' },
   'sessionDetail.tab.processing': { en: 'Processing', cn: '处理' },

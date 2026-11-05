@@ -43,6 +43,29 @@ public class S3ObjectStorage : IObjectStorage
             });
     }
 
+    public async Task<PresignedDownloadGrant> CreateDownloadGrantAsync(
+        string bucket,
+        string key,
+        TimeSpan expiry,
+        CancellationToken cancellationToken = default)
+    {
+        var request = new GetPreSignedUrlRequest
+        {
+            BucketName = bucket,
+            Key = key,
+            Verb = HttpVerb.GET,
+            Expires = DateTime.UtcNow.Add(expiry)
+        };
+
+        var url = await Task.Run(() => _s3Client.GetPreSignedURL(request), cancellationToken);
+
+        return new PresignedDownloadGrant(
+            url,
+            key,
+            bucket,
+            DateTimeOffset.UtcNow.Add(expiry));
+    }
+
     public async Task<ObjectStorageObject?> GetObjectInfoAsync(
         string bucket,
         string key,

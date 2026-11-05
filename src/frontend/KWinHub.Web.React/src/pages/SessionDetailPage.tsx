@@ -6,10 +6,11 @@ import { TopBar } from '@/components/layout/TopBar';
 import { ForceTimeCurve } from '@/components/ui/ForceTimeCurve';
 import { MetricCard } from '@/components/ui/MetricCard';
 import { BarChart } from '@/components/ui/BarChart';
+import { SessionMediaPanel } from '@/components/ui/MediaPlayer';
 import {
   ArrowLeft, Download, CheckCircle, XCircle, Activity, Info, Zap, Waves,
   TrendingUp, Dumbbell, Shuffle, RefreshCw, Database, FileJson, Clock,
-  Server, FileText, AlertCircle, Cpu, BarChart3, Loader2, type LucideIcon,
+  Server, FileText, AlertCircle, Cpu, BarChart3, Loader2, Film, type LucideIcon,
 } from 'lucide-react';
 import type { SessionStatus } from '@/lib/types';
 import { sessionsApi, type SessionDto } from '@/lib/api/sessions';
@@ -64,13 +65,14 @@ const LIFECYCLE_STEPS: { status: SessionStatus; labelEn: string; labelCn: string
   { status: 'PUBLISHED', labelEn: 'Published', labelCn: '已发布' },
 ];
 
-type Tab = 'overview' | 'trials' | 'metrics' | 'visualization' | 'analysis' | 'rawData' | 'processing' | 'dataQuality' | 'reports';
+type Tab = 'overview' | 'trials' | 'metrics' | 'visualization' | 'media' | 'analysis' | 'rawData' | 'processing' | 'dataQuality' | 'reports';
 
 const TABS: { key: Tab; labelKey: string; icon: LucideIcon }[] = [
   { key: 'overview', labelKey: 'sessionDetail.tab.overview', icon: Activity },
   { key: 'trials', labelKey: 'sessionDetail.tab.trials', icon: CheckCircle },
   { key: 'metrics', labelKey: 'sessionDetail.tab.metrics', icon: BarChart3 },
   { key: 'visualization', labelKey: 'sessionDetail.tab.visualization', icon: BarChart3 },
+  { key: 'media', labelKey: 'sessionDetail.tab.media', icon: Film },
   { key: 'analysis', labelKey: 'sessionDetail.tab.analysis', icon: Info },
   { key: 'rawData', labelKey: 'sessionDetail.tab.rawData', icon: Database },
   { key: 'processing', labelKey: 'sessionDetail.tab.processing', icon: Cpu },
@@ -477,6 +479,19 @@ export function SessionDetailPage() {
               <h4 className="text-sm font-semibold text-ink-900 mb-4">{lang === 'cn' ? '试次对比' : 'Trial Comparison'}</h4>
               <BarChart data={trialBarData} height={200} />
             </div>
+          </div>
+        );
+
+      case 'media':
+        return (
+          <div className="bg-white rounded-xl border border-ink-200 p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <Film className="w-4 h-4 text-teal-600" />
+              <h4 className="text-sm font-semibold text-ink-900">
+                {lang === 'cn' ? '媒体资源' : 'Media Assets'}
+              </h4>
+            </div>
+            <SessionMediaPanel sessionId={sessionId} lang={lang} />
           </div>
         );
 

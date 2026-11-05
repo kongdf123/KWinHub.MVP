@@ -14,7 +14,22 @@ public record MediaProcessingResult(
     string? PlaybackUrl = null,
     string? Error = null,
     bool Skipped = false,
-    string? SkipReason = null);
+    string? SkipReason = null,
+    string? ProviderJobId = null);
+
+public enum MediaProviderState
+{
+    Unknown,
+    Processing,
+    Completed,
+    Failed
+}
+
+public record MediaStatusQueryResult(
+    MediaProviderState State,
+    string? ProviderId = null,
+    string? PlaybackUrl = null,
+    string? ErrorMessage = null);
 
 public interface IMediaProcessor
 {
@@ -24,5 +39,9 @@ public interface IMediaProcessor
 
     Task<MediaProcessingResult> ProcessAsync(
         MediaProcessingRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<MediaStatusQueryResult> QueryStatusAsync(
+        string providerJobId,
         CancellationToken cancellationToken = default);
 }

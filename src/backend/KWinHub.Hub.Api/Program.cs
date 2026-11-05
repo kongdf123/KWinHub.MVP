@@ -1,6 +1,7 @@
 using System.Text;
 using KWinHub.BuildingBlocks.Abstractions;
 using KWinHub.Hub.Api.Authorization;
+using KWinHub.Hub.Api.Controllers;
 using KWinHub.Hub.Api.Services;
 using KWinHub.Hub.Application;
 using KWinHub.Hub.Infrastructure;
@@ -48,6 +49,8 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
 
 builder.Services.AddProblemDetails();
+
+builder.Services.Configure<MediaCallbackOptions>(builder.Configuration.GetSection("MediaCallbacks"));
 
 builder.Services.AddCors(options =>
 {
