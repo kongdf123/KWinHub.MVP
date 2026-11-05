@@ -49,12 +49,23 @@ namespace KWinHub.Hub.Infrastructure.Persistence.Migrations
                         .HasMaxLength(1024)
                         .HasColumnType("character varying(1024)");
 
+                    b.Property<string>("MediaProviderId")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
                     b.Property<string>("MimeType")
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
 
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("PlaybackUrl")
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
+
+                    b.Property<DateTimeOffset?>("ProcessedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("Revision")
                         .HasColumnType("integer");
@@ -1128,6 +1139,67 @@ namespace KWinHub.Hub.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("team_memberships", "hub");
+                });
+
+            modelBuilder.Entity("KWinHub.Hub.Workers.WorkerJob", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AssetId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Attempt")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("JobType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTimeOffset?>("LeaseExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("MaxAttempts")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PayloadJson")
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("ResultJson")
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssetId");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("Status", "CreatedAt");
+
+                    b.ToTable("worker_jobs", "hub");
                 });
 
             modelBuilder.Entity("KWinHub.Hub.Groups.GroupMembership", b =>

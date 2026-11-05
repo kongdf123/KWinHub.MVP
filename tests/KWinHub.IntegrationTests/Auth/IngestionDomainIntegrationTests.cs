@@ -1150,7 +1150,8 @@ public class IngestionDomainIntegrationTests : IClassFixture<HubApiSqliteFactory
         string AssetType,
         string ExternalId,
         long Size,
-        string Status);
+        string Status,
+        Guid? TrialId = null);
 
     private record IngestionErrorDto(
         string Code,

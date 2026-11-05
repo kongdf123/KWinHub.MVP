@@ -27,6 +27,9 @@ public class DataAssetConfiguration : IEntityTypeConfiguration<DataAsset>
         builder.Property(a => a.UploadedAt);
         builder.Property(a => a.VerifiedAt);
         builder.Property(a => a.FailureReason).HasMaxLength(1024);
+        builder.Property(a => a.MediaProviderId).HasMaxLength(256);
+        builder.Property(a => a.PlaybackUrl).HasMaxLength(1024);
+        builder.Property(a => a.ProcessedAt);
 
         builder.HasIndex(a => new { a.OrganizationId, a.SessionId });
         builder.HasIndex(a => new { a.OrganizationId, a.SessionId, a.ExternalId });

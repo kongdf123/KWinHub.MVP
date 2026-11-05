@@ -1,6 +1,8 @@
 using KWinHub.Hub.Application.Common;
 using KWinHub.Hub.Application.Messaging;
+using KWinHub.Hub.Application.Workers;
 using KWinHub.Hub.Messaging;
+using KWinHub.Hub.Workers;
 
 namespace KWinHub.Hub.Assets;
 
@@ -11,19 +13,22 @@ public class AssetService : IAssetService
     private readonly ITransactionManager _transactionManager;
     private readonly ObjectStorageOptions _storageOptions;
     private readonly IOutbox _outbox;
+    private readonly IWorkerJobRepository _workerJobRepository;
 
     public AssetService(
         IAssetRepository assetRepository,
         IObjectStorage objectStorage,
         ITransactionManager transactionManager,
         ObjectStorageOptions storageOptions,
-        IOutbox outbox)
+        IOutbox outbox,
+        IWorkerJobRepository workerJobRepository)
     {
         _assetRepository = assetRepository;
         _objectStorage = objectStorage;
         _transactionManager = transactionManager;
         _storageOptions = storageOptions;
         _outbox = outbox;
+        _workerJobRepository = workerJobRepository;
     }
 
     public async Task<IReadOnlyList<AssetResponse>> ListBySessionAsync(
@@ -50,7 +55,17 @@ public class AssetService : IAssetService
 
         if (asset.Status is DataAssetStatus.UploadFailed or DataAssetStatus.VerificationFailed)
         {
+            var oldStorageKey = BuildStorageKey(asset);
             asset.ResetForRetry();
+            try
+            {
+                await _objectStorage.DeleteObjectAsync(
+                    _storageOptions.Bucket, oldStorageKey, cancellationToken);
+            }
+            catch
+            {
+                // Stale object cleanup is best-effort; don't block retry
+            }
         }
 
         var storageKey = BuildStorageKey(asset);
@@ -111,6 +126,17 @@ public class AssetService : IAssetService
                 return ToResponse(asset);
             }
 
+            if (asset.MimeType is not null &&
+                !string.IsNullOrWhiteSpace(objectInfo.ContentType) &&
+                !string.Equals(objectInfo.ContentType, asset.MimeType, StringComparison.OrdinalIgnoreCase))
+            {
+                asset.MarkVerificationFailed(
+                    $"Content type mismatch: expected {asset.MimeType}, got {objectInfo.ContentType}");
+                await _assetRepository.UpdateAsync(asset, cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+                return ToResponse(asset);
+            }
+
             if (asset.Checksum is not null)
             {
                 var actualChecksum = await _objectStorage.GetObjectChecksumAsync(
@@ -148,6 +174,15 @@ public class AssetService : IAssetService
 
             await _outbox.AddAsync(outboxMessage, cancellationToken);
 
+            if (ShouldEnqueueMediaJob(asset))
+            {
+                var workerJob = new WorkerJob(
+                    assetId: asset.Id,
+                    organizationId: asset.OrganizationId,
+                    jobType: WorkerJobType.TranscodeVideo);
+                await _workerJobRepository.AddAsync(workerJob, cancellationToken);
+            }
+
             await _assetRepository.UpdateAsync(asset, cancellationToken);
             await transaction.CommitAsync(cancellationToken);
 
@@ -174,6 +209,16 @@ public class AssetService : IAssetService
         return $"orgs/{asset.OrganizationId}/sessions/{asset.SessionId}/assets/{asset.Id}/r{asset.Revision}";
     }
 
+    private static bool ShouldEnqueueMediaJob(DataAsset asset)
+    {
+        if (string.IsNullOrWhiteSpace(asset.MimeType))
+        {
+            return false;
+        }
+
+        return asset.MimeType.StartsWith("video/", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static AssetResponse ToResponse(DataAsset asset) => new(
         asset.Id,
         asset.SessionId,
@@ -187,7 +232,10 @@ public class AssetService : IAssetService
         asset.Status.ToString(),
         asset.UploadedAt,
         asset.VerifiedAt,
-        asset.FailureReason);
+        asset.FailureReason,
+        asset.MediaProviderId,
+        asset.PlaybackUrl,
+        asset.ProcessedAt);
 }
 
 public class ObjectStorageOptions

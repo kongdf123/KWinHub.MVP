@@ -7,5 +7,8 @@ public enum DataAssetStatus
     UploadedUnverified,
     UploadedVerified,
     UploadFailed,
-    VerificationFailed
+    VerificationFailed,
+    Processing,
+    Ready,
+    ProcessingFailed
 }

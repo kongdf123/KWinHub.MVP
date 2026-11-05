@@ -122,6 +122,7 @@ public class IngestionService : IIngestionService
             var session = await GetOrCreateSessionAsync(organizationId, request, cancellationToken);
 
             var trialResults = new List<IngestTrialResult>();
+            var trialIndexToId = new Dictionary<int, Guid>();
             if (request.Trials is not null)
             {
                 foreach (var trialRequest in request.Trials)
@@ -133,6 +134,7 @@ public class IngestionService : IIngestionService
                         session.ProtocolVersion,
                         trialRequest,
                         cancellationToken);
+                    trialIndexToId[trialRequest.TrialIndex] = trialId;
                     trialResults.Add(new IngestTrialResult(trialRequest.TrialIndex, trialId, "Accepted"));
                 }
             }
@@ -142,10 +144,27 @@ public class IngestionService : IIngestionService
             {
                 foreach (var asset in request.AssetPlaceholders)
                 {
+                    Guid? trialId = null;
+                    if (asset.TrialIndex.HasValue)
+                    {
+                        if (trialIndexToId.TryGetValue(asset.TrialIndex.Value, out var mappedTrialId))
+                        {
+                            trialId = mappedTrialId;
+                        }
+                        else
+                        {
+                            throw new IngestionException(
+                                IngestionErrorCodes.ValidationFailed,
+                                $"Asset '{asset.ExternalId}' references trial index {asset.TrialIndex.Value} " +
+                                "which was not provided in the trials list.",
+                                $"assetPlaceholders.{asset.ExternalId}.trialIndex");
+                        }
+                    }
+
                     var dataAsset = new DataAsset(
                         organizationId,
                         session.Id,
-                        null,
+                        trialId,
                         asset.AssetType,
                         asset.Size,
                         asset.ExternalId,
@@ -158,7 +177,8 @@ public class IngestionService : IIngestionService
                         asset.AssetType,
                         asset.ExternalId,
                         asset.Size,
-                        "PendingUpload"));
+                        "PendingUpload",
+                        trialId));
                 }
             }
 
@@ -455,6 +475,8 @@ public class IngestionService : IIngestionService
                 builder.Append(asset.MimeType ?? string.Empty);
                 builder.Append(':');
                 builder.Append(asset.Checksum ?? string.Empty);
+                builder.Append(':');
+                builder.Append(asset.TrialIndex?.ToString() ?? string.Empty);
             }
         }
 

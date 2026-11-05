@@ -34,6 +34,12 @@ public class DataAsset : BaseEntity<Guid>
 
     public string? FailureReason { get; private set; }
 
+    public string? MediaProviderId { get; private set; }
+
+    public string? PlaybackUrl { get; private set; }
+
+    public DateTimeOffset? ProcessedAt { get; private set; }
+
     private DataAsset()
     {
     }
@@ -104,6 +110,58 @@ public class DataAsset : BaseEntity<Guid>
         VerifiedAt = null;
         FailureReason = null;
         Revision++;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    public void MarkProcessing()
+    {
+        if (Status != DataAssetStatus.UploadedVerified)
+        {
+            throw new InvalidOperationException(
+                $"Cannot mark asset as Processing from status {Status}. Expected UploadedVerified.");
+        }
+
+        Status = DataAssetStatus.Processing;
+        FailureReason = null;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    public void MarkReady(string mediaProviderId, string? playbackUrl = null)
+    {
+        if (Status != DataAssetStatus.Processing)
+        {
+            throw new InvalidOperationException(
+                $"Cannot mark asset as Ready from status {Status}. Expected Processing.");
+        }
+
+        Status = DataAssetStatus.Ready;
+        MediaProviderId = mediaProviderId;
+        PlaybackUrl = playbackUrl;
+        ProcessedAt = DateTimeOffset.UtcNow;
+        FailureReason = null;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    public void MarkProcessingFailed(string reason)
+    {
+        Status = DataAssetStatus.ProcessingFailed;
+        FailureReason = reason;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    public void ResetProcessingForRetry()
+    {
+        if (Status is not DataAssetStatus.ProcessingFailed)
+        {
+            throw new InvalidOperationException(
+                $"Cannot reset processing for retry from status {Status}. Expected ProcessingFailed.");
+        }
+
+        Status = DataAssetStatus.UploadedVerified;
+        FailureReason = null;
+        MediaProviderId = null;
+        PlaybackUrl = null;
+        ProcessedAt = null;
         UpdatedAt = DateTimeOffset.UtcNow;
     }
 }

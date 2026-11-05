@@ -7,6 +7,7 @@ using KWinHub.Hub.Results;
 using KWinHub.Hub.Sessions;
 using KWinHub.Hub.Subjects;
 using KWinHub.Hub.Teams;
+using KWinHub.Hub.Workers;
 using Microsoft.EntityFrameworkCore;
 
 namespace KWinHub.Hub.Infrastructure.Persistence;
@@ -65,6 +66,8 @@ public class HubDbContext : DbContext
     public DbSet<DataAsset> DataAssets => Set<DataAsset>();
 
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
+
+    public DbSet<WorkerJob> WorkerJobs => Set<WorkerJob>();
 
     public DbSet<IngestionOperation> IngestionOperations => Set<IngestionOperation>();
 
@@ -319,6 +322,7 @@ public class HubDbContext : DbContext
 
         modelBuilder.ApplyConfiguration(new Configurations.DataAssetConfiguration());
         modelBuilder.ApplyConfiguration(new Configurations.OutboxMessageConfiguration());
+        modelBuilder.ApplyConfiguration(new Configurations.WorkerJobConfiguration());
 
         base.OnModelCreating(modelBuilder);
     }

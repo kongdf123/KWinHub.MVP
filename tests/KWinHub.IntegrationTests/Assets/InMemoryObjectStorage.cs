@@ -97,13 +97,26 @@ public class InMemoryObjectStorage : IObjectStorage
         }
     }
 
+    public void SetObjectContentType(string bucket, string key, string contentType)
+    {
+        var storageKey = $"{bucket}/{key}";
+        if (_objects.TryGetValue(storageKey, out var obj))
+        {
+            obj.ContentType = contentType;
+        }
+        else
+        {
+            _objects[storageKey] = new StoredObject(key, bucket, 0, contentType, DateTimeOffset.UtcNow);
+        }
+    }
+
     private class StoredObject
     {
         public string Key { get; }
         public string Bucket { get; }
         public long Size { get; set; }
         public string? ETag { get; set; }
-        public string? ContentType { get; }
+        public string? ContentType { get; set; }
         public DateTimeOffset LastModified { get; }
 
         public StoredObject(string key, string bucket, long size, string? contentType, DateTimeOffset lastModified)

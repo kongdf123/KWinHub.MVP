@@ -405,4 +405,102 @@ public class AssetUploadIntegrationTests : IClassFixture<AssetTestFactory>
         Assert.NotNull(assets);
         Assert.Equal(2, assets.Count);
     }
+
+    [Fact]
+    public async Task CompleteUpload_ContentTypeMismatch_MarksVerificationFailed()
+    {
+        var userId = Guid.NewGuid();
+        var orgId = Guid.NewGuid();
+        Guid sessionId = Guid.Empty;
+        Guid assetId = Guid.Empty;
+        const long size = 1024;
+
+        await SeedAsync(db =>
+        {
+            SeedActiveMembership(db, userId, orgId, OrganizationRoles.Admin);
+            var (sId, pId) = SeedSubjectAndProtocol(db, orgId);
+            sessionId = SeedSession(db, orgId, sId, pId);
+            assetId = SeedAsset(db, orgId, sessionId, size);
+        });
+
+        var client = CreateAuthorizedClient(userId, orgId);
+        await client.PostAsync($"/api/v1/assets/{assetId}/upload-grant", null);
+
+        var storageKey = $"orgs/{orgId}/sessions/{sessionId}/assets/{assetId}/r1";
+        _factory.ObjectStorage.SetObjectSize("kwinhub-assets", storageKey, size);
+        _factory.ObjectStorage.SetObjectContentType("kwinhub-assets", storageKey, "application/octet-stream");
+
+        var response = await client.PostAsJsonAsync("/api/v1/assets/complete", new { AssetId = assetId });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<AssetResponse>();
+        Assert.NotNull(result);
+        Assert.Equal("VerificationFailed", result.Status);
+        Assert.Contains("Content type mismatch", result.FailureReason);
+    }
+
+    [Fact]
+    public async Task CompleteUpload_ContentTypeMatches_MarksVerified()
+    {
+        var userId = Guid.NewGuid();
+        var orgId = Guid.NewGuid();
+        Guid sessionId = Guid.Empty;
+        Guid assetId = Guid.Empty;
+        const long size = 1024;
+
+        await SeedAsync(db =>
+        {
+            SeedActiveMembership(db, userId, orgId, OrganizationRoles.Admin);
+            var (sId, pId) = SeedSubjectAndProtocol(db, orgId);
+            sessionId = SeedSession(db, orgId, sId, pId);
+            assetId = SeedAsset(db, orgId, sessionId, size);
+        });
+
+        var client = CreateAuthorizedClient(userId, orgId);
+        await client.PostAsync($"/api/v1/assets/{assetId}/upload-grant", null);
+
+        var storageKey = $"orgs/{orgId}/sessions/{sessionId}/assets/{assetId}/r1";
+        _factory.ObjectStorage.SetObjectSize("kwinhub-assets", storageKey, size);
+        _factory.ObjectStorage.SetObjectContentType("kwinhub-assets", storageKey, "video/mp4");
+
+        var response = await client.PostAsJsonAsync("/api/v1/assets/complete", new { AssetId = assetId });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<AssetResponse>();
+        Assert.NotNull(result);
+        Assert.Equal("UploadedVerified", result.Status);
+    }
+
+    [Fact]
+    public async Task RequestUploadGrant_RetryDeletesOldStorageObject()
+    {
+        var userId = Guid.NewGuid();
+        var orgId = Guid.NewGuid();
+        Guid sessionId = Guid.Empty;
+        Guid assetId = Guid.Empty;
+        const long size = 1024;
+
+        await SeedAsync(db =>
+        {
+            SeedActiveMembership(db, userId, orgId, OrganizationRoles.Admin);
+            var (sId, pId) = SeedSubjectAndProtocol(db, orgId);
+            sessionId = SeedSession(db, orgId, sId, pId);
+            assetId = SeedAsset(db, orgId, sessionId, size);
+        });
+
+        var client = CreateAuthorizedClient(userId, orgId);
+        await client.PostAsync($"/api/v1/assets/{assetId}/upload-grant", null);
+
+        var oldStorageKey = $"orgs/{orgId}/sessions/{sessionId}/assets/{assetId}/r1";
+        _factory.ObjectStorage.SetObjectSize("kwinhub-assets", oldStorageKey, 999);
+        await client.PostAsJsonAsync("/api/v1/assets/complete", new { AssetId = assetId });
+
+        var oldExists = await _factory.ObjectStorage.ObjectExistsAsync("kwinhub-assets", oldStorageKey);
+        Assert.True(oldExists);
+
+        await client.PostAsync($"/api/v1/assets/{assetId}/upload-grant", null);
+
+        var stillExists = await _factory.ObjectStorage.ObjectExistsAsync("kwinhub-assets", oldStorageKey);
+        Assert.False(stillExists);
+    }
 }

@@ -25,7 +25,10 @@ public record AssetResponse(
     string Status,
     DateTimeOffset? UploadedAt,
     DateTimeOffset? VerifiedAt,
-    string? FailureReason);
+    string? FailureReason,
+    string? MediaProviderId = null,
+    string? PlaybackUrl = null,
+    DateTimeOffset? ProcessedAt = null);
 
 public interface IAssetService
 {

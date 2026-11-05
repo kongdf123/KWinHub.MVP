@@ -5,4 +5,5 @@ public record IngestAssetPlaceholderRequest(
     string ExternalId,
     long Size,
     string? MimeType = null,
-    string? Checksum = null);
+    string? Checksum = null,
+    int? TrialIndex = null);

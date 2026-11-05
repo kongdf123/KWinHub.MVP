@@ -4,6 +4,7 @@ using KWinHub.Hub.Application.Authorization;
 using KWinHub.Hub.Application.Common;
 using KWinHub.Hub.Application.CrossContext;
 using KWinHub.Hub.Application.Groups;
+using KWinHub.Hub.Application.Media;
 using KWinHub.Hub.Application.Messaging;
 using KWinHub.Hub.Application.Organizations;
 using KWinHub.Hub.Application.Protocols;
@@ -11,12 +12,15 @@ using KWinHub.Hub.Application.Results;
 using KWinHub.Hub.Application.Sessions;
 using KWinHub.Hub.Application.Subjects;
 using KWinHub.Hub.Application.Teams;
+using KWinHub.Hub.Application.Workers;
 using KWinHub.Hub.Assets;
 using KWinHub.Hub.Infrastructure.CrossContext;
+using KWinHub.Hub.Infrastructure.Media;
 using KWinHub.Hub.Infrastructure.Messaging;
 using KWinHub.Hub.Infrastructure.Persistence;
 using KWinHub.Hub.Infrastructure.Persistence.Repositories;
 using KWinHub.Hub.Infrastructure.Storage;
+using KWinHub.Hub.Infrastructure.Workers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -53,13 +57,17 @@ public static class DependencyInjection
         services.AddScoped<IOrganizationEventConsumptionRepository, OrganizationEventConsumptionRepository>();
         services.AddScoped<IIngestionOperationRepository, IngestionOperationRepository>();
         services.AddScoped<IAssetRepository, AssetRepository>();
+        services.AddScoped<IWorkerJobRepository, WorkerJobRepository>();
         services.AddScoped<ITransactionManager, EfTransactionManager>();
         services.AddScoped<IWorkspaceStatsReader, WorkspaceStatsReader>();
+
+        services.AddScoped<IMediaProcessor, LocalFfmpegMediaProcessor>();
 
         services.AddScoped<IOutbox, OutboxRepository>();
         services.AddSingleton<IMessageBus, LocalMessageBus>();
         services.AddSingleton<TimeProvider>(TimeProvider.System);
         services.AddHostedService<OutboxRelayService>();
+        services.AddHostedService<MediaWorkerService>();
 
         var storageSection = configuration.GetSection("ObjectStorage");
         var storageOptions = new ObjectStorageOptions();
