@@ -4,6 +4,7 @@ using KWinHub.Platform.Organizations;
 using KWinHub.Platform.Subscriptions;
 using KWinHub.Platform.Users;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace KWinHub.Platform.Infrastructure.Persistence;
 
@@ -280,6 +281,32 @@ public class PlatformDbContext : DbContext
             b.HasIndex(e => new { e.Status, e.CreatedAt });
             b.HasIndex(e => new { e.OrganizationId, e.EventVersion }).IsUnique();
         });
+
+        var dateTimeOffsetConverter = new ValueConverter<DateTimeOffset, DateTime>(
+            dto => dto.UtcDateTime,
+            dt => new DateTimeOffset(
+                DateTime.SpecifyKind(dt, DateTimeKind.Utc), TimeSpan.Zero));
+
+        var nullableDateTimeOffsetConverter = new ValueConverter<DateTimeOffset?, DateTime?>(
+            dto => dto.HasValue ? dto.Value.UtcDateTime : (DateTime?)null,
+            dt => dt.HasValue
+                ? new DateTimeOffset(DateTime.SpecifyKind(dt.Value, DateTimeKind.Utc), TimeSpan.Zero)
+                : null);
+
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        {
+            foreach (var property in entityType.GetProperties())
+            {
+                if (property.ClrType == typeof(DateTimeOffset))
+                {
+                    property.SetValueConverter(dateTimeOffsetConverter);
+                }
+                else if (property.ClrType == typeof(DateTimeOffset?))
+                {
+                    property.SetValueConverter(nullableDateTimeOffsetConverter);
+                }
+            }
+        }
 
         base.OnModelCreating(modelBuilder);
     }

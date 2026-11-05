@@ -62,8 +62,7 @@ public class PlatformRepository : IPlatformRepository
             query = query.Where(o => o.Type == parsedType);
         }
 
-        var rows = await Project(query)
-            .OrderByDescending(o => o.CreatedAt)
+        var rows = await Project(query.OrderByDescending(o => o.CreatedAt))
             .ToListAsync(cancellationToken);
 
         return rows.Select(ToRow).ToList();
