@@ -26,6 +26,7 @@ export const STRINGS: Record<string, { en: string; cn: string }> = {
   'nav.biomechanics': { en: 'Biomechanics', cn: '生物力学' },
   'nav.dashboards': { en: 'Dashboards', cn: '仪表盘' },
   'nav.reports': { en: 'Reports', cn: '报告' },
+  'nav.plans': { en: 'Assessment Plans', cn: '评估计划' },
 
   // Nav — Data & Integrations workspace
   'nav.datasets': { en: 'Datasets', cn: '数据集' },

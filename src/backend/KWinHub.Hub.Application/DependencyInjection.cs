@@ -4,6 +4,7 @@ using KWinHub.Hub.Application.History;
 using KWinHub.Hub.Application.Ingestion;
 using KWinHub.Hub.Application.Groups;
 using KWinHub.Hub.Application.Organizations;
+using KWinHub.Hub.Application.Plans;
 using KWinHub.Hub.Application.Protocols;
 using KWinHub.Hub.Application.Results;
 using KWinHub.Hub.Application.Sessions;
@@ -30,6 +31,7 @@ public static class DependencyInjection
         services.AddScoped<IDeviceService, DeviceService>();
         services.AddScoped<IResultService, ResultService>();
         services.AddScoped<IHistoryService, HistoryService>();
+        services.AddScoped<IAssessmentPlanService, AssessmentPlanService>();
         services.AddScoped<IIngestionService, IngestionService>();
         services.AddScoped<IAssetService, AssetService>();
 

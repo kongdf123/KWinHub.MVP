@@ -7,6 +7,7 @@ using KWinHub.Hub.Application.Groups;
 using KWinHub.Hub.Application.Media;
 using KWinHub.Hub.Application.Messaging;
 using KWinHub.Hub.Application.Organizations;
+using KWinHub.Hub.Application.Plans;
 using KWinHub.Hub.Application.Protocols;
 using KWinHub.Hub.Application.Results;
 using KWinHub.Hub.Application.Sessions;
@@ -57,6 +58,7 @@ public static class DependencyInjection
         services.AddScoped<IOrganizationEventConsumptionRepository, OrganizationEventConsumptionRepository>();
         services.AddScoped<IIngestionOperationRepository, IngestionOperationRepository>();
         services.AddScoped<IAssetRepository, AssetRepository>();
+        services.AddScoped<IAssessmentPlanRepository, AssessmentPlanRepository>();
         services.AddScoped<IWorkerJobRepository, WorkerJobRepository>();
         services.AddScoped<ITransactionManager, EfTransactionManager>();
         services.AddScoped<IWorkspaceStatsReader, WorkspaceStatsReader>();

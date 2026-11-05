@@ -2,6 +2,7 @@ using KWinHub.Hub.Assets;
 using KWinHub.Hub.Groups;
 using KWinHub.Hub.Messaging;
 using KWinHub.Hub.Organizations;
+using KWinHub.Hub.Plans;
 using KWinHub.Hub.Protocols;
 using KWinHub.Hub.Results;
 using KWinHub.Hub.Sessions;
@@ -70,6 +71,10 @@ public class HubDbContext : DbContext
     public DbSet<WorkerJob> WorkerJobs => Set<WorkerJob>();
 
     public DbSet<IngestionOperation> IngestionOperations => Set<IngestionOperation>();
+
+    public DbSet<AssessmentPlan> AssessmentPlans => Set<AssessmentPlan>();
+
+    public DbSet<AssessmentPlanItem> AssessmentPlanItems => Set<AssessmentPlanItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -318,6 +323,27 @@ public class HubDbContext : DbContext
             b.Property(o => o.ContentHash).HasMaxLength(64);
             b.HasIndex(o => new { o.OrganizationId, o.ClientOperationId }).IsUnique();
             b.HasIndex(o => o.SessionId);
+        });
+
+        modelBuilder.Entity<AssessmentPlan>(b =>
+        {
+            b.ToTable("assessment_plans", SchemaName);
+            b.Property(p => p.Name).HasMaxLength(200).IsRequired();
+            b.Property(p => p.Code).HasMaxLength(100).IsRequired();
+            b.Property(p => p.ProtocolCode).HasMaxLength(100);
+            b.Property(p => p.Status).HasConversion<string>().HasMaxLength(20);
+            b.HasIndex(p => new { p.OrganizationId, p.Code, p.Version }).IsUnique();
+            b.HasIndex(p => p.OrganizationId);
+        });
+
+        modelBuilder.Entity<AssessmentPlanItem>(b =>
+        {
+            b.ToTable("assessment_plan_items", SchemaName);
+            b.Property(i => i.MetricCode).HasMaxLength(100).IsRequired();
+            b.Property(i => i.MetricName).HasMaxLength(200).IsRequired();
+            b.Property(i => i.Unit).HasMaxLength(50).IsRequired();
+            b.Property(i => i.ValueType).HasMaxLength(20).IsRequired();
+            b.HasIndex(i => i.PlanId);
         });
 
         modelBuilder.ApplyConfiguration(new Configurations.DataAssetConfiguration());
