@@ -25,6 +25,7 @@ import { DashboardsPage } from '@/pages/DashboardsPage';
 import { IntegrationsPage } from '@/pages/IntegrationsPage';
 import { SyncCenterPage } from '@/pages/SyncCenterPage';
 import { ReportsPage } from '@/pages/ReportsPage';
+import { ReportDetailPage } from '@/pages/ReportDetailPage';
 import { PlansPage } from '@/pages/PlansPage';
 import { OrganizationPage } from '@/pages/admin/OrganizationPage';
 import { UsersPage } from '@/pages/admin/UsersPage';
@@ -69,6 +70,7 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
       case 'integrations': return <IntegrationsPage />;
       case 'sync-center': return <SyncCenterPage />;
       case 'reports': return <ReportsPage />;
+      case 'report-detail': return <ReportDetailPage />;
       case 'plans': return <PlansPage />;
       case 'organization': return <OrganizationPage />;
       case 'users': return <UsersPage />;

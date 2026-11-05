@@ -6,11 +6,13 @@ using KWinHub.Hub.Application.Groups;
 using KWinHub.Hub.Application.Organizations;
 using KWinHub.Hub.Application.Plans;
 using KWinHub.Hub.Application.Protocols;
+using KWinHub.Hub.Application.Reports;
 using KWinHub.Hub.Application.Results;
 using KWinHub.Hub.Application.Sessions;
 using KWinHub.Hub.Application.Subjects;
 using KWinHub.Hub.Application.Teams;
 using KWinHub.Hub.Assets;
+using KWinHub.Hub.Reports;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace KWinHub.Hub.Application;
@@ -32,6 +34,7 @@ public static class DependencyInjection
         services.AddScoped<IResultService, ResultService>();
         services.AddScoped<IHistoryService, HistoryService>();
         services.AddScoped<IAssessmentPlanService, AssessmentPlanService>();
+        services.AddScoped<IReportService, ReportService>();
         services.AddScoped<IIngestionService, IngestionService>();
         services.AddScoped<IAssetService, AssetService>();
 

@@ -83,7 +83,7 @@ export const PRIMARY_NAV: PrimaryNavItem[] = [
       { view: 'plans', labelKey: 'nav.plans' },
       { view: 'reports', labelKey: 'nav.reports' },
     ],
-    matchViews: ['plans', 'reports'],
+    matchViews: ['plans', 'reports', 'report-detail'],
   },
   {
     id: 'data',
