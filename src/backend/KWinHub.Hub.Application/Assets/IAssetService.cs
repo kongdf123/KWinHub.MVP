@@ -47,4 +47,6 @@ public interface IAssetService
     Task<AssetResponse?> GetByIdAsync(Guid organizationId, Guid assetId, CancellationToken cancellationToken = default);
 
     Task<PlaybackCredentialResponse> RequestPlaybackCredentialAsync(Guid organizationId, Guid assetId, CancellationToken cancellationToken = default);
+
+    Task<PlaybackCredentialResponse> RequestDownloadGrantAsync(Guid organizationId, Guid assetId, CancellationToken cancellationToken = default);
 }

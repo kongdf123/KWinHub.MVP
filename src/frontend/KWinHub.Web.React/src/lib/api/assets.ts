@@ -37,6 +37,13 @@ export interface PlaybackCredentialDto {
   mimeType: string | null;
 }
 
+export interface DownloadGrantDto {
+  assetId: string;
+  downloadUrl: string;
+  expiresAt: string;
+  mimeType: string | null;
+}
+
 export const assetsApi = {
   listBySession: (sessionId: string) =>
     http.get<AssetDto[]>(`/assets/by-session/${sessionId}`),
@@ -44,4 +51,6 @@ export const assetsApi = {
     http.get<AssetDto>(`/assets/${id}`),
   requestPlaybackCredential: (id: string) =>
     http.get<PlaybackCredentialDto>(`/assets/${id}/playback-credential`),
+  requestDownloadGrant: (id: string) =>
+    http.get<DownloadGrantDto>(`/assets/${id}/download-grant`),
 };

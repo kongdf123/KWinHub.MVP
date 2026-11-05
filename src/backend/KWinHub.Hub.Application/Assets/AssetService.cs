@@ -231,6 +231,33 @@ public class AssetService : IAssetService
             asset.MimeType);
     }
 
+    public async Task<PlaybackCredentialResponse> RequestDownloadGrantAsync(
+        Guid organizationId,
+        Guid assetId,
+        CancellationToken cancellationToken = default)
+    {
+        var asset = await _assetRepository.GetByIdAsync(organizationId, assetId, cancellationToken)
+            ?? throw new AssetNotFoundException(assetId);
+
+        if (asset.Status != DataAssetStatus.UploadedVerified && asset.Status != DataAssetStatus.Ready)
+        {
+            throw new AssetNotReadyException(assetId, asset.Status);
+        }
+
+        var storageKey = BuildStorageKey(asset);
+        var grant = await _objectStorage.CreateDownloadGrantAsync(
+            _storageOptions.Bucket,
+            storageKey,
+            _storageOptions.UploadGrantExpiry,
+            cancellationToken);
+
+        return new PlaybackCredentialResponse(
+            asset.Id,
+            grant.DownloadUrl,
+            grant.ExpiresAt,
+            asset.MimeType);
+    }
+
     private string BuildStorageKey(DataAsset asset)
     {
         return $"orgs/{asset.OrganizationId}/sessions/{asset.SessionId}/assets/{asset.Id}/r{asset.Revision}";

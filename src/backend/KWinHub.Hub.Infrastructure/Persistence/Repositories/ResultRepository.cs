@@ -45,24 +45,46 @@ public class ResultRepository : IResultRepository
         Guid sessionId,
         CancellationToken cancellationToken = default)
     {
-        return await _dbContext.Results
+        var results = await _dbContext.Results
             .AsNoTracking()
             .Include(r => r.Metrics)
             .Where(r => r.SessionId == sessionId && r.OrganizationId == organizationId)
-            .OrderByDescending(r => r.CreatedAt)
             .ToListAsync(cancellationToken);
+
+        return results.OrderByDescending(r => r.CreatedAt).ToList();
     }
 
     public async Task<IReadOnlyList<Result>> ListByOrganizationAsync(
         Guid organizationId,
         CancellationToken cancellationToken = default)
     {
-        return await _dbContext.Results
+        var results = await _dbContext.Results
             .AsNoTracking()
             .Include(r => r.Metrics)
             .Where(r => r.OrganizationId == organizationId)
-            .OrderByDescending(r => r.CreatedAt)
             .ToListAsync(cancellationToken);
+
+        return results.OrderByDescending(r => r.CreatedAt).ToList();
+    }
+
+    public async Task<IReadOnlyList<Result>> ListBySessionsAsync(
+        Guid organizationId,
+        IEnumerable<Guid> sessionIds,
+        CancellationToken cancellationToken = default)
+    {
+        var sessionIdList = sessionIds.ToList();
+        if (sessionIdList.Count == 0)
+        {
+            return Array.Empty<Result>();
+        }
+
+        var results = await _dbContext.Results
+            .AsNoTracking()
+            .Include(r => r.Metrics)
+            .Where(r => r.OrganizationId == organizationId && sessionIdList.Contains(r.SessionId))
+            .ToListAsync(cancellationToken);
+
+        return results.OrderByDescending(r => r.CreatedAt).ToList();
     }
 
     public async Task AddAsync(Result result, CancellationToken cancellationToken = default)

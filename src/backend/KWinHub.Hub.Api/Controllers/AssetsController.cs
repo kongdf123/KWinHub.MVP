@@ -79,6 +79,38 @@ public class AssetsController : ControllerBase
         }
     }
 
+    [HttpGet("{id:guid}/download-grant")]
+    [Authorize(Policy = HubPolicyNames.CanAccessRawAsset)]
+    [ProducesResponseType(typeof(PlaybackCredentialResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<PlaybackCredentialResponse>> RequestDownloadGrant(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var credential = await _assetService.RequestDownloadGrantAsync(
+                _currentUser.OrganizationId,
+                id,
+                cancellationToken);
+            return Ok(credential);
+        }
+        catch (AssetNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (AssetNotReadyException ex)
+        {
+            return Conflict(new ProblemDetails
+            {
+                Title = "Asset not available for download",
+                Detail = ex.Message,
+                Status = StatusCodes.Status409Conflict
+            });
+        }
+    }
+
     [HttpPost("{id:guid}/upload-grant")]
     [ProducesResponseType(typeof(AssetUploadGrantResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

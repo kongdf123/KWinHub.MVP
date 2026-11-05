@@ -30,11 +30,12 @@ public class SessionRepository : ISessionRepository
         Guid organizationId,
         CancellationToken cancellationToken = default)
     {
-        return await _dbContext.MeasurementSessions
+        var sessions = await _dbContext.MeasurementSessions
             .AsNoTracking()
             .Where(s => s.OrganizationId == organizationId)
-            .OrderByDescending(s => s.StartedAt)
             .ToListAsync(cancellationToken);
+
+        return sessions.OrderByDescending(s => s.StartedAt).ToList();
     }
 
     public async Task<IReadOnlyList<MeasurementSession>> ListBySubjectAsync(
@@ -42,11 +43,52 @@ public class SessionRepository : ISessionRepository
         Guid subjectId,
         CancellationToken cancellationToken = default)
     {
-        return await _dbContext.MeasurementSessions
+        var sessions = await _dbContext.MeasurementSessions
             .AsNoTracking()
             .Where(s => s.OrganizationId == organizationId && s.SubjectId == subjectId)
-            .OrderByDescending(s => s.StartedAt)
             .ToListAsync(cancellationToken);
+
+        return sessions.OrderByDescending(s => s.StartedAt).ToList();
+    }
+
+    public async Task<IReadOnlyList<MeasurementSession>> ListBySubjectFilteredAsync(
+        Guid organizationId,
+        Guid subjectId,
+        Guid? protocolId = null,
+        DateTimeOffset? from = null,
+        DateTimeOffset? to = null,
+        string? status = null,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _dbContext.MeasurementSessions
+            .AsNoTracking()
+            .Where(s => s.OrganizationId == organizationId && s.SubjectId == subjectId);
+
+        if (protocolId.HasValue)
+        {
+            query = query.Where(s => s.ProtocolId == protocolId.Value);
+        }
+
+        if (from.HasValue)
+        {
+            query = query.Where(s => s.StartedAt >= from.Value);
+        }
+
+        if (to.HasValue)
+        {
+            query = query.Where(s => s.StartedAt <= to.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            if (Enum.TryParse<SessionStatus>(status, ignoreCase: true, out var parsedStatus))
+            {
+                query = query.Where(s => s.Status == parsedStatus);
+            }
+        }
+
+        var sessions = await query.ToListAsync(cancellationToken);
+        return sessions.OrderByDescending(s => s.StartedAt).ToList();
     }
 
     public async Task AddAsync(MeasurementSession session, CancellationToken cancellationToken = default)

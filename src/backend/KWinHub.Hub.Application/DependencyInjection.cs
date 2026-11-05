@@ -1,5 +1,6 @@
 using FluentValidation;
 using KWinHub.Hub.Application.Authorization;
+using KWinHub.Hub.Application.History;
 using KWinHub.Hub.Application.Ingestion;
 using KWinHub.Hub.Application.Groups;
 using KWinHub.Hub.Application.Organizations;
@@ -28,6 +29,7 @@ public static class DependencyInjection
         services.AddScoped<IDataSourceService, DataSourceService>();
         services.AddScoped<IDeviceService, DeviceService>();
         services.AddScoped<IResultService, ResultService>();
+        services.AddScoped<IHistoryService, HistoryService>();
         services.AddScoped<IIngestionService, IngestionService>();
         services.AddScoped<IAssetService, AssetService>();
 

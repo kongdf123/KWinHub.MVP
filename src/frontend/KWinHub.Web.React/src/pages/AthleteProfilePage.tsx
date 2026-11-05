@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useApp } from '@/lib/app-context';
 import { t as tr } from '@/lib/i18n';
 import { DEMO_ATHLETES, DEMO_GROUPS, DEMO_TEAMS, getSessionsForAthlete, getTimelineForAthlete, getSport, getProtocol } from '@/lib/demo-data';
@@ -8,9 +8,12 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { TrendChart } from '@/components/ui/TrendChart';
 import { RadialGauge } from '@/components/ui/RadialGauge';
 import { BarChart } from '@/components/ui/BarChart';
-import { ArrowLeft, Dumbbell, TrendingUp, Calendar, Activity, Download, Zap, Waves, Shuffle } from 'lucide-react';
+import { ArrowLeft, Dumbbell, TrendingUp, Calendar, Activity, Download, Zap, Waves, Shuffle, GitCompare, Loader2 } from 'lucide-react';
+import { historyApi, type HistorySessionResponse, type ComparisonResponse, type CompatibleMetricGroupResponse } from '@/lib/api/history';
 
-type Tab = 'overview' | 'timeline' | 'trends';
+const API_MODE = import.meta.env.VITE_DATA_MODE === 'api';
+
+type Tab = 'overview' | 'timeline' | 'trends' | 'history';
 
 const SPORT_ICONS: Record<string, typeof Activity> = {
   'sport-cmj': Activity,
@@ -26,6 +29,18 @@ export function AthleteProfilePage() {
   const athleteId = viewParams.athleteId || 'a-1';
   const athlete = DEMO_ATHLETES.find((a) => a.id === athleteId) || DEMO_ATHLETES[0];
   const [tab, setTab] = useState<Tab>('overview');
+  const [historySessions, setHistorySessions] = useState<HistorySessionResponse[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [historyFilters, setHistoryFilters] = useState<{ protocolId: string; from: string; to: string; status: string }>({
+    protocolId: '',
+    from: '',
+    to: '',
+    status: '',
+  });
+  const [selectedSessionIds, setSelectedSessionIds] = useState<string[]>([]);
+  const [comparison, setComparison] = useState<ComparisonResponse | null>(null);
+  const [comparisonLoading, setComparisonLoading] = useState(false);
 
   const sessions = useMemo(() => getSessionsForAthlete(athleteId), [athleteId]);
   const timeline = useMemo(() => getTimelineForAthlete(athleteId), [athleteId]);
@@ -76,6 +91,58 @@ export function AthleteProfilePage() {
     return m ? (lang === 'cn' ? m.cn : m.en) : key;
   };
   const getMetricUnit = (key: string) => metricLabels[key]?.unit || '';
+
+  const subjectId = athleteId;
+
+  const loadHistory = async () => {
+    if (!API_MODE) return;
+    setHistoryLoading(true);
+    setHistoryError(null);
+    try {
+      const filters: Record<string, string> = {};
+      if (historyFilters.protocolId) filters.protocolId = historyFilters.protocolId;
+      if (historyFilters.from) filters.from = historyFilters.from;
+      if (historyFilters.to) filters.to = historyFilters.to;
+      if (historyFilters.status) filters.status = historyFilters.status;
+      const res = await historyApi.listSubjectHistory(subjectId, filters);
+      setHistorySessions(res.sessions);
+    } catch (e: unknown) {
+      setHistoryError(e instanceof Error ? e.message : 'Failed to load history');
+      setHistorySessions([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (API_MODE && tab === 'history') {
+      loadHistory();
+    }
+  }, [tab, historyFilters.protocolId, historyFilters.from, historyFilters.to, historyFilters.status]);
+
+  const toggleSessionSelection = (sessionId: string) => {
+    setSelectedSessionIds((prev) =>
+      prev.includes(sessionId) ? prev.filter((id) => id !== sessionId) : [...prev, sessionId],
+    );
+    setComparison(null);
+  };
+
+  const runComparison = async () => {
+    if (selectedSessionIds.length < 2) {
+      addToast(lang === 'cn' ? '请至少选择两个会话进行比较' : 'Select at least two sessions to compare', 'warning');
+      return;
+    }
+    setComparisonLoading(true);
+    try {
+      const res = await historyApi.compareSessions(subjectId, selectedSessionIds);
+      setComparison(res);
+    } catch (e: unknown) {
+      addToast(e instanceof Error ? e.message : 'Comparison failed', 'error');
+      setComparison(null);
+    } finally {
+      setComparisonLoading(false);
+    }
+  };
 
   return (
     <div>
@@ -146,6 +213,7 @@ export function AthleteProfilePage() {
             { key: 'overview' as Tab, label: tr('profile.overview', lang), icon: Activity },
             { key: 'timeline' as Tab, label: tr('profile.timeline', lang), icon: Calendar },
             { key: 'trends' as Tab, label: tr('profile.trends', lang), icon: TrendingUp },
+            { key: 'history' as Tab, label: lang === 'cn' ? '历史与对比' : 'History & Compare', icon: GitCompare },
           ]).map((t) => {
             const Icon = t.icon;
             return (
@@ -332,6 +400,199 @@ export function AthleteProfilePage() {
                 );
               })}
             </div>
+          </div>
+        )}
+
+        {/* History & Compare Tab */}
+        {tab === 'history' && (
+          <div className="space-y-6 animate-fade-in">
+            {API_MODE ? (
+              <>
+                <div className="bg-white rounded-xl border border-ink-200 p-5">
+                  <h4 className="text-sm font-semibold text-ink-900 mb-4">{lang === 'cn' ? '筛选' : 'Filters'}</h4>
+                  <div className="flex flex-wrap gap-3">
+                    <div>
+                      <label className="block text-xs text-ink-500 mb-1">{lang === 'cn' ? '协议 ID' : 'Protocol ID'}</label>
+                      <input
+                        type="text"
+                        value={historyFilters.protocolId}
+                        onChange={(e) => setHistoryFilters({ ...historyFilters, protocolId: e.target.value })}
+                        placeholder={lang === 'cn' ? '可选' : 'optional'}
+                        className="w-40 px-2.5 py-1.5 text-sm border border-ink-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-ink-500 mb-1">{lang === 'cn' ? '从' : 'From'}</label>
+                      <input
+                        type="date"
+                        value={historyFilters.from}
+                        onChange={(e) => setHistoryFilters({ ...historyFilters, from: e.target.value })}
+                        className="w-36 px-2.5 py-1.5 text-sm border border-ink-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-ink-500 mb-1">{lang === 'cn' ? '到' : 'To'}</label>
+                      <input
+                        type="date"
+                        value={historyFilters.to}
+                        onChange={(e) => setHistoryFilters({ ...historyFilters, to: e.target.value })}
+                        className="w-36 px-2.5 py-1.5 text-sm border border-ink-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-ink-500 mb-1">{lang === 'cn' ? '状态' : 'Status'}</label>
+                      <select
+                        value={historyFilters.status}
+                        onChange={(e) => setHistoryFilters({ ...historyFilters, status: e.target.value })}
+                        className="w-36 px-2.5 py-1.5 text-sm border border-ink-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      >
+                        <option value="">{lang === 'cn' ? '全部' : 'All'}</option>
+                        <option value="Completed">Completed</option>
+                        <option value="InProgress">InProgress</option>
+                        <option value="Cancelled">Cancelled</option>
+                      </select>
+                    </div>
+                    <div className="flex items-end">
+                      <button
+                        onClick={loadHistory}
+                        className="px-3 py-1.5 text-sm bg-teal-600 hover:bg-teal-700 text-white font-medium rounded-lg transition-colors"
+                      >
+                        {lang === 'cn' ? '刷新' : 'Refresh'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-xl border border-ink-200 p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-sm font-semibold text-ink-900">
+                      {lang === 'cn' ? '历史会话' : 'History Sessions'}
+                      {historySessions.length > 0 && (
+                        <span className="ml-2 text-xs text-ink-500">({historySessions.length})</span>
+                      )}
+                    </h4>
+                    <button
+                      onClick={runComparison}
+                      disabled={selectedSessionIds.length < 2 || comparisonLoading}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-teal-600 hover:bg-teal-700 text-white"
+                    >
+                      {comparisonLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <GitCompare className="w-3.5 h-3.5" />}
+                      {lang === 'cn' ? `对比所选 (${selectedSessionIds.length})` : `Compare selected (${selectedSessionIds.length})`}
+                    </button>
+                  </div>
+
+                  {historyLoading ? (
+                    <div className="flex items-center justify-center py-12 text-ink-500">
+                      <Loader2 className="w-5 h-5 animate-spin mr-2" /> {lang === 'cn' ? '加载中...' : 'Loading...'}
+                    </div>
+                  ) : historyError ? (
+                    <div className="py-8 text-center text-attention-600 text-sm">{historyError}</div>
+                  ) : historySessions.length === 0 ? (
+                    <div className="py-8 text-center text-ink-500 text-sm">{lang === 'cn' ? '暂无历史会话' : 'No history sessions found'}</div>
+                  ) : (
+                    <div className="divide-y divide-ink-100">
+                      {historySessions.map((session) => {
+                        const isSelected = selectedSessionIds.includes(session.id);
+                        return (
+                          <div key={session.id} className="py-3">
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => toggleSessionSelection(session.id)}
+                                className="w-4 h-4 rounded border-ink-300 text-teal-600 focus:ring-teal-500"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-ink-900">{session.protocolName}</p>
+                                <p className="text-xs text-ink-500">
+                                  {new Date(session.startedAt).toLocaleString(lang === 'cn' ? 'zh-CN' : 'en-US')} · {session.status}
+                                </p>
+                              </div>
+                              <div className="flex flex-wrap gap-1.5 justify-end max-w-md">
+                                {session.metrics.slice(0, 4).map((m) => (
+                                  <span key={m.metricId} className="text-xs bg-ink-50 rounded px-2 py-0.5 font-mono">
+                                    {m.code}: {typeof m.value === 'number' ? m.value.toFixed(1) : m.value} {m.unit}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {comparison && (
+                  <div className="bg-white rounded-xl border border-ink-200 p-5">
+                    <h4 className="text-sm font-semibold text-ink-900 mb-4">
+                      {lang === 'cn' ? '对比结果' : 'Comparison Results'}
+                      <span className="ml-2 text-xs text-ink-500">
+                        {comparison.compatibleMetrics.length} {lang === 'cn' ? '个兼容指标' : 'compatible metrics'}
+                      </span>
+                    </h4>
+                    {comparison.compatibleMetrics.length === 0 ? (
+                      <div className="py-6 text-center text-ink-500 text-sm">{lang === 'cn' ? '没有可比较的兼容指标' : 'No compatible metrics to compare'}</div>
+                    ) : (
+                      <div className="space-y-5">
+                        {comparison.compatibleMetrics.map((group: CompatibleMetricGroupResponse) => (
+                          <div key={group.metricCode} className="border border-ink-100 rounded-lg p-4">
+                            <div className="flex items-center justify-between mb-3">
+                              <div>
+                                <h5 className="text-sm font-semibold text-ink-900">{group.metricName}</h5>
+                                <p className="text-xs text-ink-500">{group.metricCode} · {group.unit}</p>
+                              </div>
+                              <div className="flex gap-4 text-right">
+                                <div>
+                                  <p className="text-xs text-ink-500">{lang === 'cn' ? '样本数' : 'N'}</p>
+                                  <p className="text-sm font-mono font-semibold">{group.statistics.sampleCount}</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-ink-500">{lang === 'cn' ? '均值' : 'Mean'}</p>
+                                  <p className="text-sm font-mono font-semibold">{group.statistics.mean?.toFixed(2) ?? '—'}</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-ink-500">{lang === 'cn' ? '最大值' : 'Max'}</p>
+                                  <p className="text-sm font-mono font-semibold">{group.statistics.max?.toFixed(2) ?? '—'}</p>
+                                </div>
+                              </div>
+                            </div>
+                            {group.points.length > 0 && (
+                              <div className="mb-3">
+                                <BarChart
+                                  unit={group.unit}
+                                  data={group.points.map((p) => ({
+                                    label: new Date(p.sessionDate).toLocaleDateString(lang === 'cn' ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric' }),
+                                    value: p.value,
+                                    color: '#06b56b',
+                                  }))}
+                                />
+                              </div>
+                            )}
+                            {group.exclusions.length > 0 && (
+                              <div className="pt-2 border-t border-ink-100">
+                                <p className="text-xs text-ink-500 mb-1">{lang === 'cn' ? '排除的会话' : 'Excluded sessions'}</p>
+                                {group.exclusions.map((ex, i) => (
+                                  <div key={i} className="text-xs text-ink-600">
+                                    <span className="font-mono">{ex.sessionId.slice(0, 8)}</span> — {ex.reason}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="bg-white rounded-xl border border-ink-200 p-8 text-center">
+                <GitCompare className="w-10 h-10 text-ink-300 mx-auto mb-3" />
+                <h4 className="text-sm font-semibold text-ink-900 mb-1">{lang === 'cn' ? '历史与对比' : 'History & Comparison'}</h4>
+                <p className="text-sm text-ink-500">{lang === 'cn' ? '此功能在 API 模式下可用，请设置 VITE_DATA_MODE=api。' : 'Available in API mode. Set VITE_DATA_MODE=api to enable.'}</p>
+              </div>
+            )}
           </div>
         )}
       </div>
