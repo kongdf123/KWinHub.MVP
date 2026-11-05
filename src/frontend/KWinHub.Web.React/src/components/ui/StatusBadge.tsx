@@ -7,10 +7,10 @@ export const STATUS_CONFIG: Record<Status, { labelKey: string; color: string; bg
   warning: { labelKey: 'common.warning', color: 'text-warning-700', bg: 'bg-warning-50', border: 'border-warning-200', icon: AlertTriangle },
   attention: { labelKey: 'common.attention', color: 'text-attention-700', bg: 'bg-attention-50', border: 'border-attention-200', icon: AlertCircle },
   invalid: { labelKey: 'common.invalid', color: 'text-invalid-700', bg: 'bg-invalid-50', border: 'border-invalid-200', icon: XCircle },
-  offline: { labelKey: 'common.offline', color: 'text-ink-500', bg: 'bg-ink-100', border: 'border-ink-200', icon: MinusCircle },
-  processing: { labelKey: 'common.processing', color: 'text-teal-700', bg: 'bg-teal-50', border: 'border-teal-200', icon: Zap },
-  syncing: { labelKey: 'common.syncing', color: 'text-teal-700', bg: 'bg-teal-50', border: 'border-teal-200', icon: RefreshCw },
-  pending: { labelKey: 'common.pending', color: 'text-ink-600', bg: 'bg-ink-100', border: 'border-ink-200', icon: Clock },
+  offline: { labelKey: 'common.offline', color: 'text-content-secondary', bg: 'bg-surface-hover', border: 'border-border-default', icon: MinusCircle },
+  processing: { labelKey: 'common.processing', color: 'text-accent', bg: 'bg-accent-soft', border: 'border-accent', icon: Zap },
+  syncing: { labelKey: 'common.syncing', color: 'text-accent', bg: 'bg-accent-soft', border: 'border-accent', icon: RefreshCw },
+  pending: { labelKey: 'common.pending', color: 'text-content-secondary', bg: 'bg-surface-hover', border: 'border-border-default', icon: Clock },
 };
 
 interface StatusBadgeProps {
@@ -43,10 +43,10 @@ export function StatusDot({ status, size = 'md' }: { status: Status; size?: 'sm'
     warning: 'bg-warning-500',
     attention: 'bg-attention-500',
     invalid: 'bg-invalid-500',
-    offline: 'bg-ink-400',
-    processing: 'bg-teal-500',
-    syncing: 'bg-teal-500',
-    pending: 'bg-ink-400',
+    offline: 'bg-content-muted',
+    processing: 'bg-accent',
+    syncing: 'bg-accent',
+    pending: 'bg-content-muted',
   };
   const sizeClass = size === 'sm' ? 'w-2 h-2' : size === 'lg' ? 'w-3.5 h-3.5' : 'w-2.5 h-2.5';
   return (
