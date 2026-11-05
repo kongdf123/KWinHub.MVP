@@ -25,6 +25,21 @@ public class InMemoryObjectStorage : IObjectStorage
         return Task.FromResult(grant);
     }
 
+    public Task<PresignedDownloadGrant> CreateDownloadGrantAsync(
+        string bucket,
+        string key,
+        TimeSpan expiry,
+        CancellationToken cancellationToken = default)
+    {
+        var grant = new PresignedDownloadGrant(
+            $"https://storage.example.com/{bucket}/{key}?download={Guid.NewGuid():N}",
+            key,
+            bucket,
+            DateTimeOffset.UtcNow.Add(expiry));
+
+        return Task.FromResult(grant);
+    }
+
     public Task<ObjectStorageObject?> GetObjectInfoAsync(
         string bucket,
         string key,

@@ -44,6 +44,28 @@ public class AliyunOssObjectStorage : IObjectStorage
         return Task.FromResult(grant);
     }
 
+    public Task<PresignedDownloadGrant> CreateDownloadGrantAsync(
+        string bucket,
+        string key,
+        TimeSpan expiry,
+        CancellationToken cancellationToken = default)
+    {
+        var request = new GeneratePresignedUriRequest(bucket, key, SignHttpMethod.Get)
+        {
+            Expiration = DateTime.Now.Add(expiry)
+        };
+
+        var uri = _ossClient.GeneratePresignedUri(request);
+
+        var grant = new PresignedDownloadGrant(
+            uri.ToString(),
+            key,
+            bucket,
+            DateTimeOffset.UtcNow.Add(expiry));
+
+        return Task.FromResult(grant);
+    }
+
     public Task<ObjectStorageObject?> GetObjectInfoAsync(
         string bucket,
         string key,

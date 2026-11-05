@@ -15,6 +15,12 @@ public record ObjectStorageObject(
     string? ContentType,
     DateTimeOffset LastModified);
 
+public record PresignedDownloadGrant(
+    string DownloadUrl,
+    string StorageKey,
+    string Bucket,
+    DateTimeOffset ExpiresAt);
+
 public interface IObjectStorage
 {
     Task<PresignedUploadGrant> CreateUploadGrantAsync(
@@ -22,6 +28,12 @@ public interface IObjectStorage
         string key,
         string contentType,
         long contentLength,
+        TimeSpan expiry,
+        CancellationToken cancellationToken = default);
+
+    Task<PresignedDownloadGrant> CreateDownloadGrantAsync(
+        string bucket,
+        string key,
         TimeSpan expiry,
         CancellationToken cancellationToken = default);
 
