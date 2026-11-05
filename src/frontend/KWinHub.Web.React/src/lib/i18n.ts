@@ -43,6 +43,7 @@ export const STRINGS: Record<string, { en: string; cn: string }> = {
 
   // Nav — Workflow Explorer
   'nav.demoExplorer': { en: 'Demo Explorer', cn: '演示探索器' },
+  'nav.uploadSimulator': { en: 'Client Upload Simulator', cn: '客户端上传模拟器' },
   'nav.prototypeTools': { en: 'Prototype Tools', cn: '原型工具' },
   'nav.prototypeToolsHint': { en: 'Internal demo only', cn: '仅供内部演示' },
 
