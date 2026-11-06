@@ -5,7 +5,7 @@ import { CheckCircle, AlertTriangle, AlertCircle, Info, X } from 'lucide-react';
 export interface Toast {
   id: string;
   message: string;
-  type: 'success' | 'warning' | 'attention' | 'info';
+  type: 'success' | 'warning' | 'attention' | 'info' | 'error';
 }
 
 interface ToastContainerProps {
@@ -13,18 +13,20 @@ interface ToastContainerProps {
   onDismiss: (id: string) => void;
 }
 
-const ICON_MAP = {
+const ICON_MAP: Record<Toast['type'], typeof AlertCircle> = {
   success: CheckCircle,
   warning: AlertTriangle,
   attention: AlertCircle,
   info: Info,
+  error: AlertCircle,
 };
 
-const COLOR_MAP = {
+const COLOR_MAP: Record<Toast['type'], string> = {
   success: 'text-success-600',
   warning: 'text-warning-600',
   attention: 'text-attention-600',
   info: 'text-teal-600',
+  error: 'text-invalid-600',
 };
 
 export function ToastContainer({ toasts, onDismiss }: ToastContainerProps) {
@@ -49,13 +51,14 @@ export function ToastContainer({ toasts, onDismiss }: ToastContainerProps) {
   return createPortal(
     <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2 max-w-sm animate-slide-up">
       {toasts.map((toast) => {
-        const Icon = ICON_MAP[toast.type];
+        const Icon = ICON_MAP[toast.type] ?? Info;
+        const color = COLOR_MAP[toast.type] ?? COLOR_MAP.info;
         return (
           <div
             key={toast.id}
             className="flex items-start gap-3 rounded-lg bg-white shadow-lg border border-ink-200 px-4 py-3 animate-slide-right"
           >
-            <Icon className={`w-5 h-5 mt-0.5 shrink-0 ${COLOR_MAP[toast.type]}`} />
+            <Icon className={`w-5 h-5 mt-0.5 shrink-0 ${color}`} />
             <p className="text-sm text-ink-900 flex-1">{toast.message}</p>
             <button onClick={() => onDismiss(toast.id)} className="text-ink-400 hover:text-ink-600 transition-colors">
               <X className="w-4 h-4" />
