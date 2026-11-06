@@ -8,6 +8,7 @@ public interface IResultRepository
     Task<Result?> GetBySessionAsync(Guid organizationId, Guid sessionId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Result>> ListBySessionAsync(Guid organizationId, Guid sessionId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Result>> ListByOrganizationAsync(Guid organizationId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Result>> ListBySessionsAsync(Guid organizationId, IEnumerable<Guid> sessionIds, CancellationToken cancellationToken = default);
     Task AddAsync(Result result, CancellationToken cancellationToken = default);
     Task UpdateAsync(Result result, CancellationToken cancellationToken = default);
 }

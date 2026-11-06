@@ -7,6 +7,12 @@ public record PresignedUploadGrant(
     DateTimeOffset ExpiresAt,
     IReadOnlyDictionary<string, string> Headers);
 
+public record PresignedDownloadGrant(
+    string DownloadUrl,
+    string StorageKey,
+    string Bucket,
+    DateTimeOffset ExpiresAt);
+
 public record ObjectStorageObject(
     string Key,
     string Bucket,

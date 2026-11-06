@@ -1,5 +1,5 @@
 import {
-  LayoutDashboard, Users, ClipboardList, BarChart3, FileText, Plug, Settings, GitBranch,
+  LayoutDashboard, Users, ClipboardList, BarChart3, FileText, Plug, Settings, GitBranch, CloudUpload,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -79,8 +79,11 @@ export const PRIMARY_NAV: PrimaryNavItem[] = [
     id: 'reports',
     labelKey: 'nav.reports',
     icon: FileText,
-    tabs: [{ view: 'reports', labelKey: 'nav.reports' }],
-    matchViews: ['reports'],
+    tabs: [
+      { view: 'plans', labelKey: 'nav.plans' },
+      { view: 'reports', labelKey: 'nav.reports' },
+    ],
+    matchViews: ['plans', 'reports', 'report-detail'],
   },
   {
     id: 'data',
@@ -112,6 +115,14 @@ export const PRIMARY_NAV: PrimaryNavItem[] = [
     icon: GitBranch,
     tabs: [{ view: 'workflows', labelKey: 'nav.demoExplorer' }],
     matchViews: ['workflows'],
+    prototypeTool: true,
+  },
+  {
+    id: 'upload-simulator',
+    labelKey: 'nav.uploadSimulator',
+    icon: CloudUpload,
+    tabs: [{ view: 'upload-simulator', labelKey: 'nav.uploadSimulator' }],
+    matchViews: ['upload-simulator'],
     prototypeTool: true,
   },
 ];

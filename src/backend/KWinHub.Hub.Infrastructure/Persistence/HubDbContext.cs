@@ -2,7 +2,9 @@ using KWinHub.Hub.Assets;
 using KWinHub.Hub.Groups;
 using KWinHub.Hub.Messaging;
 using KWinHub.Hub.Organizations;
+using KWinHub.Hub.Plans;
 using KWinHub.Hub.Protocols;
+using KWinHub.Hub.Reports;
 using KWinHub.Hub.Results;
 using KWinHub.Hub.Sessions;
 using KWinHub.Hub.Subjects;
@@ -70,6 +72,12 @@ public class HubDbContext : DbContext
     public DbSet<WorkerJob> WorkerJobs => Set<WorkerJob>();
 
     public DbSet<IngestionOperation> IngestionOperations => Set<IngestionOperation>();
+
+    public DbSet<AssessmentPlan> AssessmentPlans => Set<AssessmentPlan>();
+    public DbSet<AssessmentPlanItem> AssessmentPlanItems => Set<AssessmentPlanItem>();
+    public DbSet<Report> Reports => Set<Report>();
+    public DbSet<ReportMetricValue> ReportMetricValues => Set<ReportMetricValue>();
+    public DbSet<ReportAssetState> ReportAssetStates => Set<ReportAssetState>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -318,6 +326,58 @@ public class HubDbContext : DbContext
             b.Property(o => o.ContentHash).HasMaxLength(64);
             b.HasIndex(o => new { o.OrganizationId, o.ClientOperationId }).IsUnique();
             b.HasIndex(o => o.SessionId);
+        });
+
+        modelBuilder.Entity<AssessmentPlan>(b =>
+        {
+            b.ToTable("assessment_plans", SchemaName);
+            b.Property(p => p.Name).HasMaxLength(200).IsRequired();
+            b.Property(p => p.Code).HasMaxLength(100).IsRequired();
+            b.Property(p => p.ProtocolCode).HasMaxLength(100);
+            b.Property(p => p.Status).HasConversion<string>().HasMaxLength(20);
+            b.HasIndex(p => new { p.OrganizationId, p.Code, p.Version }).IsUnique();
+            b.HasIndex(p => p.OrganizationId);
+        });
+
+        modelBuilder.Entity<AssessmentPlanItem>(b =>
+        {
+            b.ToTable("assessment_plan_items", SchemaName);
+            b.Property(i => i.MetricCode).HasMaxLength(100).IsRequired();
+            b.Property(i => i.MetricName).HasMaxLength(200).IsRequired();
+            b.Property(i => i.Unit).HasMaxLength(50).IsRequired();
+            b.Property(i => i.ValueType).HasMaxLength(20).IsRequired();
+            b.HasIndex(i => i.PlanId);
+        });
+
+        modelBuilder.Entity<Report>(b =>
+        {
+            b.ToTable("reports", SchemaName);
+            b.Property(r => r.PlanCode).HasMaxLength(100).IsRequired();
+            b.Property(r => r.PlanName).HasMaxLength(200).IsRequired();
+            b.Property(r => r.Title).HasMaxLength(300).IsRequired();
+            b.Property(r => r.Status).HasConversion<string>().HasMaxLength(20);
+            b.HasIndex(r => r.OrganizationId);
+            b.HasIndex(r => r.SubjectId);
+            b.HasIndex(r => new { r.OrganizationId, r.PlanCode, r.PlanVersion });
+        });
+
+        modelBuilder.Entity<ReportMetricValue>(b =>
+        {
+            b.ToTable("report_metric_values", SchemaName);
+            b.Property(v => v.MetricCode).HasMaxLength(100).IsRequired();
+            b.Property(v => v.MetricName).HasMaxLength(200).IsRequired();
+            b.Property(v => v.Unit).HasMaxLength(50).IsRequired();
+            b.HasIndex(v => v.ReportId);
+            b.HasIndex(v => v.SessionId);
+        });
+
+        modelBuilder.Entity<ReportAssetState>(b =>
+        {
+            b.ToTable("report_asset_states", SchemaName);
+            b.Property(a => a.AssetType).HasMaxLength(50).IsRequired();
+            b.Property(a => a.Status).HasMaxLength(30).IsRequired();
+            b.HasIndex(a => a.ReportId);
+            b.HasIndex(a => a.AssetId);
         });
 
         modelBuilder.ApplyConfiguration(new Configurations.DataAssetConfiguration());

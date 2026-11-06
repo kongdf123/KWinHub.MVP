@@ -463,4 +463,159 @@ public class MediaWorkerIntegrationTests : IClassFixture<AssetTestFactory>
         Assert.NotNull(job);
         Assert.Equal(WorkerJobStatus.Pending, job.Status);
     }
+
+    [Fact]
+    public async Task MediaWorkerService_OnlyProcessesMediaQueueJobs()
+    {
+        var orgId = Guid.NewGuid();
+        var mediaAssetId = Guid.NewGuid();
+        var reportAssetId = Guid.NewGuid();
+
+        await SeedAsync(db =>
+        {
+            var mediaJob = new WorkerJob(mediaAssetId, orgId, WorkerJobType.TranscodeVideo, queueName: WorkerQueueName.Media);
+            db.WorkerJobs.Add(mediaJob);
+
+            var reportJob = new WorkerJob(reportAssetId, orgId, "GenerateReport", queueName: WorkerQueueName.Report);
+            db.WorkerJobs.Add(reportJob);
+        });
+
+        using var scope = _factory.Services.CreateScope();
+        var hostedServices = scope.ServiceProvider.GetServices<Microsoft.Extensions.Hosting.IHostedService>();
+        var workerService = hostedServices.OfType<MediaWorkerService>().First();
+
+        await workerService.ProcessBatchAsync(CancellationToken.None);
+
+        var db = scope.ServiceProvider.GetRequiredService<HubDbContext>();
+        var mediaJob = db.WorkerJobs.First(j => j.AssetId == mediaAssetId);
+        var reportJob = db.WorkerJobs.First(j => j.AssetId == reportAssetId);
+
+        Assert.Equal(WorkerJobStatus.Skipped, mediaJob.Status);
+        Assert.Equal(WorkerJobStatus.Pending, reportJob.Status);
+    }
+
+    [Fact]
+    public async Task MediaCallback_CompletedStatus_MarksAssetReady()
+    {
+        var orgId = Guid.NewGuid();
+        Guid assetId = Guid.Empty;
+
+        await SeedAsync(db =>
+        {
+            var asset = new DataAsset(orgId, Guid.NewGuid(), null, "video", 1024, $"ext-{Guid.NewGuid():N}", "video/mp4", null);
+            asset.MarkUploaded("key", "bucket");
+            asset.MarkVerified();
+            asset.MarkProcessing();
+            db.DataAssets.Add(asset);
+            assetId = asset.Id;
+
+            var job = new WorkerJob(assetId, orgId, WorkerJobType.TranscodeVideo);
+            job.Claim(TimeSpan.FromMinutes(5));
+            db.WorkerJobs.Add(job);
+        });
+
+        var client = _factory.CreateClient();
+        var payload = new { AssetId = assetId, Status = "completed", ProviderId = "vod-123", PlaybackUrl = "https://example.com/play.m3u8" };
+        var response = await client.PostAsJsonAsync("/api/v1/media-callbacks", payload);
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<HubDbContext>();
+        var asset = await db.DataAssets.FindAsync(assetId);
+        Assert.NotNull(asset);
+        Assert.Equal(DataAssetStatus.Ready, asset.Status);
+        Assert.Equal("vod-123", asset.MediaProviderId);
+        Assert.Equal("https://example.com/play.m3u8", asset.PlaybackUrl);
+
+        var job = db.WorkerJobs.First(j => j.AssetId == assetId);
+        Assert.Equal(WorkerJobStatus.Completed, job.Status);
+    }
+
+    [Fact]
+    public async Task MediaCallback_FailedStatus_MarksAssetFailed()
+    {
+        var orgId = Guid.NewGuid();
+        Guid assetId = Guid.Empty;
+
+        await SeedAsync(db =>
+        {
+            var asset = new DataAsset(orgId, Guid.NewGuid(), null, "video", 1024, $"ext-{Guid.NewGuid():N}", "video/mp4", null);
+            asset.MarkUploaded("key", "bucket");
+            asset.MarkVerified();
+            asset.MarkProcessing();
+            db.DataAssets.Add(asset);
+            assetId = asset.Id;
+
+            var job = new WorkerJob(assetId, orgId, WorkerJobType.TranscodeVideo, maxAttempts: 1);
+            job.Claim(TimeSpan.FromMinutes(5));
+            db.WorkerJobs.Add(job);
+        });
+
+        var client = _factory.CreateClient();
+        var payload = new { AssetId = assetId, Status = "failed", Error = "transcode timeout" };
+        var response = await client.PostAsJsonAsync("/api/v1/media-callbacks", payload);
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<HubDbContext>();
+        var asset = await db.DataAssets.FindAsync(assetId);
+        Assert.NotNull(asset);
+        Assert.Equal(DataAssetStatus.ProcessingFailed, asset.Status);
+        Assert.Equal("transcode timeout", asset.FailureReason);
+
+        var job = db.WorkerJobs.First(j => j.AssetId == assetId);
+        Assert.Equal(WorkerJobStatus.Failed, job.Status);
+    }
+
+    [Fact]
+    public async Task MediaCallback_AlreadyCompletedJob_IsIdempotent()
+    {
+        var orgId = Guid.NewGuid();
+        Guid assetId = Guid.Empty;
+
+        await SeedAsync(db =>
+        {
+            var asset = new DataAsset(orgId, Guid.NewGuid(), null, "video", 1024, $"ext-{Guid.NewGuid():N}", "video/mp4", null);
+            asset.MarkUploaded("key", "bucket");
+            asset.MarkVerified();
+            asset.MarkProcessing();
+            asset.MarkReady("vod-original", "https://example.com/original.m3u8");
+            db.DataAssets.Add(asset);
+            assetId = asset.Id;
+
+            var job = new WorkerJob(assetId, orgId, WorkerJobType.TranscodeVideo);
+            job.Claim(TimeSpan.FromMinutes(5));
+            job.MarkCompleted();
+            db.WorkerJobs.Add(job);
+        });
+
+        var client = _factory.CreateClient();
+        var payload = new { AssetId = assetId, Status = "completed", ProviderId = "vod-new", PlaybackUrl = "https://example.com/new.m3u8" };
+        var response = await client.PostAsJsonAsync("/api/v1/media-callbacks", payload);
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<HubDbContext>();
+        var asset = await db.DataAssets.FindAsync(assetId);
+        Assert.NotNull(asset);
+        Assert.Equal("vod-original", asset.MediaProviderId);
+        Assert.Equal("https://example.com/original.m3u8", asset.PlaybackUrl);
+    }
+
+    [Fact]
+    public async Task MediaCallback_NoMatchingJob_ReturnsNoContent()
+    {
+        var assetId = Guid.NewGuid();
+
+        await SeedAsync(_ => { });
+
+        var client = _factory.CreateClient();
+        var payload = new { AssetId = assetId, Status = "completed" };
+        var response = await client.PostAsJsonAsync("/api/v1/media-callbacks", payload);
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+    }
 }

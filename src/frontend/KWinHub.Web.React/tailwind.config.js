@@ -20,6 +20,7 @@ export default {
         content: {
           primary: 'var(--text-primary)',
           secondary: 'var(--text-secondary)',
+          muted: 'var(--text-secondary)',
           sidebar: 'var(--text-sidebar)',
           'sidebar-active': 'var(--text-sidebar-active)',
           'sidebar-muted': 'var(--text-sidebar-muted)',
@@ -33,6 +34,11 @@ export default {
           hover: 'var(--accent-hover)',
           soft: 'var(--accent-soft)',
           highlight: 'var(--accent-highlight)',
+        },
+        status: {
+          success: 'var(--status-success)',
+          warning: 'var(--status-warning)',
+          danger: 'var(--status-danger)',
         },
         ink: {
           50: '#f7f8f9',

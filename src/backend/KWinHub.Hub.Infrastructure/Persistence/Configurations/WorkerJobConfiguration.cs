@@ -14,6 +14,7 @@ public class WorkerJobConfiguration : IEntityTypeConfiguration<WorkerJob>
 
         builder.Property(j => j.AssetId).IsRequired();
         builder.Property(j => j.OrganizationId).IsRequired();
+        builder.Property(j => j.QueueName).IsRequired().HasMaxLength(50);
         builder.Property(j => j.JobType).IsRequired().HasMaxLength(100);
         builder.Property(j => j.Status).IsRequired().HasMaxLength(50);
         builder.Property(j => j.Attempt).IsRequired();
@@ -25,7 +26,9 @@ public class WorkerJobConfiguration : IEntityTypeConfiguration<WorkerJob>
         builder.Property(j => j.CompletedAt);
 
         builder.HasIndex(j => new { j.Status, j.CreatedAt });
+        builder.HasIndex(j => new { j.QueueName, j.Status, j.CreatedAt });
         builder.HasIndex(j => j.AssetId);
         builder.HasIndex(j => j.OrganizationId);
+        builder.HasIndex(j => new { j.AssetId, j.JobType });
     }
 }

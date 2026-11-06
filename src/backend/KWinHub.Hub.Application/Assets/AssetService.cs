@@ -204,6 +204,60 @@ public class AssetService : IAssetService
         return asset is null ? null : ToResponse(asset);
     }
 
+    public async Task<PlaybackCredentialResponse> RequestPlaybackCredentialAsync(
+        Guid organizationId,
+        Guid assetId,
+        CancellationToken cancellationToken = default)
+    {
+        var asset = await _assetRepository.GetByIdAsync(organizationId, assetId, cancellationToken)
+            ?? throw new AssetNotFoundException(assetId);
+
+        if (asset.Status != DataAssetStatus.Ready)
+        {
+            throw new AssetNotReadyException(assetId, asset.Status);
+        }
+
+        var storageKey = BuildStorageKey(asset);
+        var grant = await _objectStorage.CreateDownloadGrantAsync(
+            _storageOptions.Bucket,
+            storageKey,
+            _storageOptions.PlaybackGrantExpiry,
+            cancellationToken);
+
+        return new PlaybackCredentialResponse(
+            asset.Id,
+            grant.DownloadUrl,
+            grant.ExpiresAt,
+            asset.MimeType);
+    }
+
+    public async Task<PlaybackCredentialResponse> RequestDownloadGrantAsync(
+        Guid organizationId,
+        Guid assetId,
+        CancellationToken cancellationToken = default)
+    {
+        var asset = await _assetRepository.GetByIdAsync(organizationId, assetId, cancellationToken)
+            ?? throw new AssetNotFoundException(assetId);
+
+        if (asset.Status != DataAssetStatus.UploadedVerified && asset.Status != DataAssetStatus.Ready)
+        {
+            throw new AssetNotReadyException(assetId, asset.Status);
+        }
+
+        var storageKey = BuildStorageKey(asset);
+        var grant = await _objectStorage.CreateDownloadGrantAsync(
+            _storageOptions.Bucket,
+            storageKey,
+            _storageOptions.UploadGrantExpiry,
+            cancellationToken);
+
+        return new PlaybackCredentialResponse(
+            asset.Id,
+            grant.DownloadUrl,
+            grant.ExpiresAt,
+            asset.MimeType);
+    }
+
     private string BuildStorageKey(DataAsset asset)
     {
         return $"orgs/{asset.OrganizationId}/sessions/{asset.SessionId}/assets/{asset.Id}/r{asset.Revision}";
@@ -242,6 +296,7 @@ public class ObjectStorageOptions
 {
     public string Bucket { get; set; } = "kwinhub-assets";
     public TimeSpan UploadGrantExpiry { get; set; } = TimeSpan.FromMinutes(15);
+    public TimeSpan PlaybackGrantExpiry { get; set; } = TimeSpan.FromMinutes(10);
 }
 
 public class AssetNotFoundException : Exception
@@ -257,5 +312,16 @@ public class AssetAlreadyUploadedException : Exception
     public AssetAlreadyUploadedException(Guid assetId)
         : base($"Asset {assetId} is already uploaded and verified.")
     {
+    }
+}
+
+public class AssetNotReadyException : Exception
+{
+    public DataAssetStatus Status { get; }
+
+    public AssetNotReadyException(Guid assetId, DataAssetStatus status)
+        : base($"Asset {assetId} is not ready for playback. Current status: {status}.")
+    {
+        Status = status;
     }
 }

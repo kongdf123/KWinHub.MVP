@@ -5,6 +5,7 @@ import { useTheme, type Theme } from '@/lib/use-theme';
 const OPTIONS: { value: Theme; label: string; desc: string }[] = [
   { value: 'classic', label: 'Kunwei Classic', desc: 'Dark navigation, classic palette' },
   { value: 'light', label: 'Performance Light', desc: 'Light surfaces, restrained accents' },
+  { value: 'hub-light', label: 'Performance Hub', desc: 'Neutral canvas, data-first workspace' },
 ];
 
 export function ThemeSwitcher() {

@@ -25,6 +25,8 @@ import { DashboardsPage } from '@/pages/DashboardsPage';
 import { IntegrationsPage } from '@/pages/IntegrationsPage';
 import { SyncCenterPage } from '@/pages/SyncCenterPage';
 import { ReportsPage } from '@/pages/ReportsPage';
+import { ReportDetailPage } from '@/pages/ReportDetailPage';
+import { PlansPage } from '@/pages/PlansPage';
 import { OrganizationPage } from '@/pages/admin/OrganizationPage';
 import { UsersPage } from '@/pages/admin/UsersPage';
 import { RolesPage } from '@/pages/admin/RolesPage';
@@ -33,6 +35,7 @@ import { GroupsPage } from '@/pages/admin/GroupsPage';
 import { DevicesPage } from '@/pages/admin/DevicesPage';
 import { SettingsPage } from '@/pages/admin/SettingsPage';
 import { WorkflowExplorerPage } from '@/pages/WorkflowExplorerPage';
+import { UploadSimulatorPage } from '@/features/upload-simulator/UploadSimulatorPage';
 import { SubscriptionPage } from '@/features/subscriptions/SubscriptionPage';
 import { isLoggedIn, clearToken } from '@/lib/api/http';
 import { LocaleProvider } from '@/lib/i18n-context';
@@ -68,6 +71,8 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
       case 'integrations': return <IntegrationsPage />;
       case 'sync-center': return <SyncCenterPage />;
       case 'reports': return <ReportsPage />;
+      case 'report-detail': return <ReportDetailPage />;
+      case 'plans': return <PlansPage />;
       case 'organization': return <OrganizationPage />;
       case 'users': return <UsersPage />;
       case 'roles': return <RolesPage />;
@@ -76,13 +81,14 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
       case 'devices': return <DevicesPage />;
       case 'settings': return <SettingsPage />;
       case 'workflows': return <WorkflowExplorerPage />;
+      case 'upload-simulator': return <UploadSimulatorPage />;
       case 'subscription': return <SubscriptionPage />;
       default: return <HomePage />;
     }
   };
 
   return (
-    <div className="flex min-h-screen bg-ink-50">
+    <div className="flex min-h-screen bg-surface-app">
       <Sidebar onLogout={onLogout} />
       <main className="flex-1 min-w-0">
         {renderView()}

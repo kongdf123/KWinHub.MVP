@@ -32,7 +32,7 @@ public class InMemoryObjectStorage : IObjectStorage
         CancellationToken cancellationToken = default)
     {
         var grant = new PresignedDownloadGrant(
-            $"https://storage.example.com/{bucket}/{key}?download={Guid.NewGuid():N}",
+            $"https://storage.example.com/{bucket}/{key}?download-token={Guid.NewGuid():N}",
             key,
             bucket,
             DateTimeOffset.UtcNow.Add(expiry));

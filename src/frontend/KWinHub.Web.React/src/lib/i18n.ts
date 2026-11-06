@@ -26,6 +26,7 @@ export const STRINGS: Record<string, { en: string; cn: string }> = {
   'nav.biomechanics': { en: 'Biomechanics', cn: '生物力学' },
   'nav.dashboards': { en: 'Dashboards', cn: '仪表盘' },
   'nav.reports': { en: 'Reports', cn: '报告' },
+  'nav.plans': { en: 'Assessment Plans', cn: '评估计划' },
 
   // Nav — Data & Integrations workspace
   'nav.datasets': { en: 'Datasets', cn: '数据集' },
@@ -42,6 +43,7 @@ export const STRINGS: Record<string, { en: string; cn: string }> = {
 
   // Nav — Workflow Explorer
   'nav.demoExplorer': { en: 'Demo Explorer', cn: '演示探索器' },
+  'nav.uploadSimulator': { en: 'Client Upload Simulator', cn: '客户端上传模拟器' },
   'nav.prototypeTools': { en: 'Prototype Tools', cn: '原型工具' },
   'nav.prototypeToolsHint': { en: 'Internal demo only', cn: '仅供内部演示' },
 
@@ -386,6 +388,7 @@ export const STRINGS: Record<string, { en: string; cn: string }> = {
   'sessionDetail.tab.trials': { en: 'Trials', cn: '试次' },
   'sessionDetail.tab.metrics': { en: 'Metrics', cn: '指标' },
   'sessionDetail.tab.visualization': { en: 'Visualization', cn: '可视化' },
+  'sessionDetail.tab.media': { en: 'Media', cn: '媒体' },
   'sessionDetail.tab.analysis': { en: 'Analysis', cn: '分析' },
   'sessionDetail.tab.rawData': { en: 'Raw Data', cn: '原始数据' },
   'sessionDetail.tab.processing': { en: 'Processing', cn: '处理' },

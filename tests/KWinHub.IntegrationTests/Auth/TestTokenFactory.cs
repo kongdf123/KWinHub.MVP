@@ -19,7 +19,9 @@ public static class TestTokenFactory
         string signingKey = TestSigningKey,
         Guid? userId = null,
         Guid? orgId = null,
-        string role = "Owner")
+        string role = "Owner",
+        bool isPlatformAdmin = false,
+        string? email = null)
     {
         var credentials = new SigningCredentials(
             new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKey)),
@@ -31,6 +33,16 @@ public static class TestTokenFactory
             new("org_id", (orgId ?? Guid.NewGuid()).ToString()),
             new("org_role", role),
         };
+
+        if (email is not null)
+        {
+            claims.Add(new Claim("email", email));
+        }
+
+        if (isPlatformAdmin)
+        {
+            claims.Add(new Claim("platform_admin", "true"));
+        }
 
         foreach (var audience in audiences)
         {

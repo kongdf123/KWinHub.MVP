@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 
-export type Theme = 'classic' | 'light';
+export type Theme = 'classic' | 'light' | 'hub-light';
 
 const STORAGE_KEY = 'kwinhub.web-react.theme';
-const VALID_THEMES: Theme[] = ['classic', 'light'];
+const VALID_THEMES: Theme[] = ['classic', 'light', 'hub-light'];
 
 function readStoredTheme(): Theme {
   try {
@@ -14,7 +14,9 @@ function readStoredTheme(): Theme {
   } catch {
     // localStorage can be unavailable — fall through to the default.
   }
-  return 'light';
+  // Performance Hub is the recommended default for fresh demo installations.
+  // Existing saved preferences (classic / light) are preserved above.
+  return 'hub-light';
 }
 
 function applyTheme(theme: Theme) {

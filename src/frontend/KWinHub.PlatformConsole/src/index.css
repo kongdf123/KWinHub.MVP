@@ -74,6 +74,38 @@
   --focus-ring: #168373;
 }
 
+[data-theme="hub-light"] {
+  color-scheme: light;
+
+  /* Neutral, data-first, VALD-inspired workspace aesthetic */
+  --surface-app: #F3F5F7;
+  --surface-panel: #FFFFFF;
+  --surface-header: #FFFFFF;
+  --surface-hover: #F1F4F5;
+  --surface-sidebar: #FFFFFF;
+  --surface-sidebar-hover: #F2F5F5;
+  --surface-sidebar-active: #E8F2F0;
+
+  --text-primary: #17242B;
+  --text-secondary: #687780;
+  --text-sidebar: #34434A;
+  --text-sidebar-active: #176F63;
+  --text-sidebar-muted: #7B898F;
+
+  --border-default: #DFE5E8;
+  --border-sidebar: #E3E8EA;
+
+  --accent-primary: #16786B;
+  --accent-hover: #105F55;
+  --accent-soft: #E7F2EF;
+  --accent-highlight: #4A9E91;
+
+  --status-success: #21836E;
+  --status-warning: #A96F16;
+  --status-danger: #B64D4D;
+  --focus-ring: #16786B;
+}
+
 @layer base {
   * {
     -webkit-font-smoothing: antialiased;

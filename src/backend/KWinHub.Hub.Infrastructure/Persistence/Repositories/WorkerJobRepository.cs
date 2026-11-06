@@ -29,18 +29,33 @@ public class WorkerJobRepository : IWorkerJobRepository
     public async Task<IReadOnlyList<WorkerJob>> GetPendingAsync(
         int batchSize,
         TimeSpan leaseDuration,
+        string? queueName = null,
         CancellationToken cancellationToken = default)
     {
         var now = DateTimeOffset.UtcNow;
 
-        var pending = await _dbContext.WorkerJobs
-            .Where(j => j.Status == WorkerJobStatus.Pending)
+        var pendingQuery = _dbContext.WorkerJobs
+            .Where(j => j.Status == WorkerJobStatus.Pending);
+
+        if (!string.IsNullOrWhiteSpace(queueName))
+        {
+            pendingQuery = pendingQuery.Where(j => j.QueueName == queueName);
+        }
+
+        var pending = await pendingQuery
             .OrderBy(j => j.Id)
             .Take(batchSize)
             .ToListAsync(cancellationToken);
 
-        var expired = await _dbContext.WorkerJobs
-            .Where(j => j.Status == WorkerJobStatus.Processing)
+        var expiredQuery = _dbContext.WorkerJobs
+            .Where(j => j.Status == WorkerJobStatus.Processing);
+
+        if (!string.IsNullOrWhiteSpace(queueName))
+        {
+            expiredQuery = expiredQuery.Where(j => j.QueueName == queueName);
+        }
+
+        var expired = await expiredQuery
             .AsAsyncEnumerable()
             .Where(j => j.LeaseExpiresAt < now)
             .Take(batchSize)
@@ -68,11 +83,18 @@ public class WorkerJobRepository : IWorkerJobRepository
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task ResetExpiredLeasesAsync(CancellationToken cancellationToken = default)
+    public async Task ResetExpiredLeasesAsync(string? queueName = null, CancellationToken cancellationToken = default)
     {
         var now = DateTimeOffset.UtcNow;
-        var expired = await _dbContext.WorkerJobs
-            .Where(j => j.Status == WorkerJobStatus.Processing)
+        var query = _dbContext.WorkerJobs
+            .Where(j => j.Status == WorkerJobStatus.Processing);
+
+        if (!string.IsNullOrWhiteSpace(queueName))
+        {
+            query = query.Where(j => j.QueueName == queueName);
+        }
+
+        var expired = await query
             .AsAsyncEnumerable()
             .Where(j => j.LeaseExpiresAt < now)
             .ToListAsync(cancellationToken);
@@ -98,6 +120,7 @@ public class WorkerJobRepository : IWorkerJobRepository
     public async Task<IReadOnlyList<WorkerJob>> GetByOrganizationIdAsync(
         Guid organizationId,
         string? status = null,
+        string? queueName = null,
         int limit = 100,
         CancellationToken cancellationToken = default)
     {
@@ -109,6 +132,11 @@ public class WorkerJobRepository : IWorkerJobRepository
             query = query.Where(j => j.Status == status);
         }
 
+        if (!string.IsNullOrWhiteSpace(queueName))
+        {
+            query = query.Where(j => j.QueueName == queueName);
+        }
+
         return await query
             .AsAsyncEnumerable()
             .OrderByDescending(j => j.CreatedAt)
@@ -118,16 +146,36 @@ public class WorkerJobRepository : IWorkerJobRepository
 
     public async Task<IReadOnlyList<WorkerJob>> GetStuckJobsAsync(
         TimeSpan processingStuckThreshold,
+        string? queueName = null,
         CancellationToken cancellationToken = default)
     {
         var cutoff = DateTimeOffset.UtcNow.Subtract(processingStuckThreshold);
 
-        return await _dbContext.WorkerJobs
-            .Where(j => j.Status == WorkerJobStatus.Processing)
+        var query = _dbContext.WorkerJobs
+            .Where(j => j.Status == WorkerJobStatus.Processing);
+
+        if (!string.IsNullOrWhiteSpace(queueName))
+        {
+            query = query.Where(j => j.QueueName == queueName);
+        }
+
+        return await query
             .AsAsyncEnumerable()
             .Where(j => j.UpdatedAt < cutoff)
             .OrderBy(j => j.UpdatedAt)
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task<WorkerJob?> GetByAssetAndTypeAsync(
+        Guid assetId,
+        string jobType,
+        CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.WorkerJobs
+            .Where(j => j.AssetId == assetId && j.JobType == jobType)
+            .AsAsyncEnumerable()
+            .OrderByDescending(j => j.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
     }
 
     public async Task ResetJobForRetryAsync(Guid jobId, CancellationToken cancellationToken = default)

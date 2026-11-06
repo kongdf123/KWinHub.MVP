@@ -6,6 +6,7 @@ public record WorkerJobResponse(
     Guid Id,
     Guid AssetId,
     Guid OrganizationId,
+    string QueueName,
     string JobType,
     string Status,
     int Attempt,
@@ -27,11 +28,12 @@ public interface IWorkerJobRepository
     Task<IReadOnlyList<WorkerJob>> GetPendingAsync(
         int batchSize,
         TimeSpan leaseDuration,
+        string? queueName = null,
         CancellationToken cancellationToken = default);
 
     Task UpdateAsync(WorkerJob job, CancellationToken cancellationToken = default);
 
-    Task ResetExpiredLeasesAsync(CancellationToken cancellationToken = default);
+    Task ResetExpiredLeasesAsync(string? queueName = null, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<WorkerJob>> GetByAssetIdAsync(
         Guid assetId,
@@ -40,11 +42,18 @@ public interface IWorkerJobRepository
     Task<IReadOnlyList<WorkerJob>> GetByOrganizationIdAsync(
         Guid organizationId,
         string? status = null,
+        string? queueName = null,
         int limit = 100,
         CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<WorkerJob>> GetStuckJobsAsync(
         TimeSpan processingStuckThreshold,
+        string? queueName = null,
+        CancellationToken cancellationToken = default);
+
+    Task<WorkerJob?> GetByAssetAndTypeAsync(
+        Guid assetId,
+        string jobType,
         CancellationToken cancellationToken = default);
 
     Task ResetJobForRetryAsync(Guid jobId, CancellationToken cancellationToken = default);

@@ -37,12 +37,12 @@ const SPORT_ICONS: Record<string, typeof Activity> = {
 };
 
 const SESSION_STATUS_CONFIG: Record<SessionStatus, { en: string; cn: string; color: string; icon: typeof CheckCircle }> = {
-  LOCAL: { en: 'Local', cn: '本地', color: 'text-ink-500', icon: CheckCircle },
-  QUEUED: { en: 'Queued', cn: '排队中', color: 'text-ink-500', icon: RefreshCw },
-  UPLOADING: { en: 'Uploading', cn: '上传中', color: 'text-teal-600', icon: RefreshCw },
-  RECEIVED: { en: 'Received', cn: '已接收', color: 'text-teal-600', icon: CheckCircle },
-  VALIDATING: { en: 'Validating', cn: '验证中', color: 'text-teal-600', icon: RefreshCw },
-  PROCESSING: { en: 'Processing', cn: '处理中', color: 'text-teal-600', icon: RefreshCw },
+  LOCAL: { en: 'Local', cn: '本地', color: 'text-content-secondary', icon: CheckCircle },
+  QUEUED: { en: 'Queued', cn: '排队中', color: 'text-content-secondary', icon: RefreshCw },
+  UPLOADING: { en: 'Uploading', cn: '上传中', color: 'text-accent', icon: RefreshCw },
+  RECEIVED: { en: 'Received', cn: '已接收', color: 'text-accent', icon: CheckCircle },
+  VALIDATING: { en: 'Validating', cn: '验证中', color: 'text-accent', icon: RefreshCw },
+  PROCESSING: { en: 'Processing', cn: '处理中', color: 'text-accent', icon: RefreshCw },
   ANALYZED: { en: 'Analyzed', cn: '已分析', color: 'text-success-600', icon: CheckCircle },
   PUBLISHED: { en: 'Published', cn: '已发布', color: 'text-success-600', icon: CheckCircle },
   UPLOAD_FAILED: { en: 'Upload Failed', cn: '上传失败', color: 'text-invalid-600', icon: XCircle },
@@ -51,10 +51,10 @@ const SESSION_STATUS_CONFIG: Record<SessionStatus, { en: string; cn: string; col
 };
 
 const SCI_STATUS_CONFIG: Record<ScientificFixtureSummaryStatus, { en: string; cn: string; color: string; bg: string }> = {
-  local: { en: 'Local', cn: '本地', color: 'text-ink-600', bg: 'bg-ink-100' },
-  uploading: { en: 'Uploading', cn: '上传中', color: 'text-teal-700', bg: 'bg-teal-50' },
-  validating: { en: 'Validating', cn: '校验中', color: 'text-teal-700', bg: 'bg-teal-50' },
-  processing: { en: 'Calculating', cn: '计算中', color: 'text-teal-700', bg: 'bg-teal-50' },
+  local: { en: 'Local', cn: '本地', color: 'text-content-secondary', bg: 'bg-surface-hover' },
+  uploading: { en: 'Uploading', cn: '上传中', color: 'text-accent', bg: 'bg-accent-soft' },
+  validating: { en: 'Validating', cn: '校验中', color: 'text-accent', bg: 'bg-accent-soft' },
+  processing: { en: 'Calculating', cn: '计算中', color: 'text-accent', bg: 'bg-accent-soft' },
   published: { en: 'Published', cn: '已发布', color: 'text-success-700', bg: 'bg-success-50' },
   failed: { en: 'Failed', cn: '失败', color: 'text-invalid-700', bg: 'bg-invalid-50' },
 };
@@ -314,7 +314,7 @@ export function SessionsPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={tr('sessions.searchPlaceholder', lang)}
-              className="w-full pl-9 pr-3 py-2 text-sm bg-white border border-ink-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-teal-400 transition-all"
+              className="w-full pl-9 pr-3 py-2 text-sm bg-surface-panel border border-default rounded-lg focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent transition-all"
             />
           </div>
           <select value={protocolFilter} onChange={(e) => setProtocolFilter(e.target.value)} className="text-sm bg-white border border-ink-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400 transition-all">
@@ -353,7 +353,7 @@ export function SessionsPage() {
           </button>
         </div>
 
-        <div className="bg-white rounded-xl border border-ink-200 overflow-hidden">
+        <div className="bg-surface-panel rounded-xl border border-default overflow-hidden">
           {API_MODE ? (
             <DataTable
               columns={[

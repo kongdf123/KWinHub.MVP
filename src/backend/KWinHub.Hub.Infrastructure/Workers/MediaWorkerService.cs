@@ -61,10 +61,10 @@ public class MediaWorkerService : BackgroundService
         var mediaProcessor = scope.ServiceProvider.GetRequiredService<IMediaProcessor>();
         var transactionManager = scope.ServiceProvider.GetRequiredService<ITransactionManager>();
 
-        await jobRepository.ResetExpiredLeasesAsync(cancellationToken);
-        await ReconcileStuckJobsAsync(jobRepository, cancellationToken);
+        await jobRepository.ResetExpiredLeasesAsync(WorkerQueueName.Media, cancellationToken);
+        await ReconcileStuckJobsAsync(jobRepository, assetRepository, mediaProcessor, transactionManager, cancellationToken);
 
-        var jobs = await jobRepository.GetPendingAsync(BatchSize, LeaseDuration, cancellationToken);
+        var jobs = await jobRepository.GetPendingAsync(BatchSize, LeaseDuration, WorkerQueueName.Media, cancellationToken);
         if (jobs.Count == 0)
         {
             return;
@@ -81,23 +81,122 @@ public class MediaWorkerService : BackgroundService
 
     private async Task ReconcileStuckJobsAsync(
         IWorkerJobRepository jobRepository,
+        IAssetRepository assetRepository,
+        IMediaProcessor mediaProcessor,
+        ITransactionManager transactionManager,
         CancellationToken cancellationToken)
     {
-        var stuckJobs = await jobRepository.GetStuckJobsAsync(StuckJobThreshold, cancellationToken);
+        var stuckJobs = await jobRepository.GetStuckJobsAsync(StuckJobThreshold, WorkerQueueName.Media, cancellationToken);
         if (stuckJobs.Count == 0)
         {
             return;
         }
 
         _logger.LogWarning(
-            "Media worker detected {Count} stuck processing jobs (older than {Threshold}). Resetting to pending.",
+            "Media worker detected {Count} stuck processing jobs (older than {Threshold}).",
             stuckJobs.Count, StuckJobThreshold);
 
         foreach (var job in stuckJobs)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var asset = await assetRepository.GetByIdAsync(job.OrganizationId, job.AssetId, cancellationToken);
+            if (asset is null)
+            {
+                job.MarkSkipped("Asset not found during reconciliation");
+                await jobRepository.UpdateAsync(job, cancellationToken);
+                continue;
+            }
+
+            if (asset.Status == DataAssetStatus.Ready)
+            {
+                job.MarkCompleted();
+                await jobRepository.UpdateAsync(job, cancellationToken);
+                continue;
+            }
+
+            var providerJobId = ExtractProviderJobId(job.ResultJson);
+            if (!string.IsNullOrWhiteSpace(providerJobId))
+            {
+                var status = await mediaProcessor.QueryStatusAsync(providerJobId, cancellationToken);
+                switch (status.State)
+                {
+                    case MediaProviderState.Completed:
+                        await using (var tx = await transactionManager.BeginTransactionAsync(cancellationToken))
+                        {
+                            try
+                            {
+                                asset.MarkReady(
+                                    status.ProviderId ?? asset.MediaProviderId ?? mediaProcessor.ProviderName,
+                                    status.PlaybackUrl ?? asset.PlaybackUrl);
+                                await assetRepository.UpdateAsync(asset, cancellationToken);
+                                job.MarkCompleted();
+                                await jobRepository.UpdateAsync(job, cancellationToken);
+                                await tx.CommitAsync(cancellationToken);
+                            }
+                            catch
+                            {
+                                await tx.RollbackAsync(cancellationToken);
+                                throw;
+                            }
+                        }
+                        continue;
+
+                    case MediaProviderState.Failed:
+                        await using (var tx = await transactionManager.BeginTransactionAsync(cancellationToken))
+                        {
+                            try
+                            {
+                                asset.MarkProcessingFailed(status.ErrorMessage ?? "Provider reported failure");
+                                await assetRepository.UpdateAsync(asset, cancellationToken);
+                                job.MarkFailed(status.ErrorMessage ?? "Provider reported failure");
+                                await jobRepository.UpdateAsync(job, cancellationToken);
+                                await tx.CommitAsync(cancellationToken);
+                            }
+                            catch
+                            {
+                                await tx.RollbackAsync(cancellationToken);
+                                throw;
+                            }
+                        }
+                        continue;
+
+                    case MediaProviderState.Processing:
+                        job.RenewLease(LeaseDuration);
+                        await jobRepository.UpdateAsync(job, cancellationToken);
+                        continue;
+
+                    case MediaProviderState.Unknown:
+                    default:
+                        break;
+                }
+            }
+
             job.ResetLease();
             await jobRepository.UpdateAsync(job, cancellationToken);
         }
+    }
+
+    private static string? ExtractProviderJobId(string? resultJson)
+    {
+        if (string.IsNullOrWhiteSpace(resultJson))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(resultJson);
+            if (doc.RootElement.TryGetProperty("ProviderJobId", out var id) && id.ValueKind == JsonValueKind.String)
+            {
+                return id.GetString();
+            }
+        }
+        catch
+        {
+        }
+
+        return null;
     }
 
     private async Task ProcessJobAsync(
