@@ -37,7 +37,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'results', 'result-detail', 'performance', 'trends', 'comparisons', 'biomechanics',
     'dashboards', 'reports',
     'organization',
-    'workflows',
+    'workflows', 'upload-simulator',
   ],
   'org-admin': [
     'home', 'athletes', 'athlete-profile', 'teams', 'groups',
@@ -47,13 +47,13 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'datasets', 'raw-data', 'data-sources', 'data-source-detail', 'integrations',
     'organization', 'users', 'roles', 'settings',
     'subscription',
-    'workflows',
+    'workflows', 'upload-simulator',
   ],
   athlete: [
     'home', 'athletes', 'athlete-profile',
     'sessions', 'session-detail',
     'results', 'result-detail', 'performance', 'trends',
-    'workflows',
+    'workflows', 'upload-simulator',
   ],
   support: [
     'home', 'athletes', 'athlete-profile', 'teams', 'groups',
@@ -61,7 +61,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'results', 'result-detail', 'performance', 'trends', 'comparisons', 'biomechanics',
     'dashboards', 'reports',
     'datasets', 'raw-data', 'data-sources', 'data-source-detail', 'integrations', 'sync-center',
-    'workflows',
+    'workflows', 'upload-simulator',
   ],
 };
 

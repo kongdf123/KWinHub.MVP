@@ -1,128 +1,155 @@
 import type { SessionStatus } from '@/lib/types';
 
-export type SimulatedFailureMode = 'none' | 'upload' | 'validation' | 'processing';
+export type FailureMode = 'none' | 'upload' | 'validation' | 'processing';
 
-export interface UploadConfig {
+export interface SessionDevice {
+  id: string;
+  externalDeviceId: string;
+  type: string;
+  serialNumber: string;
+}
+
+export interface SessionTrial {
+  externalTrialId: string;
+  trialNumber: number;
+  status: 'valid' | 'invalid';
+  reason?: string;
+}
+
+export interface DeviceTrialGroup {
+  device: SessionDevice;
+  trials: SessionTrial[];
+}
+
+export interface UploadedFile {
+  id: string;
+  name: string;
+  sizeBytes: number;
+  type: string;
+  previewUrl?: string;
+  dataUrl?: string;
+}
+
+export interface CsvPreview {
+  headers: string[];
+  rows: string[][];
+  rowCount: number;
+}
+
+export interface WizardState {
+  clientId: string;
+  clientApplication: string;
+  clientVersion: string;
+  externalSessionId: string;
+  sessionName: string;
+  date: string;
+  environment: 'production' | 'staging' | 'development';
+  operatorName: string;
   athleteId: string;
   protocolId: string;
-  deviceId: string;
-  trials: number;
-  failureMode: SimulatedFailureMode;
-  operatorName: string;
+  devices: DeviceTrialGroup[];
+  csvFile: UploadedFile | null;
+  csvPreview: CsvPreview | null;
+  videoFile: UploadedFile | null;
+  notes: string;
+  failureMode: FailureMode;
 }
 
-export interface PipelineStage {
-  status: SessionStatus;
+export interface DeviceAsset {
+  externalDeviceId: string;
+  deviceType: string;
+  trials: {
+    externalTrialId: string;
+    trialNumber: number;
+    assets: AssetRef[];
+  }[];
+}
+
+export interface AssetRef {
+  kind: 'csv' | 'video';
+  fileName: string;
+  sizeBytes: number;
+  mimeType: string;
+}
+
+export interface SessionManifest {
+  externalSessionId: string;
+  client: {
+    id: string;
+    application: string;
+    version: string;
+  };
+  subject: {
+    id: string;
+  };
+  protocol: {
+    id: string;
+  };
+  operator: {
+    name: string;
+  };
+  environment: string;
+  startedAt: string;
+  devices: DeviceAsset[];
+  notes: string;
+}
+
+export interface LifecycleStage {
+  key: string;
   label: string;
   labelCn: string;
-  description: string;
-  descriptionCn: string;
+  status: SessionStatus;
 }
 
-export type StageResult = 'pending' | 'running' | 'success' | 'failed' | 'skipped';
+export type LifecycleResult = 'pending' | 'running' | 'success' | 'failed' | 'skipped';
 
-export interface PipelineStageState {
-  stage: PipelineStage;
-  result: StageResult;
+export interface LifecycleStageState {
+  stage: LifecycleStage;
+  result: LifecycleResult;
   startedAt: string | null;
   completedAt: string | null;
   detail: string | null;
 }
 
-export interface UploadJob {
-  id: string;
-  config: UploadConfig;
+export interface SimulationResult {
+  sessionId: string;
   idempotencyKey: string;
+  correlationId: string;
   statusUrl: string;
   currentStatus: SessionStatus;
-  stages: PipelineStageState[];
-  log: LogEntry[];
+  stages: LifecycleStageState[];
+  log: SimulationLogEntry[];
   startedAt: string;
   completedAt: string | null;
   errorMessage: string | null;
+  isDuplicate: boolean;
 }
 
-export interface LogEntry {
+export interface SimulationLogEntry {
   id: string;
   timestamp: string;
   level: 'info' | 'success' | 'warning' | 'error';
-  status: SessionStatus;
   message: string;
   messageCn: string;
 }
 
-export const PIPELINE_STAGES: PipelineStage[] = [
-  {
-    status: 'LOCAL',
-    label: 'Local Capture',
-    labelCn: '本地采集',
-    description: 'Raw measurement captured on the client device',
-    descriptionCn: '在客户端设备上完成原始数据采集',
-  },
-  {
-    status: 'QUEUED',
-    label: 'Queue',
-    labelCn: '上传队列',
-    description: 'Session added to the client upload queue',
-    descriptionCn: '会话已加入客户端上传队列',
-  },
-  {
-    status: 'UPLOADING',
-    label: 'Upload',
-    labelCn: '数据上传',
-    description: 'Transferring raw payload to KWinHub API',
-    descriptionCn: '正在传输原始数据至 KWinHub API',
-  },
-  {
-    status: 'RECEIVED',
-    label: 'Received',
-    labelCn: '服务端接收',
-    description: 'Server acknowledged and persisted the session',
-    descriptionCn: '服务端已确认接收并持久化会话',
-  },
-  {
-    status: 'VALIDATING',
-    label: 'Validation',
-    labelCn: '数据校验',
-    description: 'Protocol validity rules applied to raw measurements',
-    descriptionCn: '对原始测量应用协议有效性规则',
-  },
-  {
-    status: 'PROCESSING',
-    label: 'Processing',
-    labelCn: '指标计算',
-    description: 'Computing metrics via the protocol processing graph',
-    descriptionCn: '通过协议处理图谱计算指标',
-  },
-  {
-    status: 'ANALYZED',
-    label: 'Analyzed',
-    labelCn: '分析完成',
-    description: 'Metrics and visualizations ready',
-    descriptionCn: '指标与可视化结果已就绪',
-  },
-  {
-    status: 'PUBLISHED',
-    label: 'Published',
-    labelCn: '已发布',
-    description: 'Session published to the athlete record',
-    descriptionCn: '会话已发布至运动员记录',
-  },
+export const LIFECYCLE_STAGES: LifecycleStage[] = [
+  { key: 'create', label: 'Create Session', labelCn: '创建会话', status: 'RECEIVED' },
+  { key: 'asset-auth', label: 'Asset Authorization', labelCn: '资源授权', status: 'RECEIVED' },
+  { key: 'asset-upload', label: 'Asset Upload', labelCn: '资源上传', status: 'UPLOADING' },
+  { key: 'session-update', label: 'Session Update', labelCn: '会话更新', status: 'RECEIVED' },
+  { key: 'processing', label: 'Processing', labelCn: '处理计算', status: 'PROCESSING' },
+  { key: 'publish', label: 'Publish', labelCn: '发布', status: 'PUBLISHED' },
 ];
 
-export function failureStatusFor(mode: SimulatedFailureMode): SessionStatus | null {
-  switch (mode) {
-    case 'upload':
-      return 'UPLOAD_FAILED';
-    case 'validation':
-      return 'VALIDATION_FAILED';
-    case 'processing':
-      return 'PROCESSING_FAILED';
-    default:
-      return null;
-  }
-}
+export const FAILURE_STAGE: Record<Exclude<FailureMode, 'none'>, string> = {
+  upload: 'asset-upload',
+  validation: 'processing',
+  processing: 'processing',
+};
 
-export function terminalStatusFor(mode: SimulatedFailureMode): SessionStatus {
-  return failureStatusFor(mode) ?? 'PUBLISHED';
-}
+export const FAILURE_STATUS: Record<Exclude<FailureMode, 'none'>, SessionStatus> = {
+  upload: 'UPLOAD_FAILED',
+  validation: 'VALIDATION_FAILED',
+  processing: 'PROCESSING_FAILED',
+};

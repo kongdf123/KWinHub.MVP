@@ -4,15 +4,27 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Corporate brand color — stable across all themes */
+:root {
+  --kunwei-brand-primary: #168373;
+}
+
 :root,
 [data-theme="classic"] {
   color-scheme: light;
 
-  /* Workspace — cool light-gray + white surfaces */
+  /* Brand identity */
+  --brand-primary: var(--kunwei-brand-primary);
+  --brand-secondary: #0d675c;
+  --brand-foreground: #ffffff;
+
+  /* Surfaces */
   --surface-app: #f5f7f8;
   --surface-panel: #ffffff;
   --surface-header: #ffffff;
   --surface-hover: #eef1f1;
+  --surface-selected: #e6f4f1;
+  --surface-overlay: rgba(23, 33, 38, 0.45);
 
   /* Sidebar — deep black-green foundation */
   --surface-sidebar: #102523;
@@ -23,87 +35,210 @@
   /* Text */
   --text-primary: #172126;
   --text-secondary: #718087;
+  --text-tertiary: #8a969c;
+  --text-disabled: #b8c1c4;
+  --text-inverse: #ffffff;
   --text-sidebar: #d7e5e1;
   --text-sidebar-active: #ffffff;
   --text-sidebar-muted: #a8c1bc;
 
-  /* Border */
+  /* Borders */
   --border-default: #e2e8e9;
+  --border-subtle: #eef1f1;
+  --border-strong: #c6ced5;
+  --border-focus: #168373;
 
-  /* Brand — teal for primary actions, mint for restrained highlights */
+  /* Theme accent — Kunwei Classic teal */
   --accent-primary: #168373;
   --accent-hover: #0d675c;
+  --accent-active: #0a5449;
   --accent-soft: #e6f4f1;
   --accent-highlight: #46baa4;
+  --accent-foreground: #ffffff;
+  --accent-text: #168373;
 
   /* Semantic status colors */
   --status-success: #168373;
+  --status-success-soft: #e6f4f1;
   --status-warning: #b78021;
+  --status-warning-soft: #fff4dd;
   --status-danger: #b9564e;
+  --status-danger-soft: #fdecea;
+  --status-info: #3977a8;
+  --status-info-soft: #eaf2f8;
+  --status-neutral: #718087;
+  --status-neutral-soft: #eef1f1;
+
+  /* Focus & interaction */
   --focus-ring: #168373;
+  --focus-ring-offset: 2px;
+  --interactive-disabled-opacity: 0.5;
+  --interactive-transition-duration: 150ms;
+
+  /* Visualization */
+  --viz-series-1: #168373;
+  --viz-series-2: #3977a8;
+  --viz-series-3: #8a6bb0;
+  --viz-series-4: #5f8d68;
+  --viz-series-5: #c47755;
+  --viz-grid: #e7ecee;
+  --viz-axis: #718087;
+  --viz-reference: #8a969c;
+  --viz-highlight: #e6f4f1;
 }
 
 [data-theme="light"] {
   color-scheme: light;
 
+  /* Brand identity */
+  --brand-primary: var(--kunwei-brand-primary);
+  --brand-secondary: #0d675c;
+  --brand-foreground: #ffffff;
+
+  /* Surfaces */
   --surface-app: #f5f7f8;
   --surface-panel: #ffffff;
-  --surface-sidebar: #ffffff;
   --surface-header: #ffffff;
   --surface-hover: #edf2f1;
+  --surface-selected: #eaf2f8;
+  --surface-overlay: rgba(23, 33, 38, 0.45);
+
+  /* Sidebar */
+  --surface-sidebar: #ffffff;
   --surface-sidebar-hover: #edf2f1;
-  --surface-sidebar-active: #e6f4f1;
-
-  --text-primary: #172126;
-  --text-secondary: #718087;
-  --text-sidebar: #34443f;
-  --text-sidebar-active: #168373;
-  --text-sidebar-muted: #64717c;
-
-  --border-default: #e2e8e9;
+  --surface-sidebar-active: #eaf2f8;
   --border-sidebar: #e2e8e9;
 
-  --accent-primary: #168373;
-  --accent-hover: #0d675c;
-  --accent-soft: #e6f4f1;
-  --accent-highlight: #46baa4;
+  /* Text */
+  --text-primary: #172126;
+  --text-secondary: #5a6670;
+  --text-tertiary: #8a969c;
+  --text-disabled: #b8c1c4;
+  --text-inverse: #ffffff;
+  --text-sidebar: #34443f;
+  --text-sidebar-active: #3977a8;
+  --text-sidebar-muted: #64717c;
 
-  --status-success: #168373;
+  /* Borders */
+  --border-default: #e2e8e9;
+  --border-subtle: #eef1f1;
+  --border-strong: #c6ced5;
+  --border-focus: #3977a8;
+
+  /* Theme accent — Performance Light professional blue */
+  --accent-primary: #3977a8;
+  --accent-hover: #2f638d;
+  --accent-active: #285577;
+  --accent-soft: #eaf2f8;
+  --accent-highlight: #6599c0;
+  --accent-foreground: #ffffff;
+  --accent-text: #3977a8;
+
+  /* Semantic status colors */
+  --status-success: #21836e;
+  --status-success-soft: #e6f4f1;
   --status-warning: #b78021;
+  --status-warning-soft: #fff4dd;
   --status-danger: #b9564e;
-  --focus-ring: #168373;
+  --status-danger-soft: #fdecea;
+  --status-info: #3977a8;
+  --status-info-soft: #eaf2f8;
+  --status-neutral: #718087;
+  --status-neutral-soft: #eef1f1;
+
+  /* Focus & interaction */
+  --focus-ring: #3977a8;
+  --focus-ring-offset: 2px;
+  --interactive-disabled-opacity: 0.5;
+  --interactive-transition-duration: 150ms;
+
+  /* Visualization */
+  --viz-series-1: #3977a8;
+  --viz-series-2: #168373;
+  --viz-series-3: #8a6bb0;
+  --viz-series-4: #5f8d68;
+  --viz-series-5: #c47755;
+  --viz-grid: #e7ecee;
+  --viz-axis: #718087;
+  --viz-reference: #8a969c;
+  --viz-highlight: #eaf2f8;
 }
 
 [data-theme="hub-light"] {
   color-scheme: light;
 
-  /* Neutral, data-first, VALD-inspired workspace aesthetic */
-  --surface-app: #F3F5F7;
-  --surface-panel: #FFFFFF;
-  --surface-header: #FFFFFF;
-  --surface-hover: #F1F4F5;
-  --surface-sidebar: #FFFFFF;
-  --surface-sidebar-hover: #F2F5F5;
-  --surface-sidebar-active: #E8F2F0;
+  /* Brand identity — independent of theme accent */
+  --brand-primary: var(--kunwei-brand-primary);
+  --brand-secondary: #0d675c;
+  --brand-foreground: #ffffff;
 
-  --text-primary: #17242B;
+  /* Surfaces — neutral, data-first, VALD-inspired */
+  --surface-app: #f3f5f7;
+  --surface-panel: #ffffff;
+  --surface-header: #ffffff;
+  --surface-hover: #f1f4f6;
+  --surface-selected: #f7f0e1;
+  --surface-overlay: rgba(38, 52, 66, 0.45);
+
+  /* Sidebar */
+  --surface-sidebar: #ffffff;
+  --surface-sidebar-hover: #f3f5f7;
+  --surface-sidebar-active: #f7f0e1;
+  --border-sidebar: #e3e8ea;
+
+  /* Text */
+  --text-primary: #263442;
   --text-secondary: #687780;
-  --text-sidebar: #34434A;
-  --text-sidebar-active: #176F63;
-  --text-sidebar-muted: #7B898F;
+  --text-tertiary: #89949c;
+  --text-disabled: #b8c1c4;
+  --text-inverse: #ffffff;
+  --text-sidebar: #34434a;
+  --text-sidebar-active: #70551f;
+  --text-sidebar-muted: #7b898f;
 
-  --border-default: #DFE5E8;
-  --border-sidebar: #E3E8EA;
+  /* Borders */
+  --border-default: #dde2e7;
+  --border-subtle: #eef1f3;
+  --border-strong: #c6ced5;
+  --border-focus: #a57825;
 
-  --accent-primary: #16786B;
-  --accent-hover: #105F55;
-  --accent-soft: #E7F2EF;
-  --accent-highlight: #4A9E91;
+  /* Theme accent — Performance Hub warm gold / bronze */
+  --accent-primary: #b8892e;
+  --accent-hover: #a57825;
+  --accent-active: #89631f;
+  --accent-soft: #f7f0e1;
+  --accent-highlight: #d1ac61;
+  --accent-foreground: #20252b;
+  --accent-text: #70551f;
 
-  --status-success: #21836E;
-  --status-warning: #A96F16;
-  --status-danger: #B64D4D;
-  --focus-ring: #16786B;
+  /* Semantic status colors */
+  --status-success: #21836e;
+  --status-success-soft: #e6f4f1;
+  --status-warning: #a65f12;
+  --status-warning-soft: #fff4dd;
+  --status-danger: #b64d4d;
+  --status-danger-soft: #fdecea;
+  --status-info: #3977a8;
+  --status-info-soft: #eaf2f8;
+  --status-neutral: #718087;
+  --status-neutral-soft: #eef1f1;
+
+  /* Focus & interaction */
+  --focus-ring: #a57825;
+  --focus-ring-offset: 2px;
+  --interactive-disabled-opacity: 0.5;
+  --interactive-transition-duration: 150ms;
+
+  /* Visualization */
+  --viz-series-1: #b8892e;
+  --viz-series-2: #4777a8;
+  --viz-series-3: #8a6bb0;
+  --viz-series-4: #5f8d68;
+  --viz-series-5: #c47755;
+  --viz-grid: #e7ecee;
+  --viz-axis: #718087;
+  --viz-reference: #8a969c;
+  --viz-highlight: #f7f0e1;
 }
 
 @layer base {

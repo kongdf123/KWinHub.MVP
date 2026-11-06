@@ -11,7 +11,7 @@ import {
   DEMO_REPORTS, DEMO_DASHBOARD_WIDGETS, DEMO_TEAMS, DEMO_SPORTS,
   DEMO_IMPORTS, DEMO_INTEGRATIONS, DEMO_USERS, DEMO_GROUPS, DEMO_ORG,
   getSessionsForAthlete, getTimelineForAthlete, getSport, getProtocol, getAthlete, getTeam,
-  getResultForSession, getDataSource,
+  getResultForSession, getDataSource, getAllSessions,
 } from './demo-data';
 import { getMetric } from './metrics';
 import { http } from './api/http';
@@ -267,7 +267,7 @@ export const sessionService = {
       const list = await http.get<ApiSession[]>('/sessions');
       return list.map(mapSession);
     }
-    return delay([...DEMO_SESSIONS]);
+    return delay(getAllSessions());
   },
   async getById(id: string): Promise<TestSession | undefined> {
     if (API_MODE) {
@@ -279,7 +279,7 @@ export const sessionService = {
         throw e;
       }
     }
-    return delay(DEMO_SESSIONS.find((s) => s.id === id));
+    return delay(getAllSessions().find((s) => s.id === id));
   },
   async getByAthlete(athleteId: string): Promise<TestSession[]> {
     if (API_MODE) {
@@ -292,7 +292,7 @@ export const sessionService = {
     if (API_MODE) {
       return sessionService.getAll().then((list) => list.filter((s) => s.protocolId === protocolId));
     }
-    return delay(DEMO_SESSIONS.filter((s) => s.protocolId === protocolId));
+    return delay(getAllSessions().filter((s) => s.protocolId === protocolId));
   },
   getByTeam(teamId: string): Promise<TestSession[]> {
     if (API_MODE) {
@@ -306,7 +306,7 @@ export const sessionService = {
       });
     }
     const athleteIds = new Set(DEMO_ATHLETES.filter((a) => a.teamId === teamId).map((a) => a.id));
-    return delay(DEMO_SESSIONS.filter((s) => athleteIds.has(s.athleteId)));
+    return delay(getAllSessions().filter((s) => athleteIds.has(s.athleteId)));
   },
 
   // Real POST /api/v1/sessions — idempotent via externalId

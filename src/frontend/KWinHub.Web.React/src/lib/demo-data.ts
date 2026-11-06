@@ -6,6 +6,7 @@ import type {
 } from './types';
 import { getMetric } from './metrics';
 import { mulberry32 } from './scientific';
+import { getGeneratedSessions } from './ingestion-demo-store';
 
 // --- Organization ---------------------------------------------------------
 export const DEMO_ORG: Organization = {
@@ -591,10 +592,14 @@ export const DEMO_REPORTS: ReportDefinition[] = [
 ];
 
 // --- Lookup Helpers -------------------------------------------------------
+export function getAllSessions(): TestSession[] {
+  return [...DEMO_SESSIONS, ...getGeneratedSessions()];
+}
+
 export function getSessionsForAthlete(athleteId: string): TestSession[] {
-  return DEMO_SESSIONS.filter((s) => s.athleteId === athleteId).sort(
-    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-  );
+  return getAllSessions()
+    .filter((s) => s.athleteId === athleteId)
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }
 
 export function getTimelineForAthlete(athleteId: string): TimelineEvent[] {
